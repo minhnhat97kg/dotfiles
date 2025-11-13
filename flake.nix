@@ -311,113 +311,119 @@
       # ============================================================================
       # Android Configuration (nix-on-droid)
       # ============================================================================
-      nixOnDroidConfigurations.default = nix-on-droid.lib.nixOnDroidConfiguration {
-        modules = [
-          {
-            # Nix-on-droid specific settings
-            system.stateVersion = "24.05";
+      nixOnDroidConfigurations.default =
+        let
+          system = "aarch64-linux";
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
+        in
+        nix-on-droid.lib.nixOnDroidConfiguration {
+          inherit pkgs;
+          modules = [
+            {
+              # Nix-on-droid specific settings
+              system.stateVersion = "24.05";
 
-            # Allow unfree packages
-            nixpkgs.config.allowUnfree = true;
+              # Nix configuration
+              nix = {
+                extraOptions = ''
+                  experimental-features = nix-command flakes
+                '';
 
-            # Nix configuration
-            nix = {
-              extraOptions = ''
-                experimental-features = nix-command flakes
+                substituters = [
+                  "https://nix-community.cachix.org"
+                  "https://cache.nixos.org"
+                ];
+
+                trustedPublicKeys = [
+                  "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+                ];
+              };
+
+              # User configuration
+              user.shell = "${pkgs.zsh}/bin/zsh";
+
+              # Android-specific environment
+              environment.packages = with pkgs; [
+                # Core utilities
+                git
+                neovim
+                tmux
+                fzf
+
+                # Development tools
+                go
+
+                # Shell
+                zsh
+                oh-my-zsh
+
+                # SSH Server
+                openssh
+              ];
+
+              # Terminal configuration
+              terminal.font = "${pkgs.nerd-fonts.fira-code}/share/fonts/truetype/NerdFonts/FiraCodeNerdFont-Regular.ttf";
+
+              # Build activation script to set up SSH server
+              build.activation.sshd = ''
+                $DRY_RUN_CMD mkdir -p $HOME/.ssh
+                $DRY_RUN_CMD chmod 700 $HOME/.ssh
+
+                # Create SSH host keys if they don't exist
+                if [ ! -f $HOME/.ssh/ssh_host_rsa_key ]; then
+                  $DRY_RUN_CMD ${pkgs.openssh}/bin/ssh-keygen -t rsa -b 4096 -f $HOME/.ssh/ssh_host_rsa_key -N ""
+                fi
+                if [ ! -f $HOME/.ssh/ssh_host_ed25519_key ]; then
+                  $DRY_RUN_CMD ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f $HOME/.ssh/ssh_host_ed25519_key -N ""
+                fi
+
+                # Create sshd_config if it doesn't exist
+                if [ ! -f $HOME/.ssh/sshd_config ]; then
+                  $DRY_RUN_CMD cat > $HOME/.ssh/sshd_config << 'EOF'
+                # SSH Server Configuration for Nix-on-Droid
+                Port 8022
+                ListenAddress 0.0.0.0
+
+                # Host keys
+                HostKey ~/.ssh/ssh_host_rsa_key
+                HostKey ~/.ssh/ssh_host_ed25519_key
+
+                # Authentication
+                PermitRootLogin no
+                PubkeyAuthentication yes
+                AuthorizedKeysFile .ssh/authorized_keys
+                PasswordAuthentication no
+                ChallengeResponseAuthentication no
+
+                # Forwarding
+                AllowTcpForwarding yes
+                X11Forwarding no
+
+                # Other settings
+                PrintMotd no
+                AcceptEnv LANG LC_*
+                Subsystem sftp ${pkgs.openssh}/libexec/sftp-server
+                EOF
+                fi
+
+                $DRY_RUN_CMD chmod 600 $HOME/.ssh/sshd_config
+                $DRY_RUN_CMD touch $HOME/.ssh/authorized_keys
+                $DRY_RUN_CMD chmod 600 $HOME/.ssh/authorized_keys
+
+                echo "SSH server setup complete!"
+                echo "To start SSH server, run: sshd -f ~/.ssh/sshd_config"
+                echo "To add your public key, add it to: ~/.ssh/authorized_keys"
+                echo "SSH will be available on port 8022"
               '';
-
-              substituters = [
-                "https://nix-community.cachix.org"
-                "https://cache.nixos.org"
-              ];
-
-              trustedPublicKeys = [
-                "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-              ];
-            };
-
-            # User configuration
-            user.shell = "${nixpkgs.legacyPackages.aarch64-linux.zsh}/bin/zsh";
-
-            # Android-specific environment
-            environment.packages = with nixpkgs.legacyPackages.aarch64-linux; [
-              # Core utilities
-              git
-              neovim
-              tmux
-              fzf
-
-              # Development tools
-              go
-
-              # Shell
-              zsh
-              oh-my-zsh
-
-              # SSH Server
-              openssh
-            ];
-
-            # Terminal configuration
-            terminal.font = "${nixpkgs.legacyPackages.aarch64-linux.nerd-fonts.fira-code}/share/fonts/truetype/NerdFonts/FiraCodeNerdFont-Regular.ttf";
-
-            # Build activation script to set up SSH server
-            build.activation.sshd = ''
-              $DRY_RUN_CMD mkdir -p $HOME/.ssh
-              $DRY_RUN_CMD chmod 700 $HOME/.ssh
-
-              # Create SSH host keys if they don't exist
-              if [ ! -f $HOME/.ssh/ssh_host_rsa_key ]; then
-                $DRY_RUN_CMD ${nixpkgs.legacyPackages.aarch64-linux.openssh}/bin/ssh-keygen -t rsa -b 4096 -f $HOME/.ssh/ssh_host_rsa_key -N ""
-              fi
-              if [ ! -f $HOME/.ssh/ssh_host_ed25519_key ]; then
-                $DRY_RUN_CMD ${nixpkgs.legacyPackages.aarch64-linux.openssh}/bin/ssh-keygen -t ed25519 -f $HOME/.ssh/ssh_host_ed25519_key -N ""
-              fi
-
-              # Create sshd_config if it doesn't exist
-              if [ ! -f $HOME/.ssh/sshd_config ]; then
-                $DRY_RUN_CMD cat > $HOME/.ssh/sshd_config << 'EOF'
-              # SSH Server Configuration for Nix-on-Droid
-              Port 8022
-              ListenAddress 0.0.0.0
-
-              # Host keys
-              HostKey ~/.ssh/ssh_host_rsa_key
-              HostKey ~/.ssh/ssh_host_ed25519_key
-
-              # Authentication
-              PermitRootLogin no
-              PubkeyAuthentication yes
-              AuthorizedKeysFile .ssh/authorized_keys
-              PasswordAuthentication no
-              ChallengeResponseAuthentication no
-
-              # Forwarding
-              AllowTcpForwarding yes
-              X11Forwarding no
-
-              # Other settings
-              PrintMotd no
-              AcceptEnv LANG LC_*
-              Subsystem sftp ${nixpkgs.legacyPackages.aarch64-linux.openssh}/libexec/sftp-server
-              EOF
-              fi
-
-              $DRY_RUN_CMD chmod 600 $HOME/.ssh/sshd_config
-              $DRY_RUN_CMD touch $HOME/.ssh/authorized_keys
-              $DRY_RUN_CMD chmod 600 $HOME/.ssh/authorized_keys
-
-              echo "SSH server setup complete!"
-              echo "To start SSH server, run: sshd -f ~/.ssh/sshd_config"
-              echo "To add your public key, add it to: ~/.ssh/authorized_keys"
-              echo "SSH will be available on port 8022"
-            '';
+            }
 
             # Home-manager integration for Android
-            home-manager = {
-              config =
-                { pkgs, ... }:
-                nixpkgs.lib.mkMerge [
+            {
+              home-manager = {
+                config = nixpkgs.lib.mkMerge [
                   (sharedHomeConfig { inherit pkgs; })
                   {
                     home.username = username;
@@ -434,11 +440,11 @@
                     '';
                   }
                 ];
-              useGlobalPkgs = true;
-            };
-          }
-        ];
-      };
+                useGlobalPkgs = true;
+              };
+            }
+          ];
+        };
 
       # Formatter
       formatter = {
