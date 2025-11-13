@@ -56,14 +56,14 @@
           git
           gh # GitHub CLI
           fzf
-          neovim
+          # neovim - configured via programs.neovim instead
           ripgrep # rg - fast grep alternative
           fd # fast find alternative
           jq # JSON processor
           jless # JSON viewer
 
           # Shell & Terminal
-          tmux
+          # tmux - configured via programs.tmux instead
           tmuxinator
           ranger # File manager
           htop # Process viewer
@@ -103,7 +103,7 @@
           pgcli # PostgreSQL CLI client
           usql # Universal SQL CLI
           pspg # PostgreSQL pager
-          dblab # Database lab
+          # dblab # Database lab - currently broken, build fails
 
           # API & HTTP Tools
           httpie
@@ -179,7 +179,7 @@
 
             zsh = {
               enable = true;
-              initExtra = ''
+              initExtraBeforeCompInit = ''
                 export GOPATH=$HOME/go
                 export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
               '';
@@ -350,8 +350,8 @@
               environment.packages = with pkgs; [
                 # Core utilities
                 git
-                neovim
-                tmux
+                # neovim - configured via home-manager programs.neovim
+                # tmux - configured via home-manager programs.tmux
                 fzf
 
                 # Development tools
@@ -480,7 +480,7 @@
 
                       zsh = {
                         enable = true;
-                        initExtra = ''
+                        initExtraBeforeCompInit = ''
                           export GOPATH=$HOME/go
                           export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 
