@@ -29,6 +29,7 @@
       "https://nix-community.cachix.org"
     ];
     trusted-public-keys = [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
     ];
   };
@@ -238,10 +239,12 @@
                   "flakes"
                 ];
                 substituters = [
+                  "https://cache.nixos.org"
                   "https://mirror.sjtu.edu.cn/nix-channels/store"
                   "https://nix-community.cachix.org"
                 ];
                 trusted-public-keys = [
+                  "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
                   "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
                 ];
               };
@@ -333,11 +336,12 @@
                 '';
 
                 substituters = [
-                  "https://nix-community.cachix.org"
                   "https://cache.nixos.org"
+                  "https://nix-community.cachix.org"
                 ];
 
                 trustedPublicKeys = [
+                  "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
                   "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
                 ];
               };
@@ -426,8 +430,8 @@
                 config = nixpkgs.lib.mkMerge [
                   (sharedHomeConfig { inherit pkgs; })
                   {
-                    home.username = username;
-                    home.homeDirectory = "/data/data/com.termux.nix/files/home";
+                    home.username = nixpkgs.lib.mkForce username;
+                    home.homeDirectory = nixpkgs.lib.mkForce "/data/data/com.termux.nix/files/home";
 
                     # Android-specific shell configuration
                     programs.zsh.initExtra = ''
