@@ -363,6 +363,7 @@
 
                 # SSH Server
                 openssh
+                net-tools
               ];
 
               # Terminal configuration
@@ -423,7 +424,11 @@ LOGFILE="$HOME/.ssh/sshd.log"
 rm -f "$LOGFILE"
 ${pkgs.openssh}/bin/sshd -f "$HOME/.ssh/sshd_config" -E "$LOGFILE" || {
   echo "sshd failed to launch. Log:" >&2
-  sed 's/^/  /' "$LOGFILE" >&2 || true
+  if [ -f "$LOGFILE" ]; then
+    while IFS= read -r line; do printf '  %s\n' "$line"; done < "$LOGFILE" >&2 || true
+  else
+    echo "  (log file missing)" >&2
+  fi
   exit 1
 }
 
@@ -454,7 +459,11 @@ if pgrep -f "sshd -f $HOME/.ssh/sshd_config" >/dev/null 2>&1; then
 else
   echo "Failed to start SSH server!" >&2
   echo "Last 50 log lines:" >&2
-  (tail -n 50 "$LOGFILE" 2>/dev/null || echo "(no log)") | sed 's/^/  /' >&2
+  if [ -f "$LOGFILE" ]; then
+    tail -n 50 "$LOGFILE" 2>/dev/null | while IFS= read -r line; do printf '  %s\n' "$line"; done >&2
+  else
+    echo "  (no log)" >&2
+  fi
   exit 1
 fi
 EOS
