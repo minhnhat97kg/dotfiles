@@ -464,13 +464,14 @@ if pgrep -f "sshd -f $HOME/.ssh/sshd_config" >/dev/null 2>&1; then
   echo ""
   echo "On your Mac/client, run this ONE command:"
   echo ""
+  # Android-compatible IP detection
   if command -v ip >/dev/null 2>&1; then
-    ip -4 addr show | grep -oE 'inet ([0-9]{1,3}\.){3}[0-9]{1,3}' | awk '{print $2}' | grep -v '^127\.' | head -n1 | while read -r ip; do
-      echo "  scp -P 8022 ~/.ssh/android_client_key* $ip:~/.ssh/ && ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@$ip"
+    ip -4 addr show 2>/dev/null | grep -oE 'inet ([0-9]{1,3}\.){3}[0-9]{1,3}' | awk '{print $2}' | grep -v '^127\.' | head -n1 | while read -r ipaddr; do
+      echo "  scp -P 8022 ~/.ssh/android_client_key* $ipaddr:~/.ssh/ && ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@$ipaddr"
     done
   elif command -v ifconfig >/dev/null 2>&1; then
-    ifconfig | grep 'inet ' | awk '{print $2}' | grep -v '^127\.' | head -n1 | while read -r ip; do
-      echo "  scp -P 8022 ~/.ssh/android_client_key* $ip:~/.ssh/ && ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@$ip"
+    ifconfig 2>/dev/null | grep 'inet ' | awk '{print $2}' | sed 's/addr://' | grep -v '^127\.' | head -n1 | while read -r ipaddr; do
+      echo "  scp -P 8022 ~/.ssh/android_client_key* $ipaddr:~/.ssh/ && ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@$ipaddr"
     done
   fi
   echo ""
@@ -487,12 +488,12 @@ if pgrep -f "sshd -f $HOME/.ssh/sshd_config" >/dev/null 2>&1; then
   echo ""
   echo "2. Then connect with:"
   if command -v ip >/dev/null 2>&1; then
-    ip -4 addr show | grep -oE 'inet ([0-9]{1,3}\.){3}[0-9]{1,3}' | awk '{print $2}' | grep -v '^127\.' | while read -r ip; do
-      echo "   ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@$ip"
+    ip -4 addr show 2>/dev/null | grep -oE 'inet ([0-9]{1,3}\.){3}[0-9]{1,3}' | awk '{print $2}' | grep -v '^127\.' | while read -r ipaddr; do
+      echo "   ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@$ipaddr"
     done
   elif command -v ifconfig >/dev/null 2>&1; then
-    ifconfig | grep 'inet ' | awk '{print $2}' | grep -v '^127\.' | while read -r ip; do
-      echo "   ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@$ip"
+    ifconfig 2>/dev/null | grep 'inet ' | awk '{print $2}' | sed 's/addr://' | grep -v '^127\.' | while read -r ipaddr; do
+      echo "   ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@$ipaddr"
     done
   fi
   echo ""
