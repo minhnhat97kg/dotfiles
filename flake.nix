@@ -353,9 +353,11 @@
                 # neovim - configured via home-manager programs.neovim
                 # tmux - configured via home-manager programs.tmux
                 fzf
+                procps # Provides pkill, pgrep, ps, etc.
 
                 # Development tools
                 go
+                gcc
 
                 # Shell
                 zsh
@@ -384,6 +386,22 @@
                   ${pkgs.openssh}/bin/ssh-keygen -t ecdsa -b 521 -f "$HOME/.ssh/ssh_host_ecdsa_key" -N ""
                 fi
 
+                # Generate auto-login client key if it doesn't exist
+                if [ ! -f "$HOME/.ssh/android_client_key" ]; then
+                  ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$HOME/.ssh/android_client_key" -N "" -C "auto-generated-android-client"
+                  echo "Generated auto-login client key: $HOME/.ssh/android_client_key"
+                fi
+
+                # Auto-add client public key to authorized_keys for passwordless login
+                touch "$HOME/.ssh/authorized_keys"
+                chmod 600 "$HOME/.ssh/authorized_keys"
+
+                CLIENT_PUBKEY=$(cat "$HOME/.ssh/android_client_key.pub")
+                if ! grep -qF "$CLIENT_PUBKEY" "$HOME/.ssh/authorized_keys"; then
+                  echo "$CLIENT_PUBKEY" >> "$HOME/.ssh/authorized_keys"
+                  echo "Added auto-login key to authorized_keys"
+                fi
+
                 # Create sshd_config if it doesn't exist
                 if [ ! -f "$HOME/.ssh/sshd_config" ]; then
                   cat <<'EOF' > "$HOME/.ssh/sshd_config"
@@ -395,12 +413,12 @@ ListenAddress 0.0.0.0
 HostKey ~/.ssh/ssh_host_ed25519_key
 HostKey ~/.ssh/ssh_host_ecdsa_key
 
-# Authentication
+# Authentication (key-based only for security)
 PermitRootLogin no
 PubkeyAuthentication yes
 AuthorizedKeysFile %h/.ssh/authorized_keys
-PasswordAuthentication yes
-ChallengeResponseAuthentication yes
+PasswordAuthentication no
+ChallengeResponseAuthentication no
 
 # Forwarding
 AllowTcpForwarding yes
@@ -414,8 +432,6 @@ EOF
                 fi
 
                 chmod 600 "$HOME/.ssh/sshd_config"
-                touch "$HOME/.ssh/authorized_keys"
-                chmod 600 "$HOME/.ssh/authorized_keys"
 
                 # Create helper script to start SSH server with connection info
                 cat <<'EOS' > "$HOME/.ssh/start-sshd.sh"
@@ -436,43 +452,47 @@ ${pkgs.openssh}/bin/sshd -f "$HOME/.ssh/sshd_config" -E "$LOGFILE" || {
 
 sleep 0.3
 if pgrep -f "sshd -f $HOME/.ssh/sshd_config" >/dev/null 2>&1; then
-  echo "SSH server started successfully!"
+  echo "✓ SSH server started successfully!"
   echo ""
-  echo "Connection information:"
-  echo "======================="
-  echo "Port: 8022"
-  echo "User: nix-on-droid"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "  ZERO-CONFIG CONNECTION"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
-  echo "Host key fingerprints (verify these on the client):"
-  if [ -f "$HOME/.ssh/ssh_host_ed25519_key" ]; then
-    ${pkgs.openssh}/bin/ssh-keygen -lf "$HOME/.ssh/ssh_host_ed25519_key" || true
-  fi
-  if [ -f "$HOME/.ssh/ssh_host_ecdsa_key" ]; then
-    ${pkgs.openssh}/bin/ssh-keygen -lf "$HOME/.ssh/ssh_host_ecdsa_key" || true
-  fi
+  echo "On your Mac/client, run this ONE command:"
   echo ""
-  echo "Device IP addresses:" 
   if command -v ip >/dev/null 2>&1; then
-    ip -4 addr show | grep -oE '(?<=inet )([0-9]{1,3}\.){3}[0-9]{1,3}' | grep -v '^127\.' | while read -r ip; do
-      echo "  ssh -p 8022 nix-on-droid@$ip"
+    ip -4 addr show | grep -oE 'inet ([0-9]{1,3}\.){3}[0-9]{1,3}' | awk '{print $2}' | grep -v '^127\.' | head -n1 | while read -r ip; do
+      echo "  scp -P 8022 ~/.ssh/android_client_key* $ip:~/.ssh/ && ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@$ip"
+    done
+  elif command -v ifconfig >/dev/null 2>&1; then
+    ifconfig | grep 'inet ' | awk '{print $2}' | grep -v '^127\.' | head -n1 | while read -r ip; do
+      echo "  scp -P 8022 ~/.ssh/android_client_key* $ip:~/.ssh/ && ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@$ip"
+    done
+  fi
+  echo ""
+  echo "This will:"
+  echo "  1. Copy the auto-generated key to your client"
+  echo "  2. Connect automatically (no password needed!)"
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "Alternative: Manual setup"
+  echo "-------------------------"
+  echo "1. Copy this file from Android to your Mac:"
+  echo "   $HOME/.ssh/android_client_key"
+  echo ""
+  echo "2. Then connect with:"
+  if command -v ip >/dev/null 2>&1; then
+    ip -4 addr show | grep -oE 'inet ([0-9]{1,3}\.){3}[0-9]{1,3}' | awk '{print $2}' | grep -v '^127\.' | while read -r ip; do
+      echo "   ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@$ip"
     done
   elif command -v ifconfig >/dev/null 2>&1; then
     ifconfig | grep 'inet ' | awk '{print $2}' | grep -v '^127\.' | while read -r ip; do
-      echo "  ssh -p 8022 nix-on-droid@$ip"
+      echo "   ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@$ip"
     done
-  else
-    echo "  (No ip/ifconfig available to enumerate addresses)"
   fi
   echo ""
-  echo "Make sure your public key is in: $HOME/.ssh/authorized_keys"
   echo "Log file: $LOGFILE"
-  if [ ! -s "$HOME/.ssh/authorized_keys" ]; then
-    echo ""
-    echo "No public keys found in $HOME/.ssh/authorized_keys."
-    echo "Add your Mac's public key like this (example):"
-    echo "  echo 'ssh-ed25519 AAAA... yourname@mac' >> $HOME/.ssh/authorized_keys"
-    echo "Ensure file permissions: chmod 600 $HOME/.ssh/authorized_keys"
-  fi
 else
   echo "Failed to start SSH server!" >&2
   echo "Last 50 log lines:" >&2
@@ -490,12 +510,38 @@ EOS
                 printf '#!/usr/bin/env bash\npkill -f "sshd -f $HOME/.ssh/sshd_config"\n' > $HOME/.ssh/stop-sshd.sh
                 $DRY_RUN_CMD chmod +x $HOME/.ssh/stop-sshd.sh
 
-                echo "SSH server setup complete!"
-                echo "To start SSH server, run: ~/.ssh/start-sshd.sh"
-                echo "  Or with absolute path: ${pkgs.openssh}/bin/sshd -f ~/.ssh/sshd_config"
-                echo "To stop SSH server, run: ~/.ssh/stop-sshd.sh"
-                echo "To add your public key, add it to: ~/.ssh/authorized_keys"
-                echo "SSH will be available on port 8022"
+                # Create helper script to display the private key for easy copying
+                cat <<'SHOW_KEY' > "$HOME/.ssh/show-client-key.sh"
+#!/usr/bin/env bash
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  CLIENT KEY (Copy this to your Mac)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Run this on your Mac to save the key:"
+echo ""
+echo "cat > ~/.ssh/android_client_key << 'EOF'"
+cat "$HOME/.ssh/android_client_key"
+echo "EOF"
+echo "chmod 600 ~/.ssh/android_client_key"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+SHOW_KEY
+                $DRY_RUN_CMD chmod +x "$HOME/.ssh/show-client-key.sh"
+
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                echo "  SSH Server Setup Complete!"
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                echo ""
+                echo "Quick start:"
+                echo "  1. Start SSH:  ~/.ssh/start-sshd.sh"
+                echo "  2. Show key:   ~/.ssh/show-client-key.sh"
+                echo "  3. Stop SSH:   ~/.ssh/stop-sshd.sh"
+                echo ""
+                echo "Features:"
+                echo "  • Auto-generated Ed25519 keys (no RSA)"
+                echo "  • Zero-config passwordless login"
+                echo "  • Port 8022"
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
               '';
 
               # Home-manager integration
