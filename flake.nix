@@ -382,41 +382,73 @@
                 fi
 
                 # Create sshd_config if it doesn't exist
-                if [ ! -f $HOME/.ssh/sshd_config ]; then
-                  $DRY_RUN_CMD cat > $HOME/.ssh/sshd_config << 'EOF'
-                # SSH Server Configuration for Nix-on-Droid
-                Port 8022
-                ListenAddress 0.0.0.0
+                if [ ! -f "$HOME/.ssh/sshd_config" ]; then
+                  cat <<'EOF' > "$HOME/.ssh/sshd_config"
+# SSH Server Configuration for Nix-on-Droid
+Port 8022
+ListenAddress 0.0.0.0
 
-                # Host keys
-                HostKey ~/.ssh/ssh_host_rsa_key
-                HostKey ~/.ssh/ssh_host_ed25519_key
+# Host keys
+HostKey ~/.ssh/ssh_host_rsa_key
+HostKey ~/.ssh/ssh_host_ed25519_key
 
-                # Authentication
-                PermitRootLogin no
-                PubkeyAuthentication yes
-                AuthorizedKeysFile .ssh/authorized_keys
-                PasswordAuthentication no
-                ChallengeResponseAuthentication no
+# Authentication
+PermitRootLogin no
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+PasswordAuthentication no
+ChallengeResponseAuthentication no
 
-                # Forwarding
-                AllowTcpForwarding yes
-                X11Forwarding no
+# Forwarding
+AllowTcpForwarding yes
+X11Forwarding no
 
-                # Other settings
-                PrintMotd no
-                AcceptEnv LANG LC_*
-                Subsystem sftp ${pkgs.openssh}/libexec/sftp-server
-                EOF
+# Other settings
+PrintMotd no
+AcceptEnv LANG LC_*
+Subsystem sftp ${pkgs.openssh}/libexec/sftp-server
+EOF
                 fi
 
                 $DRY_RUN_CMD chmod 600 $HOME/.ssh/sshd_config
                 $DRY_RUN_CMD touch $HOME/.ssh/authorized_keys
                 $DRY_RUN_CMD chmod 600 $HOME/.ssh/authorized_keys
 
-                # Create helper script to start SSH server
-                printf '#!/usr/bin/env bash\n${pkgs.openssh}/bin/sshd -f ~/.ssh/sshd_config\n' > $HOME/.ssh/start-sshd.sh
-                $DRY_RUN_CMD chmod +x $HOME/.ssh/start-sshd.sh
+                # Create helper script to start SSH server with connection info
+                cat <<'EOS' > "$HOME/.ssh/start-sshd.sh"
+#!/usr/bin/env bash
+set -euo pipefail
+
+${pkgs.openssh}/bin/sshd -f "$HOME/.ssh/sshd_config"
+
+if pgrep -f "sshd -f $HOME/.ssh/sshd_config" >/dev/null 2>&1; then
+  echo "SSH server started successfully!"
+  echo ""
+  echo "Connection information:"
+  echo "======================="
+  echo "Port: 8022"
+  echo "User: nix-on-droid"
+  echo ""
+  echo "Device IP addresses:" 
+  if command -v ip >/dev/null 2>&1; then
+    ip -4 addr show | grep -oE '(?<=inet )([0-9]{1,3}\.){3}[0-9]{1,3}' | grep -v '^127\.' | while read -r ip; do
+      echo "  ssh -p 8022 nix-on-droid@$ip"
+    done
+  elif command -v ifconfig >/dev/null 2>&1; then
+    ifconfig | grep 'inet ' | awk '{print $2}' | grep -v '^127\.' | while read -r ip; do
+      echo "  ssh -p 8022 nix-on-droid@$ip"
+    done
+  else
+    echo "  (No ip/ifconfig available to enumerate addresses)"
+  fi
+  echo ""
+  echo "Make sure your public key is in: $HOME/.ssh/authorized_keys"
+else
+  echo "Failed to start SSH server!" >&2
+  exit 1
+fi
+EOS
+                $DRY_RUN_CMD chmod +x "$HOME/.ssh/start-sshd.sh"
 
                 # Create helper script to stop SSH server
                 printf '#!/usr/bin/env bash\npkill -f "sshd -f $HOME/.ssh/sshd_config"\n' > $HOME/.ssh/stop-sshd.sh
