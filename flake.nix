@@ -415,17 +415,11 @@
                 $DRY_RUN_CMD chmod 600 $HOME/.ssh/authorized_keys
 
                 # Create helper script to start SSH server
-                $DRY_RUN_CMD cat > $HOME/.ssh/start-sshd.sh << 'SCRIPT'
-              #!/usr/bin/env bash
-              ${pkgs.openssh}/bin/sshd -f ~/.ssh/sshd_config
-              SCRIPT
+                printf '#!/usr/bin/env bash\n${pkgs.openssh}/bin/sshd -f ~/.ssh/sshd_config\n' > $HOME/.ssh/start-sshd.sh
                 $DRY_RUN_CMD chmod +x $HOME/.ssh/start-sshd.sh
 
                 # Create helper script to stop SSH server
-                $DRY_RUN_CMD cat > $HOME/.ssh/stop-sshd.sh << 'SCRIPT'
-              #!/usr/bin/env bash
-              pkill -f "sshd -f $HOME/.ssh/sshd_config"
-              SCRIPT
+                printf '#!/usr/bin/env bash\npkill -f "sshd -f $HOME/.ssh/sshd_config"\n' > $HOME/.ssh/stop-sshd.sh
                 $DRY_RUN_CMD chmod +x $HOME/.ssh/stop-sshd.sh
 
                 echo "SSH server setup complete!"
