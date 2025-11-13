@@ -414,8 +414,24 @@
                 $DRY_RUN_CMD touch $HOME/.ssh/authorized_keys
                 $DRY_RUN_CMD chmod 600 $HOME/.ssh/authorized_keys
 
+                # Create helper script to start SSH server
+                $DRY_RUN_CMD cat > $HOME/.ssh/start-sshd.sh << 'SCRIPT'
+              #!/usr/bin/env bash
+              ${pkgs.openssh}/bin/sshd -f ~/.ssh/sshd_config
+              SCRIPT
+                $DRY_RUN_CMD chmod +x $HOME/.ssh/start-sshd.sh
+
+                # Create helper script to stop SSH server
+                $DRY_RUN_CMD cat > $HOME/.ssh/stop-sshd.sh << 'SCRIPT'
+              #!/usr/bin/env bash
+              pkill -f "sshd -f $HOME/.ssh/sshd_config"
+              SCRIPT
+                $DRY_RUN_CMD chmod +x $HOME/.ssh/stop-sshd.sh
+
                 echo "SSH server setup complete!"
-                echo "To start SSH server, run: sshd -f ~/.ssh/sshd_config"
+                echo "To start SSH server, run: ~/.ssh/start-sshd.sh"
+                echo "  Or with absolute path: ${pkgs.openssh}/bin/sshd -f ~/.ssh/sshd_config"
+                echo "To stop SSH server, run: ~/.ssh/stop-sshd.sh"
                 echo "To add your public key, add it to: ~/.ssh/authorized_keys"
                 echo "SSH will be available on port 8022"
               '';
