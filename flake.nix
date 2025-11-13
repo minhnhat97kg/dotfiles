@@ -370,15 +370,15 @@
 
               # Build activation script to set up SSH server
               build.activation.sshd = ''
-                $DRY_RUN_CMD mkdir -p $HOME/.ssh
-                $DRY_RUN_CMD chmod 700 $HOME/.ssh
+                mkdir -p "$HOME/.ssh"
+                chmod 700 "$HOME/.ssh"
 
                 # Create SSH host keys if they don't exist
                 if [ ! -f $HOME/.ssh/ssh_host_rsa_key ]; then
-                  $DRY_RUN_CMD ${pkgs.openssh}/bin/ssh-keygen -t rsa -b 4096 -f $HOME/.ssh/ssh_host_rsa_key -N ""
+                  ${pkgs.openssh}/bin/ssh-keygen -t rsa -b 4096 -f "$HOME/.ssh/ssh_host_rsa_key" -N ""
                 fi
                 if [ ! -f $HOME/.ssh/ssh_host_ed25519_key ]; then
-                  $DRY_RUN_CMD ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f $HOME/.ssh/ssh_host_ed25519_key -N ""
+                  ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$HOME/.ssh/ssh_host_ed25519_key" -N ""
                 fi
 
                 # Create sshd_config if it doesn't exist
@@ -410,17 +410,24 @@ Subsystem sftp ${pkgs.openssh}/libexec/sftp-server
 EOF
                 fi
 
-                $DRY_RUN_CMD chmod 600 $HOME/.ssh/sshd_config
-                $DRY_RUN_CMD touch $HOME/.ssh/authorized_keys
-                $DRY_RUN_CMD chmod 600 $HOME/.ssh/authorized_keys
+                chmod 600 "$HOME/.ssh/sshd_config"
+                touch "$HOME/.ssh/authorized_keys"
+                chmod 600 "$HOME/.ssh/authorized_keys"
 
                 # Create helper script to start SSH server with connection info
                 cat <<'EOS' > "$HOME/.ssh/start-sshd.sh"
 #!/usr/bin/env bash
 set -euo pipefail
 
-${pkgs.openssh}/bin/sshd -f "$HOME/.ssh/sshd_config"
+LOGFILE="$HOME/.ssh/sshd.log"
+rm -f "$LOGFILE"
+${pkgs.openssh}/bin/sshd -f "$HOME/.ssh/sshd_config" -E "$LOGFILE" || {
+  echo "sshd failed to launch. Log:" >&2
+  sed 's/^/  /' "$LOGFILE" >&2 || true
+  exit 1
+}
 
+sleep 0.3
 if pgrep -f "sshd -f $HOME/.ssh/sshd_config" >/dev/null 2>&1; then
   echo "SSH server started successfully!"
   echo ""
@@ -443,8 +450,11 @@ if pgrep -f "sshd -f $HOME/.ssh/sshd_config" >/dev/null 2>&1; then
   fi
   echo ""
   echo "Make sure your public key is in: $HOME/.ssh/authorized_keys"
+  echo "Log file: $LOGFILE"
 else
   echo "Failed to start SSH server!" >&2
+  echo "Last 50 log lines:" >&2
+  (tail -n 50 "$LOGFILE" 2>/dev/null || echo "(no log)") | sed 's/^/  /' >&2
   exit 1
 fi
 EOS
