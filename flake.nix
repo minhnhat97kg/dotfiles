@@ -427,11 +427,13 @@
             # Home-manager integration for Android
             {
               home-manager = {
+                backupFileExtension = "hm-bak";
+                useGlobalPkgs = true;
                 config = nixpkgs.lib.mkMerge [
                   (sharedHomeConfig { inherit pkgs; })
                   {
-                    home.username = nixpkgs.lib.mkForce username;
-                    home.homeDirectory = nixpkgs.lib.mkForce "/data/data/com.termux.nix/files/home";
+                    # Note: home.username and home.homeDirectory are automatically
+                    # managed by nix-on-droid and should not be set here
 
                     # Android-specific shell configuration
                     programs.zsh.initExtra = ''
@@ -444,7 +446,6 @@
                     '';
                   }
                 ];
-                useGlobalPkgs = true;
               };
             }
           ];
