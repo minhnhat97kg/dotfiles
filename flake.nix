@@ -14,6 +14,7 @@
     nix-on-droid = {
       url = "github:nix-community/nix-on-droid/release-24.05";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
     };
 
     # home-manager for user configuration
@@ -93,8 +94,6 @@
 
           # Cloud & DevOps
           terraform
-          goreleaser
-          go-task # Task runner
 
           # Database Tools
           postgresql
@@ -115,8 +114,6 @@
           lazydocker
 
           # Security & Auth
-          gnupg
-          stripe-cli
           aws-vault # AWS credential manager
 
           # File & Text Processing
@@ -422,30 +419,30 @@
                 echo "To add your public key, add it to: ~/.ssh/authorized_keys"
                 echo "SSH will be available on port 8022"
               '';
-            }
 
-            # Home-manager integration for Android
-            {
+              # Home-manager integration
               home-manager = {
                 backupFileExtension = "hm-bak";
                 useGlobalPkgs = true;
-                config = nixpkgs.lib.mkMerge [
-                  (sharedHomeConfig { inherit pkgs; })
-                  {
-                    # Note: home.username and home.homeDirectory are automatically
-                    # managed by nix-on-droid and should not be set here
+                config =
+                  { config, pkgs, ... }:
+                  nixpkgs.lib.mkMerge [
+                    (sharedHomeConfig { inherit pkgs; })
+                    {
+                      # Note: home.username and home.homeDirectory are automatically
+                      # managed by nix-on-droid and should not be set here
 
-                    # Android-specific shell configuration
-                    programs.zsh.initExtra = ''
-                      # Android-specific paths
-                      export GOPATH=$HOME/go
-                      export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
+                      # Android-specific shell configuration
+                      programs.zsh.initExtra = ''
+                        # Android-specific paths
+                        export GOPATH=$HOME/go
+                        export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 
-                      # Termux-specific
-                      export TMPDIR=/data/data/com.termux.nix/files/usr/tmp
-                    '';
-                  }
-                ];
+                        # Termux-specific
+                        export TMPDIR=/data/data/com.termux.nix/files/usr/tmp
+                      '';
+                    }
+                  ];
               };
             }
           ];
