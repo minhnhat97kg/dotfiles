@@ -354,6 +354,10 @@
                 # tmux - configured via home-manager programs.tmux
                 fzf
                 procps # Provides pkill, pgrep, ps, etc.
+                gnugrep # Provides grep command
+                gnused # Provides sed command
+                gawk # Provides awk command
+                coreutils # Provides cat, chmod, mkdir, etc.
 
                 # Development tools
                 go
