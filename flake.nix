@@ -374,12 +374,14 @@
                 mkdir -p "$HOME/.ssh"
                 chmod 700 "$HOME/.ssh"
 
-                # Create SSH host keys if they don't exist
-                if [ ! -f $HOME/.ssh/ssh_host_rsa_key ]; then
-                  ${pkgs.openssh}/bin/ssh-keygen -t rsa -b 4096 -f "$HOME/.ssh/ssh_host_rsa_key" -N ""
-                fi
+                # Create SSH host keys if they don't exist (Ed25519 only - modern, secure alternative to RSA)
                 if [ ! -f $HOME/.ssh/ssh_host_ed25519_key ]; then
                   ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$HOME/.ssh/ssh_host_ed25519_key" -N ""
+                fi
+
+                # Optional: Create ECDSA key as fallback for older clients
+                if [ ! -f $HOME/.ssh/ssh_host_ecdsa_key ]; then
+                  ${pkgs.openssh}/bin/ssh-keygen -t ecdsa -b 521 -f "$HOME/.ssh/ssh_host_ecdsa_key" -N ""
                 fi
 
                 # Create sshd_config if it doesn't exist
@@ -389,16 +391,16 @@
 Port 8022
 ListenAddress 0.0.0.0
 
-# Host keys
-HostKey ~/.ssh/ssh_host_rsa_key
+# Host keys (Ed25519 and ECDSA - no RSA)
 HostKey ~/.ssh/ssh_host_ed25519_key
+HostKey ~/.ssh/ssh_host_ecdsa_key
 
 # Authentication
 PermitRootLogin no
 PubkeyAuthentication yes
-AuthorizedKeysFile .ssh/authorized_keys
-PasswordAuthentication no
-ChallengeResponseAuthentication no
+AuthorizedKeysFile %h/.ssh/authorized_keys
+PasswordAuthentication yes
+ChallengeResponseAuthentication yes
 
 # Forwarding
 AllowTcpForwarding yes
@@ -441,6 +443,14 @@ if pgrep -f "sshd -f $HOME/.ssh/sshd_config" >/dev/null 2>&1; then
   echo "Port: 8022"
   echo "User: nix-on-droid"
   echo ""
+  echo "Host key fingerprints (verify these on the client):"
+  if [ -f "$HOME/.ssh/ssh_host_ed25519_key" ]; then
+    ${pkgs.openssh}/bin/ssh-keygen -lf "$HOME/.ssh/ssh_host_ed25519_key" || true
+  fi
+  if [ -f "$HOME/.ssh/ssh_host_ecdsa_key" ]; then
+    ${pkgs.openssh}/bin/ssh-keygen -lf "$HOME/.ssh/ssh_host_ecdsa_key" || true
+  fi
+  echo ""
   echo "Device IP addresses:" 
   if command -v ip >/dev/null 2>&1; then
     ip -4 addr show | grep -oE '(?<=inet )([0-9]{1,3}\.){3}[0-9]{1,3}' | grep -v '^127\.' | while read -r ip; do
@@ -456,6 +466,13 @@ if pgrep -f "sshd -f $HOME/.ssh/sshd_config" >/dev/null 2>&1; then
   echo ""
   echo "Make sure your public key is in: $HOME/.ssh/authorized_keys"
   echo "Log file: $LOGFILE"
+  if [ ! -s "$HOME/.ssh/authorized_keys" ]; then
+    echo ""
+    echo "No public keys found in $HOME/.ssh/authorized_keys."
+    echo "Add your Mac's public key like this (example):"
+    echo "  echo 'ssh-ed25519 AAAA... yourname@mac' >> $HOME/.ssh/authorized_keys"
+    echo "Ensure file permissions: chmod 600 $HOME/.ssh/authorized_keys"
+  fi
 else
   echo "Failed to start SSH server!" >&2
   echo "Last 50 log lines:" >&2
