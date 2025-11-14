@@ -366,6 +366,7 @@
                 # Development tools
                 go
                 gcc
+                gnumake # Provides make command
 
                 # Shell
                 zsh
