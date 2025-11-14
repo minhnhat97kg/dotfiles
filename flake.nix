@@ -358,6 +358,7 @@
                 gnused # Provides sed command
                 gawk # Provides awk command
                 coreutils # Provides cat, chmod, mkdir, etc.
+                glibcLocales # Provides UTF-8 locale support
 
                 # Development tools
                 go
@@ -635,9 +636,17 @@ SHOW_KEY
                           # Termux-specific
                           export TMPDIR=/data/data/com.termux.nix/files/usr/tmp
 
-                          # SSH session optimization - set TERM for better compatibility
+                          # SSH/Mosh session optimization
                           if [ -n "$SSH_CONNECTION" ] || [ -n "$SSH_CLIENT" ] || [ -n "$SSH_TTY" ]; then
                             export TERM=xterm-256color
+                          fi
+
+                          # Mosh-specific optimizations
+                          if [ -n "$MOSH_CONNECTION" ]; then
+                            export TERM=xterm-256color
+                            export LC_ALL=en_US.UTF-8
+                            export LANG=en_US.UTF-8
+                            export LANGUAGE=en_US.UTF-8
                           fi
                         '';
                         shellAliases = {
