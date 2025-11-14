@@ -370,6 +370,12 @@
                 # SSH Server
                 openssh
                 net-tools
+
+                # Mosh (Mobile Shell) - for unstable connections
+                mosh
+
+                # Tailscale - VPN for remote access
+                tailscale
               ];
 
               # Terminal configuration
