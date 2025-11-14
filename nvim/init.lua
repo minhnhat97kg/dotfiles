@@ -210,9 +210,6 @@ require("lazy").setup({
 		config = true,
 	},
 
-	-- Editor enhancements
-	"tpope/vim-sleuth", -- Detect tabstop and shiftwidth automatically
-
 	-- Git integration (disabled in SSH for performance)
 	{
 		"lewis6991/gitsigns.nvim",
@@ -317,17 +314,6 @@ require("lazy").setup({
 		end,
 	},
 
-	-- LSP Lua development
-	{
-		"folke/lazydev.nvim",
-		ft = "lua",
-		opts = {
-			library = {
-				{ path = "luvit-meta/library", words = { "vim%.uv" } },
-			},
-		},
-	},
-
 	-- Completion
 	{
 		"saghen/blink.cmp",
@@ -388,83 +374,6 @@ require("lazy").setup({
 
 	-- Mason for LSP/tools installation
 	{ "williamboman/mason.nvim", opts = {} },
-
-	-- Formatting
-	{
-		"stevearc/conform.nvim",
-		event = { "BufWritePre" },
-		cmd = { "ConformInfo" },
-		keys = {
-			{
-				"<leader>f",
-				function()
-					require("conform").format({ async = true, lsp_format = "fallback" })
-				end,
-				mode = "",
-				desc = "[F]ormat buffer",
-			},
-		},
-		opts = {
-			notify_on_error = false,
-			format_on_save = function(bufnr)
-				-- Disable format on save for very large files
-				local max_filesize = 100 * 1024 -- 100 KB
-				local ok, stats = pcall(vim.loop.fs_stat, vim.api.nvim_buf_get_name(bufnr))
-				if ok and stats and stats.size > max_filesize then
-					return
-				end
-
-				local disable_filetypes = { c = true, cpp = true }
-				local lsp_format_opt = disable_filetypes[vim.bo[bufnr].filetype] and "never" or "fallback"
-				return {
-					timeout_ms = 500,
-					lsp_format = lsp_format_opt,
-				}
-			end,
-			formatters_by_ft = {
-				lua = { "stylua" },
-				nix = { "nixfmt" },
-				javascript = { "prettierd" },
-				typescript = { "prettierd" },
-				javascriptreact = { "prettierd" },
-				typescriptreact = { "prettierd" },
-				svelte = { "prettierd" },
-				css = { "prettierd" },
-				html = { "prettierd" },
-				json = { "prettierd" },
-				yaml = { "prettierd" },
-				markdown = { "prettierd" },
-				graphql = { "prettierd" },
-				liquid = { "prettierd" },
-				python = { "isort", "black" },
-				go = { "goimports" },
-				sql = { "sql-formatter" },
-				xml = { "prettierd" },
-				terraform = { "terraform_fmt" },
-			},
-		},
-	},
-
-	-- Linting
-	{
-		"mfussenegger/nvim-lint",
-		event = { "BufReadPre", "BufNewFile" },
-		config = function()
-			local lint = require("lint")
-			lint.linters_by_ft = {
-				markdown = { "markdownlint" },
-			}
-			local lint_augroup = vim.api.nvim_create_augroup("lint", { clear = true })
-			vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "InsertLeave" }, {
-				group = lint_augroup,
-				callback = function()
-					if vim.opt_local.modifiable:get() then
-						lint.try_lint()
-					end
-				end,
-			})
-		end,
-	},
 
 	-- Highlight comments
 	{
@@ -614,9 +523,6 @@ require("lazy").setup({
 			{ "<c-\\>", "<cmd><C-U>TmuxNavigatePrevious<cr>" },
 		},
 	},
-
-	-- Git diff view
-	{ "sindrets/diffview.nvim" },
 
 	-- Copilot (disabled in SSH - network dependent)
 	{
@@ -770,6 +676,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		map("<leader>la", vim.lsp.buf.code_action, "Code Action")
 		map("<leader>lr", vim.lsp.buf.rename, "Rename all references")
 		map("<leader>lf", vim.lsp.buf.format, "Format")
+		map("<leader>f", vim.lsp.buf.format, "[F]ormat buffer") -- Replaced conform.nvim
 		map("<leader>v", "<cmd>vsplit | lua vim.lsp.buf.definition()<cr>", "Goto Definition in Vertical Split")
 
 		local function client_supports_method(client, method, bufnr)
