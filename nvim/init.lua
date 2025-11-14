@@ -1,4 +1,9 @@
 -- ============================================================================
+-- SSH DETECTION (must be first!)
+-- ============================================================================
+require("ssh-detect").setup()
+
+-- ============================================================================
 -- BASIC SETTINGS
 -- ============================================================================
 vim.g.mapleader = " "
@@ -32,6 +37,11 @@ vim.opt.scrolloff = 10
 vim.schedule(function()
 	vim.opt.clipboard = "unnamedplus"
 end)
+
+-- ============================================================================
+-- SSH OPTIMIZATIONS (Apply after basic settings)
+-- ============================================================================
+require("config.ssh-optimizations").setup()
 
 -- ============================================================================
 -- KEYMAPS
@@ -90,9 +100,10 @@ require("lazy").setup({
 	-- Editor enhancements
 	"tpope/vim-sleuth", -- Detect tabstop and shiftwidth automatically
 
-	-- Git integration
+	-- Git integration (disabled in SSH for performance)
 	{
 		"lewis6991/gitsigns.nvim",
+		enabled = not vim.g.is_ssh,
 		opts = {
 			signs = {
 				add = { text = "+" },
@@ -408,9 +419,10 @@ require("lazy").setup({
 		},
 	},
 
-	-- Indent guides
+	-- Indent guides (disabled in SSH for performance)
 	{
 		"lukas-reineke/indent-blankline.nvim",
+		enabled = not vim.g.is_ssh,
 		main = "ibl",
 		opts = {},
 	},
@@ -422,10 +434,10 @@ require("lazy").setup({
 		lazy = false,
 		opts = {
 			bigfile = { enabled = true },
-			indent = { enabled = true },
+			indent = { enabled = not vim.g.is_ssh }, -- Disable in SSH
 			quickfile = { enabled = true },
-			scroll = { enabled = true },
-			lazygit = { enabled = true },
+			scroll = { enabled = not vim.g.is_ssh }, -- Disable smooth scrolling in SSH
+			lazygit = { enabled = not vim.g.is_ssh }, -- Disable git UI in SSH
 			bufdelete = { enabled = true },
 			terminal = { enabled = true },
 		},
@@ -477,10 +489,14 @@ require("lazy").setup({
 	-- Git diff view
 	{ "sindrets/diffview.nvim" },
 
-	-- Copilot
-	{ "github/copilot.vim" },
+	-- Copilot (disabled in SSH - network dependent)
+	{
+		"github/copilot.vim",
+		enabled = not vim.g.is_ssh,
+	},
 	{
 		"CopilotC-Nvim/CopilotChat.nvim",
+		enabled = not vim.g.is_ssh,
 		dependencies = {
 			{ "github/copilot.vim" },
 			{ "nvim-lua/plenary.nvim", branch = "master" },
@@ -504,9 +520,10 @@ require("lazy").setup({
 		},
 	},
 
-	-- Markdown rendering
+	-- Markdown rendering (disabled in SSH - heavy rendering)
 	{
 		"MeanderingProgrammer/render-markdown.nvim",
+		enabled = not vim.g.is_ssh,
 		dependencies = { "nvim-treesitter/nvim-treesitter", "echasnovski/mini.nvim" },
 		opts = {},
 	},
@@ -542,7 +559,40 @@ require("lazy").setup({
 local lsp_configs = {}
 for _, f in pairs(vim.api.nvim_get_runtime_file("lsp/*.lua", true)) do
 	local server_name = vim.fn.fnamemodify(f, ":t:r")
-	table.insert(lsp_configs, server_name)
+
+	-- Skip SSH-specific configs when not in SSH
+	if server_name:match("-ssh$") then
+		if vim.g.is_ssh then
+			-- In SSH mode, use SSH config and skip regular version
+			local base_name = server_name:gsub("-ssh$", "")
+			-- Remove regular version if already added
+			for i, config in ipairs(lsp_configs) do
+				if config == base_name then
+					table.remove(lsp_configs, i)
+					break
+				end
+			end
+			table.insert(lsp_configs, server_name)
+		end
+		-- Skip adding SSH config when not in SSH mode
+	else
+		-- Only add regular config if not in SSH mode or no SSH version exists
+		if not vim.g.is_ssh then
+			table.insert(lsp_configs, server_name)
+		else
+			-- Check if SSH version exists
+			local ssh_version = server_name .. "-ssh"
+			local has_ssh_version = false
+			for _, file in ipairs(vim.api.nvim_get_runtime_file("lsp/" .. ssh_version .. ".lua", true)) do
+				has_ssh_version = true
+				break
+			end
+			-- If no SSH version, use regular version
+			if not has_ssh_version then
+				table.insert(lsp_configs, server_name)
+			end
+		end
+	end
 end
 vim.lsp.enable(lsp_configs)
 

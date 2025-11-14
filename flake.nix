@@ -634,6 +634,11 @@ SHOW_KEY
 
                           # Termux-specific
                           export TMPDIR=/data/data/com.termux.nix/files/usr/tmp
+
+                          # SSH session optimization - set TERM for better compatibility
+                          if [ -n "$SSH_CONNECTION" ] || [ -n "$SSH_CLIENT" ] || [ -n "$SSH_TTY" ]; then
+                            export TERM=xterm-256color
+                          fi
                         '';
                         shellAliases = {
                           ll = "ls -l";
