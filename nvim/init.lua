@@ -1,10 +1,44 @@
 -- ============================================================================
 -- SSH DETECTION (must be first!)
 -- ============================================================================
-require("ssh-detect").setup()
+local function is_ssh()
+	return os.getenv("SSH_CONNECTION") ~= nil
+		or os.getenv("SSH_CLIENT") ~= nil
+		or os.getenv("SSH_TTY") ~= nil
+end
+
+vim.g.is_ssh = is_ssh()
+
+if vim.g.is_ssh then
+	vim.notify("SSH session detected - applying performance optimizations", vim.log.levels.INFO)
+end
 
 -- Debug helper: Use :DebugEnv to check environment variables
-require("debug-env")
+vim.api.nvim_create_user_command("DebugEnv", function()
+	print("=== SSH/Mosh Detection Debug ===")
+	print("")
+	print("SSH Detection:")
+	print("  SSH_CONNECTION: " .. (os.getenv("SSH_CONNECTION") or "not set"))
+	print("  SSH_CLIENT: " .. (os.getenv("SSH_CLIENT") or "not set"))
+	print("  SSH_TTY: " .. (os.getenv("SSH_TTY") or "not set"))
+	print("")
+	print("Terminal Info:")
+	print("  TERM: " .. (os.getenv("TERM") or "not set"))
+	print("  COLORTERM: " .. (os.getenv("COLORTERM") or "not set"))
+	print("")
+	print("Locale Info:")
+	print("  LC_ALL: " .. (os.getenv("LC_ALL") or "not set"))
+	print("  LANG: " .. (os.getenv("LANG") or "not set"))
+	print("")
+	print("Detection Results:")
+	print("  is_ssh: " .. tostring(vim.g.is_ssh))
+	print("")
+	print("Neovim Color Settings:")
+	print("  termguicolors: " .. tostring(vim.opt.termguicolors:get()))
+	print("  encoding: " .. vim.opt.encoding:get())
+	print("  has('termguicolors'): " .. tostring(vim.fn.has("termguicolors")))
+	print("")
+end, {})
 
 -- ============================================================================
 -- BASIC SETTINGS
@@ -42,9 +76,85 @@ vim.schedule(function()
 end)
 
 -- ============================================================================
--- SSH OPTIMIZATIONS (Apply after basic settings)
+-- PERFORMANCE OPTIMIZATIONS (Always applied)
 -- ============================================================================
-require("config.ssh-optimizations").setup()
+
+-- Faster update time (default is 4000ms, we use 300ms for better responsiveness)
+vim.opt.updatetime = 300
+
+-- Faster timeout for mapped sequences (default is 1000ms)
+vim.opt.timeoutlen = 300
+
+-- Disable swap files (faster, but no crash recovery)
+vim.opt.swapfile = false
+
+-- Keep undo history in a file instead of memory
+vim.opt.undofile = true
+vim.opt.undolevels = 10000
+
+-- Faster terminal connection
+vim.opt.ttyfast = true
+
+-- Better completion experience
+vim.opt.completeopt = "menu,menuone,noselect"
+
+-- Smaller command line height (less redraw)
+vim.opt.cmdheight = 1
+
+-- Don't show mode in command line (we have statusline)
+vim.opt.showmode = false
+
+-- Limit syntax highlighting in long lines
+vim.opt.synmaxcol = 300 -- Only highlight first 300 columns
+
+-- Limit number of items in completion menu
+vim.opt.pumheight = 15 -- Max 15 items in popup menu
+
+-- Don't scan included files for completion (faster)
+vim.opt.complete:remove("i")
+
+-- Disable providers we don't use (faster startup)
+vim.g.loaded_perl_provider = 0
+vim.g.loaded_ruby_provider = 0
+vim.g.loaded_node_provider = 0
+vim.g.loaded_python3_provider = 0
+
+vim.notify("Performance optimizations applied", vim.log.levels.INFO)
+
+-- ============================================================================
+-- SSH OPTIMIZATIONS (Only for SSH sessions)
+-- ============================================================================
+
+if vim.g.is_ssh then
+	-- Disable cursorline over SSH (causes constant redraws)
+	vim.opt.cursorline = false
+
+	-- Disable mouse support over SSH (reduces overhead)
+	vim.opt.mouse = ""
+
+	-- Increase update time for SSH (reduce network traffic)
+	vim.opt.updatetime = 1000
+
+	-- Disable list characters over SSH
+	vim.opt.list = false
+
+	-- Disable cursor shape changes (causes lag over network)
+	vim.opt.guicursor = ""
+
+	-- Disable clipboard sync over SSH (very slow)
+	vim.schedule(function()
+		vim.opt.clipboard = ""
+	end)
+
+	-- Reduce diagnostic verbosity over SSH
+	vim.diagnostic.config({
+		virtual_text = false,
+		update_in_insert = false,
+		severity_sort = true,
+	})
+
+	vim.notify("SSH optimizations applied", vim.log.levels.INFO)
+end
 
 -- ============================================================================
 -- KEYMAPS
@@ -235,6 +345,7 @@ require("lazy").setup({
 			completion = {
 				menu = {
 					min_width = 25,
+					max_height = 15, -- Limit completion menu height for performance
 					border = "rounded",
 					draw = {
 						columns = { { "label", "label_description", gap = 4 }, { "kind_icon", gap = 1, "kind" } },
@@ -242,7 +353,7 @@ require("lazy").setup({
 				},
 				documentation = {
 					auto_show = true,
-					auto_show_delay_ms = 200,
+					auto_show_delay_ms = 300, -- Slightly delay to reduce overhead
 					window = {
 						border = "rounded",
 						winhighlight = "FloatBorder:boolean",
@@ -296,6 +407,13 @@ require("lazy").setup({
 		opts = {
 			notify_on_error = false,
 			format_on_save = function(bufnr)
+				-- Disable format on save for very large files
+				local max_filesize = 100 * 1024 -- 100 KB
+				local ok, stats = pcall(vim.loop.fs_stat, vim.api.nvim_buf_get_name(bufnr))
+				if ok and stats and stats.size > max_filesize then
+					return
+				end
+
 				local disable_filetypes = { c = true, cpp = true }
 				local lsp_format_opt = disable_filetypes[vim.bo[bufnr].filetype] and "never" or "fallback"
 				return {
@@ -393,6 +511,14 @@ require("lazy").setup({
 			highlight = {
 				enable = true,
 				additional_vim_regex_highlighting = { "ruby" },
+				disable = function(lang, buf)
+					-- Disable for very large files
+					local max_filesize = 100 * 1024 -- 100 KB
+					local ok, stats = pcall(vim.loop.fs_stat, vim.api.nvim_buf_get_name(buf))
+					if ok and stats and stats.size > max_filesize then
+						return true
+					end
+				end,
 			},
 			indent = { enable = true, disable = { "ruby" } },
 		},
@@ -599,11 +725,16 @@ for _, f in pairs(vim.api.nvim_get_runtime_file("lsp/*.lua", true)) do
 end
 vim.lsp.enable(lsp_configs)
 
--- Diagnostic configuration
+-- Diagnostic configuration (optimized for performance)
 vim.diagnostic.config({
-	virtual_text = true,
+	virtual_text = {
+		spacing = 4,
+		prefix = "●",
+		-- Only show diagnostics for current line
+		source = "if_many",
+	},
 	underline = true,
-	update_in_insert = false,
+	update_in_insert = false, -- Don't update while typing
 	severity_sort = true,
 	float = {
 		border = "rounded",
@@ -649,35 +780,37 @@ vim.api.nvim_create_autocmd("LspAttach", {
 			end
 		end
 
-		local client = vim.lsp.get_client_by_id(event.data.client_id)
-		if
-			client
-			and client_supports_method(
-				client,
-				vim.lsp.protocol.Methods.textDocument_documentHighlight,
-				event.buf
-			)
-		then
-			local highlight_augroup = vim.api.nvim_create_augroup("lsp-highlight", { clear = false })
-
-			vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
-				buffer = event.buf,
-				group = highlight_augroup,
-				callback = vim.lsp.buf.document_highlight,
-			})
-			vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
-				buffer = event.buf,
-				group = highlight_augroup,
-				callback = vim.lsp.buf.clear_references,
-			})
-
-			vim.api.nvim_create_autocmd("LspDetach", {
-				group = vim.api.nvim_create_augroup("lsp-detach", { clear = true }),
-				callback = function(event2)
-					vim.lsp.buf.clear_references()
-					vim.api.nvim_clear_autocmds({ group = "lsp-highlight", buffer = event2.buf })
-				end,
-			})
-		end
+		-- Disable document highlight for better performance
+		-- (Can be re-enabled if needed, but causes lag on cursor movement)
+		-- local client = vim.lsp.get_client_by_id(event.data.client_id)
+		-- if
+		-- 	client
+		-- 	and client_supports_method(
+		-- 		client,
+		-- 		vim.lsp.protocol.Methods.textDocument_documentHighlight,
+		-- 		event.buf
+		-- 	)
+		-- then
+		-- 	local highlight_augroup = vim.api.nvim_create_augroup("lsp-highlight", { clear = false })
+		--
+		-- 	vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
+		-- 		buffer = event.buf,
+		-- 		group = highlight_augroup,
+		-- 		callback = vim.lsp.buf.document_highlight,
+		-- 	})
+		-- 	vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+		-- 		buffer = event.buf,
+		-- 		group = highlight_augroup,
+		-- 		callback = vim.lsp.buf.clear_references,
+		-- 	})
+		--
+		-- 	vim.api.nvim_create_autocmd("LspDetach", {
+		-- 		group = vim.api.nvim_create_augroup("lsp-detach", { clear = true }),
+		-- 		callback = function(event2)
+		-- 			vim.lsp.buf.clear_references()
+		-- 			vim.api.nvim_clear_autocmds({ group = "lsp-highlight", buffer = event2.buf })
+		-- 		end,
+		-- 	})
+		-- end
 	end,
 })
