@@ -413,9 +413,22 @@
 Port 8022
 ListenAddress 0.0.0.0
 
-# Host keys (Ed25519 and ECDSA - no RSA)
+# Host keys (Ed25519 only for speed - Ed25519 is faster than ECDSA)
 HostKey ~/.ssh/ssh_host_ed25519_key
-HostKey ~/.ssh/ssh_host_ecdsa_key
+
+# Performance optimizations
+# Use faster ciphers (chacha20 is optimized for mobile CPUs)
+Ciphers chacha20-poly1305@openssh.com,aes128-gcm@openssh.com,aes128-ctr
+# Use faster MAC algorithms
+MACs hmac-sha2-256-etm@openssh.com,hmac-sha2-256
+# Use faster key exchange algorithms
+KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group14-sha256
+# Disable compression (uses CPU, adds latency on fast networks)
+Compression no
+# Reduce DNS lookups
+UseDNS no
+# Faster login
+GSSAPIAuthentication no
 
 # Authentication (key-based only for security)
 PermitRootLogin no

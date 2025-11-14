@@ -61,13 +61,31 @@
 # Connect
 ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@<android-ip>
 
-# Optional: Add to ~/.ssh/config for easier access
+# Optional: Add to ~/.ssh/config for faster, easier access
 cat >> ~/.ssh/config << 'EOF'
 Host android
     HostName <android-ip>
     Port 8022
     User nix-on-droid
     IdentityFile ~/.ssh/android_client_key
+
+    # Performance optimizations (match server config)
+    Ciphers chacha20-poly1305@openssh.com,aes128-gcm@openssh.com,aes128-ctr
+    MACs hmac-sha2-256-etm@openssh.com,hmac-sha2-256
+    KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org
+    Compression no
+
+    # Connection persistence (reuse connections)
+    ControlMaster auto
+    ControlPath ~/.ssh/control-%r@%h:%p
+    ControlPersist 10m
+
+    # Keep connection alive
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+
+    # Faster login
+    GSSAPIAuthentication no
 EOF
 
 # Then just use:
