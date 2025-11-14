@@ -30,14 +30,13 @@ function M.setup()
 	-- Always apply color fixes for SSH/Mosh sessions
 	-- (Mosh detection might fail, so we apply fixes for all SSH)
 	if vim.g.is_ssh or vim.g.is_mosh then
-		-- Force 256 color support (safe for both SSH and Mosh)
-		vim.opt.termguicolors = false -- Disable true color, use 256 colors
-		vim.opt.t_Co = 256
-
-		-- Ensure TERM is set properly
+		-- Ensure TERM is set properly FIRST (before Neovim reads it)
 		if vim.env.TERM ~= "xterm-256color" and vim.env.TERM ~= "screen-256color" then
 			vim.env.TERM = "xterm-256color"
 		end
+
+		-- Force 256 color support (safe for both SSH and Mosh)
+		vim.opt.termguicolors = false -- Disable true color, use 256 colors
 
 		-- Set encoding for proper icon/unicode support
 		vim.opt.encoding = "utf-8"

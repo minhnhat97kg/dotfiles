@@ -124,6 +124,9 @@
 
           # Utilities
           fx # JSON viewer
+
+          # AWS
+          awscli2
         ];
 
       # Shared home-manager configuration

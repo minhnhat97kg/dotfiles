@@ -41,8 +41,8 @@ function M.show_env()
 	-- Neovim settings
 	print("Neovim Color Settings:")
 	print("  termguicolors: " .. tostring(vim.opt.termguicolors:get()))
-	print("  t_Co: " .. tostring(vim.opt.t_Co:get()))
 	print("  encoding: " .. vim.opt.encoding:get())
+	print("  has('termguicolors'): " .. tostring(vim.fn.has("termguicolors")))
 	print("")
 end
 
