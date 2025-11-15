@@ -138,7 +138,7 @@
 
       # Shared home-manager configuration
       sharedHomeConfig =
-        { pkgs, ... }:
+        { pkgs, lib, ... }:
         {
           home.stateVersion = "24.05";
 
@@ -189,17 +189,19 @@
 
             zsh = {
               enable = true;
-              initExtraBeforeCompInit = ''
-                export GOPATH=$HOME/go
-                export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
-              '';
-              initExtra = ''
-                # Load aliases from YAML config if available
-                ALIASES_SCRIPT="$HOME/.config/dotfiles/scripts/load-aliases.sh"
-                if [ -f "$ALIASES_SCRIPT" ]; then
-                  eval "$($ALIASES_SCRIPT)"
-                fi
-              '';
+              initContent = lib.mkMerge [
+                (lib.mkOrder 550 ''
+                  export GOPATH=$HOME/go
+                  export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
+                '')
+                ''
+                  # Load aliases from YAML config if available
+                  ALIASES_SCRIPT="$HOME/.config/dotfiles/scripts/load-aliases.sh"
+                  if [ -f "$ALIASES_SCRIPT" ]; then
+                    eval "$($ALIASES_SCRIPT)"
+                  fi
+                ''
+              ];
               shellAliases = {
                 ll = "ls -l";
                 lg = "lazygit";
@@ -323,7 +325,7 @@
             home-manager.users.${username} =
               { pkgs, lib, config, ... }:
               nixpkgs.lib.mkMerge [
-                (sharedHomeConfig { inherit pkgs; })
+                (sharedHomeConfig { inherit pkgs lib; })
                 {
                   home.username = username;
                   home.homeDirectory = "/Users/${username}";
@@ -710,7 +712,7 @@ SHOW_KEY
                 backupFileExtension = "hm-bak";
                 useGlobalPkgs = true;
                 config =
-                  { config, pkgs, ... }:
+                  { config, pkgs, lib, ... }:
                   {
                     # Note: home.username and home.homeDirectory are automatically
                     # managed by nix-on-droid and should not be set here
@@ -765,7 +767,7 @@ SHOW_KEY
 
                       zsh = {
                         enable = true;
-                        initExtraBeforeCompInit = ''
+                        initContent = lib.mkOrder 550 ''
                           export GOPATH=$HOME/go
                           export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 
