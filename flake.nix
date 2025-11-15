@@ -125,6 +125,7 @@
           # File & Text Processing
           delta # Better git diff (used in git config)
           diff-so-fancy # Git diff highlighting
+          yq-go # YAML processor (used by scripts)
 
           # Monitoring & System
           # watchman # File watching
