@@ -204,11 +204,6 @@
                 ll = "ls -l";
                 lg = "lazygit";
                 e = "nvim";
-
-                # AWS profile switchers
-                aws-buuuk = "export AWS_PROFILE=buuuk-dev";
-                aws-jpas = "export AWS_PROFILE=jpas-uat-dev";
-                aws-fl = "export AWS_PROFILE=fl-dev";
               };
               oh-my-zsh = {
                 enable = true;
@@ -231,8 +226,8 @@
             includes = [
               { path = "~/.config/git/gitconfig"; }
               {
-                condition = "gitdir:~/buuuk/**";
-                path = "~/.config/git/buuuk.gitconfig";
+                condition = "gitdir:~/work/**";
+                path = "~/.config/git/work.gitconfig";
               }
               {
                 condition = "gitdir:~/projects/**";
@@ -242,7 +237,6 @@
           };
 
           home.file.".config/git/gitconfig".source = ./git/gitconfig;
-          home.file.".config/git/buuuk.gitconfig".source = ./git/buuuk.gitconfig;
           home.file.".config/git/minhnhat97kg.gitconfig".source = ./git/minhnhat97kg.gitconfig;
           home.file.".gitignore_global".source = ./git/gitignore_global;
 
@@ -370,22 +364,29 @@
                     recursive = true;
                   };
 
-                  # AWS configuration
-                  home.file.".aws/config".source = ./secrets/aws-config;
-
-                  # Decrypt AWS credentials on activation
-                  home.activation.decryptAwsCredentials =
+                  # Decrypt AWS configuration on activation
+                  home.activation.decryptAwsConfig =
                     let
-                      secretsFile = ./secrets/aws-credentials;
+                      awsConfigFile = ./secrets/aws-config.enc;
+                      awsCredsFile = ./secrets/aws-credentials;
                       ageKey = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
                     in
                     lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-                      if [ -f ${secretsFile} ] && [ -f ${ageKey} ]; then
-                        echo "Decrypting AWS credentials..."
+                      if [ -f ${ageKey} ]; then
+                        echo "Decrypting AWS configuration..."
                         $DRY_RUN_CMD mkdir -p $HOME/.aws
-                        ${pkgs.age}/bin/age --decrypt -i ${ageKey} ${secretsFile} > $HOME/.aws/credentials
-                        $DRY_RUN_CMD chmod 600 $HOME/.aws/credentials
-                        echo "✓ AWS credentials decrypted"
+
+                        if [ -f ${awsConfigFile} ]; then
+                          ${pkgs.age}/bin/age --decrypt -i ${ageKey} ${awsConfigFile} > $HOME/.aws/config
+                          $DRY_RUN_CMD chmod 644 $HOME/.aws/config
+                          echo "  ✓ AWS config decrypted"
+                        fi
+
+                        if [ -f ${awsCredsFile} ]; then
+                          ${pkgs.age}/bin/age --decrypt -i ${ageKey} ${awsCredsFile} > $HOME/.aws/credentials
+                          $DRY_RUN_CMD chmod 600 $HOME/.aws/credentials
+                          echo "  ✓ AWS credentials decrypted"
+                        fi
                       fi
                     '';
 
@@ -410,6 +411,22 @@
                         done
 
                         echo "✓ SSH keys decrypted"
+                      fi
+                    '';
+
+                  # Decrypt git work config on activation
+                  home.activation.decryptGitWorkConfig =
+                    let
+                      secretsFile = ./secrets/git/work.gitconfig.enc;
+                      ageKey = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
+                    in
+                    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+                      if [ -f ${secretsFile} ] && [ -f ${ageKey} ]; then
+                        echo "Decrypting git work config..."
+                        $DRY_RUN_CMD mkdir -p $HOME/.config/git
+                        ${pkgs.age}/bin/age --decrypt -i ${ageKey} ${secretsFile} > $HOME/.config/git/work.gitconfig
+                        $DRY_RUN_CMD chmod 644 $HOME/.config/git/work.gitconfig
+                        echo "✓ Git work config decrypted"
                       fi
                     '';
 

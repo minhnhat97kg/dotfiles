@@ -44,9 +44,10 @@ modules.old/
 
 # Secrets - NEVER COMMIT unencrypted files or age keys
 secrets/**/*
-!secrets/aws-config
+!secrets/aws-config.enc
 !secrets/aws-credentials
 !secrets/ssh/*.enc
+!secrets/git/*.enc
 !secrets/README.md
 *.tmp
 
@@ -63,3 +64,4 @@ fish/fishd.*
 karabiner/automatic_backups/
 htop/htoprc.bak
 btop/btop.log
+lazygit/state.yml

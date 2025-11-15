@@ -1,7 +1,0 @@
-[user]
-  email = nhat@buuuk.com
-  name = Nhat Huynh
-
-[core]
-  excludesfile = ~/.gitignore_global
-  sshCommand = "ssh -i ~/.ssh/id_ed25519"
