@@ -31,13 +31,16 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
-# Get age private key from config
-AGE_KEY=$($YQ_CMD eval '.age.private_key' "$CONFIG_FILE")
+# Get age private key - use environment variable if set, otherwise read from config
+if [ -z "${AGE_KEY:-}" ]; then
+    AGE_KEY=$($YQ_CMD eval '.age.private_key' "$CONFIG_FILE")
+fi
 AGE_KEY="${AGE_KEY/#\~/$HOME}"
 
 if [ ! -f "$AGE_KEY" ]; then
     echo "Error: Age private key not found: $AGE_KEY"
     echo "Please ensure your age key exists at this location"
+    echo "Or set AGE_KEY environment variable: export AGE_KEY=/path/to/key.txt"
     exit 1
 fi
 

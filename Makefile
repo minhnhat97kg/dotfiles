@@ -1,174 +1,102 @@
-.PHONY: help install build switch decrypt-all decrypt-aws decrypt-ssh encrypt-aws encrypt-ssh test-decrypt clean
-.PHONY: macos-install macos-build macos-switch android-install android-build android-switch
-.PHONY: check update format show platform generate-key
+.PHONY: help install build switch decrypt encrypt test clean check update format
 
-# Configuration
-AGE_KEY := ~/.config/sops/age/keys.txt
+# Configuration - can override via: make decrypt AGE_KEY=/path/to/key.txt
+AGE_KEY ?= ~/.config/sops/age/keys.txt
 AGE_PUBKEY := age1h7y2etdv5r0nclaaavral84gcdd2kvvcu2h8yes3e3k3fcp03fzq306yas
-DOTFILES := $(shell pwd)
 
 # Platform detection
-UNAME := $(shell uname -s)
-ifeq ($(UNAME),Darwin)
-    PLATFORM := macos
-else ifeq ($(UNAME),Linux)
-    ifeq ($(shell test -d /data/data/com.termux.nix && echo 1),1)
-        PLATFORM := android
-    else
-        PLATFORM := linux
-    endif
-else
-    PLATFORM := unknown
-endif
+PLATFORM := $(shell uname -s | sed 's/Darwin/macos/' | sed 's/Linux/android/' )
 
-help: ## Show this help message
-	@echo "╔════════════════════════════════════════════════════════════════╗"
-	@echo "║              Dotfiles Management - Multi-Platform              ║"
-	@echo "╚════════════════════════════════════════════════════════════════╝"
+help: ## Show available commands
+	@echo "Dotfiles Management (Platform: $(PLATFORM))"
 	@echo ""
-	@echo "Current platform: $(PLATFORM)"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 	@echo ""
-	@echo "Usage: make [target]"
-	@echo ""
-	@echo "Common Targets:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | grep -v "macOS\|Android" | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
-	@echo ""
-	@echo "macOS Specific:"
-	@grep -E '^macos-[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
-	@echo ""
-	@echo "Android Specific:"
-	@grep -E '^android-[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo "Options:"
+	@echo "  AGE_KEY=/path/to/key.txt  Override age key location"
 
-# Platform-agnostic targets
-install: ## Auto-detect platform and install
+# Main targets
+install: decrypt ## Decrypt and install configuration
 ifeq ($(PLATFORM),macos)
-	@$(MAKE) macos-install
-else ifeq ($(PLATFORM),android)
-	@$(MAKE) android-install
-else
-	@echo "❌ Unknown platform: $(PLATFORM)"
-	@exit 1
-endif
-
-build: ## Auto-detect platform and build
-ifeq ($(PLATFORM),macos)
-	@$(MAKE) macos-build
-else ifeq ($(PLATFORM),android)
-	@$(MAKE) android-build
-else
-	@echo "❌ Unknown platform: $(PLATFORM)"
-	@exit 1
-endif
-
-switch: ## Auto-detect platform, decrypt secrets and switch
-ifeq ($(PLATFORM),macos)
-	@$(MAKE) macos-switch
-else ifeq ($(PLATFORM),android)
-	@$(MAKE) android-switch
-else
-	@echo "❌ Unknown platform: $(PLATFORM)"
-	@exit 1
-endif
-
-# macOS specific targets
-macos-install: ## macOS: Install nix-darwin configuration
-	@echo "📱 Installing nix-darwin configuration..."
 	darwin-rebuild switch --flake .
+else
+	nix-on-droid switch --flake .
+endif
 
-macos-build: ## macOS: Build nix-darwin configuration (without activation)
-	@echo "🔨 Building nix-darwin configuration..."
+build: ## Build configuration without installing
+ifeq ($(PLATFORM),macos)
 	darwin-rebuild build --flake .
-
-macos-switch: decrypt-all ## macOS: Decrypt secrets and switch configuration
-	@echo "🔄 Switching nix-darwin configuration..."
-	darwin-rebuild switch --flake .
-
-# Android specific targets
-android-install: ## Android: Install nix-on-droid configuration
-	@echo "🤖 Installing nix-on-droid configuration..."
-	nix-on-droid switch --flake .
-
-android-build: ## Android: Build nix-on-droid configuration (without activation)
-	@echo "🔨 Building nix-on-droid configuration..."
+else
 	nix-on-droid build --flake .
+endif
 
-android-switch: decrypt-all ## Android: Decrypt secrets and switch configuration
-	@echo "🔄 Switching nix-on-droid configuration..."
-	nix-on-droid switch --flake .
+switch: decrypt install ## Decrypt secrets and switch configuration
 
-# Decryption targets (config-driven)
-decrypt-all: ## Decrypt all secrets based on secrets.yaml
+decrypt: ## Decrypt all secrets (use AGE_KEY=/path to override)
+	@if [ ! -f "$(AGE_KEY)" ]; then \
+		echo "❌ Age key not found at: $(AGE_KEY)"; \
+		echo "   Generate one with: make gen-key"; \
+		echo "   Or specify: make decrypt AGE_KEY=/path/to/key.txt"; \
+		exit 1; \
+	fi
 	@./scripts/decrypt-secrets.sh
 
-# Encryption targets (config-driven)
-encrypt-all: ## Encrypt all secrets based on secrets.yaml
+encrypt: ## Encrypt all secrets (use AGE_KEY=/path to override)
+	@if [ ! -f "$(AGE_KEY)" ]; then \
+		echo "❌ Age key not found at: $(AGE_KEY)"; \
+		exit 1; \
+	fi
 	@./scripts/encrypt-secrets.sh
 
-# Legacy individual targets (kept for backwards compatibility)
-decrypt-aws: ## Decrypt AWS credentials (uses config)
-	@echo "Note: Using config-driven decrypt. Run 'make decrypt-all' for all secrets."
-	@./scripts/decrypt-secrets.sh
-
-decrypt-ssh: ## Decrypt SSH keys (uses config)
-	@echo "Note: Using config-driven decrypt. Run 'make decrypt-all' for all secrets."
-	@./scripts/decrypt-secrets.sh
-
-encrypt-aws: ## Encrypt AWS credentials (uses config)
-	@echo "Note: Using config-driven encrypt. Run 'make encrypt-all' for all secrets."
-	@./scripts/encrypt-secrets.sh
-
-encrypt-ssh: ## Encrypt SSH keys (uses config)
-	@echo "Note: Using config-driven encrypt. Run 'make encrypt-all' for all secrets."
-	@./scripts/encrypt-secrets.sh
-
-# Testing
-test-decrypt: ## Test decryption to temporary directory
-	@echo "Testing decryption..."
+test: ## Test decryption in /tmp
 	@rm -rf /tmp/dotfiles-test
 	@mkdir -p /tmp/dotfiles-test/.config/sops/age
 	@cp $(AGE_KEY) /tmp/dotfiles-test/.config/sops/age/
 	@HOME=/tmp/dotfiles-test ./scripts/decrypt-secrets.sh
-	@echo ""
-	@echo "✓ Test successful! Files decrypted to /tmp/dotfiles-test"
-	@ls -la /tmp/dotfiles-test/.aws/ 2>/dev/null || true
-	@ls -la /tmp/dotfiles-test/.ssh/ 2>/dev/null || true
+	@echo "✓ Test complete: /tmp/dotfiles-test"
 
-# Cleanup
 clean: ## Clean build artifacts
-	@echo "Cleaning build artifacts..."
-	@rm -rf result result-*
-	@rm -rf /tmp/dotfiles-test
-	@echo "✓ Cleaned"
+	@rm -rf result result-* /tmp/dotfiles-test
 
-# Generate new age key
-generate-key: ## Generate a new age encryption key
-	@echo "Generating new age key..."
-	@mkdir -p ~/.config/sops/age
-	@age-keygen -o ~/.config/sops/age/keys.txt
-	@echo ""
-	@echo "✓ New age key generated at: ~/.config/sops/age/keys.txt"
-	@echo ""
-	@echo "⚠️  IMPORTANT: Update AGE_PUBKEY in Makefile with the public key shown above!"
-	@echo "⚠️  IMPORTANT: Re-encrypt all secrets with the new key!"
+gen-key: ## Generate or import age encryption key
+	@echo "Choose an option:"
+	@echo "  1) Generate new age key"
+	@echo "  2) Import existing age key"
+	@read -p "Enter choice [1/2]: " choice; \
+	mkdir -p ~/.config/sops/age; \
+	if [ "$$choice" = "1" ]; then \
+		age-keygen -o ~/.config/sops/age/keys.txt; \
+		echo ""; \
+		echo "⚠️  Update AGE_PUBKEY in Makefile with the public key shown above!"; \
+		echo "⚠️  Re-encrypt all secrets with: make encrypt"; \
+	elif [ "$$choice" = "2" ]; then \
+		echo ""; \
+		echo "Paste your age private key (it should start with 'AGE-SECRET-KEY-'):"; \
+		read -r age_key; \
+		echo "$$age_key" > ~/.config/sops/age/keys.txt; \
+		chmod 600 ~/.config/sops/age/keys.txt; \
+		echo ""; \
+		echo "✓ Age key saved to: ~/.config/sops/age/keys.txt"; \
+		echo ""; \
+		echo "Now extracting public key..."; \
+		pubkey=$$(age-keygen -y ~/.config/sops/age/keys.txt 2>/dev/null || echo ""); \
+		if [ -n "$$pubkey" ]; then \
+			echo "Public key: $$pubkey"; \
+			echo ""; \
+			echo "⚠️  Update AGE_PUBKEY in Makefile with: $$pubkey"; \
+		else \
+			echo "⚠️  Could not extract public key. Please verify the key is valid."; \
+		fi; \
+	else \
+		echo "Invalid choice"; \
+		exit 1; \
+	fi
 
-# Flake management
-check: ## Check flake configuration for errors
-	@echo "🔍 Checking flake configuration..."
+check: ## Check flake configuration
 	nix flake check
 
 update: ## Update flake inputs
-	@echo "⬆️  Updating flake inputs..."
 	nix flake update
 
 format: ## Format nix files
-	@echo "✨ Formatting nix files..."
 	nix fmt
-
-show: ## Show flake outputs
-	@echo "📋 Flake outputs:"
-	@nix flake show
-
-# Platform info
-platform: ## Show detected platform
-	@echo "Platform: $(PLATFORM)"
-	@echo "System: $(UNAME)"
