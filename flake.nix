@@ -193,10 +193,22 @@
                 export GOPATH=$HOME/go
                 export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
               '';
+              initExtra = ''
+                # Load aliases from YAML config if available
+                ALIASES_SCRIPT="$HOME/.config/dotfiles/scripts/load-aliases.sh"
+                if [ -f "$ALIASES_SCRIPT" ]; then
+                  eval "$($ALIASES_SCRIPT)"
+                fi
+              '';
               shellAliases = {
                 ll = "ls -l";
                 lg = "lazygit";
                 e = "nvim";
+
+                # AWS profile switchers
+                aws-buuuk = "export AWS_PROFILE=buuuk-dev";
+                aws-jpas = "export AWS_PROFILE=jpas-uat-dev";
+                aws-fl = "export AWS_PROFILE=fl-dev";
               };
               oh-my-zsh = {
                 enable = true;
@@ -233,6 +245,12 @@
           home.file.".config/git/buuuk.gitconfig".source = ./git/buuuk.gitconfig;
           home.file.".config/git/minhnhat97kg.gitconfig".source = ./git/minhnhat97kg.gitconfig;
           home.file.".gitignore_global".source = ./git/gitignore_global;
+
+          # Shell aliases script
+          home.file.".config/dotfiles/scripts/load-aliases.sh" = {
+            source = ./scripts/load-aliases.sh;
+            executable = true;
+          };
         };
     in
     {
@@ -321,39 +339,14 @@
                   home.file.".config/zellij/config.kdl".source = ./zellij/config.kdl;
                   home.file.".config/skhd/skhdrc".source = ./skhd/skhdrc;
 
-                  # Terminal emulators
+                  # Terminal emulator (Alacritty only)
                   home.file.".config/alacritty/alacritty.toml".source = ./alacritty/alacritty.toml;
-                  home.file.".config/kitty/kitty.conf".source = ./kitty/kitty.conf;
-                  home.file.".config/iterm2/" = {
-                    source = ./iterm2;
-                    recursive = true;
-                  };
 
-                  # Shell configurations
-                  home.file.".zshrc".source = ./shell/.zshrc;
-                  home.file.".bashrc".source = ./shell/.bashrc;
-                  home.file.".profile".source = ./shell/.profile;
-                  home.file.".zprofile".source = ./shell/.zprofile;
+                  # Shell configurations (zsh managed by programs.zsh in shared config)
                   home.file.".ideavimrc".source = ./shell/.ideavimrc;
-
-                  # Fish shell
-                  home.file.".config/fish/" = {
-                    source = ./fish;
-                    recursive = true;
-                  };
 
                   # Git configuration
                   home.file.".config/git/ignore".source = ./git/ignore;
-
-                  # System monitoring
-                  home.file.".config/htop/" = {
-                    source = ./htop;
-                    recursive = true;
-                  };
-                  home.file.".config/btop/" = {
-                    source = ./btop;
-                    recursive = true;
-                  };
 
                   # Development tools
                   home.file.".config/lazygit/" = {
@@ -422,13 +415,8 @@
 
                   # macOS-specific packages
                   home.packages = with pkgs; [
-                    # Development Tools (macOS GUI)
                     alacritty # Terminal emulator
-
-                    # Hardware/Embedded Development
                     qmk # Keyboard firmware
-
-                    # Additional Tools
                     localstack # Local AWS cloud stack
                   ];
 

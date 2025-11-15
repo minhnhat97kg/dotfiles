@@ -54,6 +54,9 @@ secrets/**/*
 .config/sops/
 **/sops/age/keys.txt
 
+# Personal aliases (customize per machine)
+shell/aliases.yaml
+
 # Config-specific ignores
 fish/fish_variables
 fish/fishd.*
