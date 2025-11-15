@@ -1,4 +1,4 @@
-.PHONY: help install build switch decrypt encrypt test clean check update format
+.PHONY: help install build switch decrypt encrypt test clean check update format deps
 
 # Configuration - can override via: make decrypt AGE_KEY=/path/to/key.txt
 AGE_KEY ?= ~/.config/sops/age/keys.txt
@@ -14,6 +14,22 @@ help: ## Show available commands
 	@echo ""
 	@echo "Options:"
 	@echo "  AGE_KEY=/path/to/key.txt  Override age key location"
+
+deps: ## Install required dependencies (yq-go, age)
+	@echo "Installing dependencies..."
+	@if ! command -v yq-go &> /dev/null && ! command -v yq &> /dev/null; then \
+		echo "  Installing yq-go..."; \
+		nix-env -iA nixpkgs.yq-go; \
+	else \
+		echo "  ✓ yq already installed"; \
+	fi
+	@if ! command -v age &> /dev/null; then \
+		echo "  Installing age..."; \
+		nix-env -iA nixpkgs.age; \
+	else \
+		echo "  ✓ age already installed"; \
+	fi
+	@echo "✓ All dependencies installed"
 
 # Main targets
 install: decrypt ## Decrypt and install configuration
@@ -32,7 +48,7 @@ endif
 
 switch: decrypt install ## Decrypt secrets and switch configuration
 
-decrypt: ## Decrypt all secrets (use AGE_KEY=/path to override)
+decrypt: check-deps ## Decrypt all secrets (use AGE_KEY=/path to override)
 	@expanded_key=$$(echo "$(AGE_KEY)" | sed "s|^~|$$HOME|"); \
 	if [ ! -f "$$expanded_key" ]; then \
 		echo "❌ Age key not found at: $(AGE_KEY)"; \
@@ -42,13 +58,24 @@ decrypt: ## Decrypt all secrets (use AGE_KEY=/path to override)
 	fi
 	@AGE_KEY="$(AGE_KEY)" ./scripts/decrypt-secrets.sh
 
-encrypt: ## Encrypt all secrets (use AGE_KEY=/path to override)
+encrypt: check-deps ## Encrypt all secrets (use AGE_KEY=/path to override)
 	@expanded_key=$$(echo "$(AGE_KEY)" | sed "s|^~|$$HOME|"); \
 	if [ ! -f "$$expanded_key" ]; then \
 		echo "❌ Age key not found at: $(AGE_KEY)"; \
 		exit 1; \
 	fi
 	@AGE_KEY="$(AGE_KEY)" ./scripts/encrypt-secrets.sh
+
+# Internal target - check and auto-install dependencies
+check-deps:
+	@if ! command -v yq-go &> /dev/null && ! command -v yq &> /dev/null; then \
+		echo "⚠️  yq-go not found, installing..."; \
+		nix-env -iA nixpkgs.yq-go; \
+	fi
+	@if ! command -v age &> /dev/null; then \
+		echo "⚠️  age not found, installing..."; \
+		nix-env -iA nixpkgs.age; \
+	fi
 
 test: ## Test decryption in /tmp
 	@rm -rf /tmp/dotfiles-test
