@@ -33,26 +33,28 @@ endif
 switch: decrypt install ## Decrypt secrets and switch configuration
 
 decrypt: ## Decrypt all secrets (use AGE_KEY=/path to override)
-	@if [ ! -f "$(AGE_KEY)" ]; then \
+	@expanded_key=$$(echo "$(AGE_KEY)" | sed "s|^~|$$HOME|"); \
+	if [ ! -f "$$expanded_key" ]; then \
 		echo "❌ Age key not found at: $(AGE_KEY)"; \
 		echo "   Generate one with: make gen-key"; \
 		echo "   Or specify: make decrypt AGE_KEY=/path/to/key.txt"; \
 		exit 1; \
 	fi
-	@./scripts/decrypt-secrets.sh
+	@AGE_KEY="$(AGE_KEY)" ./scripts/decrypt-secrets.sh
 
 encrypt: ## Encrypt all secrets (use AGE_KEY=/path to override)
-	@if [ ! -f "$(AGE_KEY)" ]; then \
+	@expanded_key=$$(echo "$(AGE_KEY)" | sed "s|^~|$$HOME|"); \
+	if [ ! -f "$$expanded_key" ]; then \
 		echo "❌ Age key not found at: $(AGE_KEY)"; \
 		exit 1; \
 	fi
-	@./scripts/encrypt-secrets.sh
+	@AGE_KEY="$(AGE_KEY)" ./scripts/encrypt-secrets.sh
 
 test: ## Test decryption in /tmp
 	@rm -rf /tmp/dotfiles-test
 	@mkdir -p /tmp/dotfiles-test/.config/sops/age
 	@cp $(AGE_KEY) /tmp/dotfiles-test/.config/sops/age/
-	@HOME=/tmp/dotfiles-test ./scripts/decrypt-secrets.sh
+	@AGE_KEY=/tmp/dotfiles-test/.config/sops/age/keys.txt HOME=/tmp/dotfiles-test ./scripts/decrypt-secrets.sh
 	@echo "✓ Test complete: /tmp/dotfiles-test"
 
 clean: ## Clean build artifacts
