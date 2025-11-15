@@ -22,6 +22,12 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # sops-nix for secrets management
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   nixConfig = {
@@ -114,10 +120,11 @@
           lazydocker
 
           # Security & Auth
-          aws-vault # AWS credential manager
+          age # Encryption tool
 
           # File & Text Processing
-          # git-delta # Better git diff
+          delta # Better git diff (used in git config)
+          diff-so-fancy # Git diff highlighting
 
           # Monitoring & System
           # watchman # File watching
@@ -205,6 +212,27 @@
             source = ./nvim;
             recursive = true;
           };
+
+          # Git configuration
+          programs.git = {
+            enable = true;
+            includes = [
+              { path = "~/.config/git/gitconfig"; }
+              {
+                condition = "gitdir:~/buuuk/**";
+                path = "~/.config/git/buuuk.gitconfig";
+              }
+              {
+                condition = "gitdir:~/projects/**";
+                path = "~/.config/git/minhnhat97kg.gitconfig";
+              }
+            ];
+          };
+
+          home.file.".config/git/gitconfig".source = ./git/gitconfig;
+          home.file.".config/git/buuuk.gitconfig".source = ./git/buuuk.gitconfig;
+          home.file.".config/git/minhnhat97kg.gitconfig".source = ./git/minhnhat97kg.gitconfig;
+          home.file.".gitignore_global".source = ./git/gitignore_global;
         };
     in
     {
@@ -281,7 +309,7 @@
               inherit username;
             };
             home-manager.users.${username} =
-              { pkgs, ... }:
+              { pkgs, lib, config, ... }:
               nixpkgs.lib.mkMerge [
                 (sharedHomeConfig { inherit pkgs; })
                 {
@@ -291,6 +319,106 @@
                   # macOS-specific home files
                   home.file.".config/yabai/yabairc".source = ./yabai/yabairc;
                   home.file.".config/zellij/config.kdl".source = ./zellij/config.kdl;
+                  home.file.".config/skhd/skhdrc".source = ./skhd/skhdrc;
+
+                  # Terminal emulators
+                  home.file.".config/alacritty/alacritty.toml".source = ./alacritty/alacritty.toml;
+                  home.file.".config/kitty/kitty.conf".source = ./kitty/kitty.conf;
+                  home.file.".config/iterm2/" = {
+                    source = ./iterm2;
+                    recursive = true;
+                  };
+
+                  # Shell configurations
+                  home.file.".zshrc".source = ./shell/.zshrc;
+                  home.file.".bashrc".source = ./shell/.bashrc;
+                  home.file.".profile".source = ./shell/.profile;
+                  home.file.".zprofile".source = ./shell/.zprofile;
+                  home.file.".ideavimrc".source = ./shell/.ideavimrc;
+
+                  # Fish shell
+                  home.file.".config/fish/" = {
+                    source = ./fish;
+                    recursive = true;
+                  };
+
+                  # Git configuration
+                  home.file.".config/git/ignore".source = ./git/ignore;
+
+                  # System monitoring
+                  home.file.".config/htop/" = {
+                    source = ./htop;
+                    recursive = true;
+                  };
+                  home.file.".config/btop/" = {
+                    source = ./btop;
+                    recursive = true;
+                  };
+
+                  # Development tools
+                  home.file.".config/lazygit/" = {
+                    source = ./lazygit;
+                    recursive = true;
+                  };
+                  home.file.".config/lazydocker/" = {
+                    source = ./lazydocker;
+                    recursive = true;
+                  };
+
+                  # Keyboard customization
+                  home.file.".config/karabiner/" = {
+                    source = ./karabiner;
+                    recursive = true;
+                  };
+
+                  # Sketchybar
+                  home.file.".config/sketchybar/" = {
+                    source = ./sketchybar;
+                    recursive = true;
+                  };
+
+                  # AWS configuration
+                  home.file.".aws/config".source = ./secrets/aws-config;
+
+                  # Decrypt AWS credentials on activation
+                  home.activation.decryptAwsCredentials =
+                    let
+                      secretsFile = ./secrets/aws-credentials;
+                      ageKey = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
+                    in
+                    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+                      if [ -f ${secretsFile} ] && [ -f ${ageKey} ]; then
+                        echo "Decrypting AWS credentials..."
+                        $DRY_RUN_CMD mkdir -p $HOME/.aws
+                        ${pkgs.age}/bin/age --decrypt -i ${ageKey} ${secretsFile} > $HOME/.aws/credentials
+                        $DRY_RUN_CMD chmod 600 $HOME/.aws/credentials
+                        echo "✓ AWS credentials decrypted"
+                      fi
+                    '';
+
+                  # Decrypt SSH keys on activation
+                  home.activation.decryptSshKeys =
+                    let
+                      secretsDir = ./secrets/ssh;
+                      ageKey = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
+                    in
+                    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+                      if [ -d ${secretsDir} ] && [ -f ${ageKey} ]; then
+                        echo "Decrypting SSH keys..."
+                        $DRY_RUN_CMD mkdir -p $HOME/.ssh
+
+                        for encrypted in ${secretsDir}/*.enc; do
+                          if [ -f "$encrypted" ]; then
+                            filename=$(basename "$encrypted" .enc)
+                            echo "  → $filename"
+                            ${pkgs.age}/bin/age --decrypt -i ${ageKey} "$encrypted" > $HOME/.ssh/$filename
+                            $DRY_RUN_CMD chmod 600 $HOME/.ssh/$filename
+                          fi
+                        done
+
+                        echo "✓ SSH keys decrypted"
+                      fi
+                    '';
 
                   # macOS-specific packages
                   home.packages = with pkgs; [

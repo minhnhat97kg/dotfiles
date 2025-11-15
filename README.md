@@ -7,7 +7,7 @@ A minimal, consolidated Nix configuration supporting both **macOS** (via nix-dar
 ```
 dotfiles/
 ├── flake.nix              # Single unified configuration (all platforms)
-├── nvim/
+├── nvim/                  # Neovim editor configuration
 │   ├── init.lua          # Minimized Neovim config (630 lines)
 │   ├── lsp/              # LSP server configurations
 │   │   ├── lua_ls.lua
@@ -15,8 +15,28 @@ dotfiles/
 │   │   └── golsp.lua
 │   └── ftplugin/
 │       └── java.lua      # Java-specific settings
+├── shell/                 # Shell dotfiles
+│   ├── .zshrc            # Zsh configuration
+│   ├── .bashrc           # Bash configuration
+│   ├── .profile          # Shell profile
+│   ├── .zprofile         # Zsh profile
+│   └── .ideavimrc        # IdeaVim configuration
 ├── yabai/yabairc         # macOS window manager
+├── skhd/skhdrc           # macOS hotkey daemon
 ├── zellij/config.kdl     # Terminal multiplexer
+├── alacritty/            # Alacritty terminal emulator config
+├── kitty/                # Kitty terminal emulator config
+├── iterm2/               # iTerm2 configuration
+├── fish/                 # Fish shell configuration
+├── git/                  # Git global ignore patterns
+├── htop/                 # htop system monitor config
+├── btop/                 # btop system monitor config
+├── lazygit/              # Lazygit TUI configuration
+├── lazydocker/           # Lazydocker TUI configuration
+├── karabiner/            # Karabiner keyboard customization
+├── sketchybar/           # Sketchybar macOS status bar
+├── aws/                  # AWS CLI configuration
+├── secrets/              # Encrypted secrets (managed by sops)
 └── README.md             # This file
 ```
 
@@ -31,19 +51,32 @@ dotfiles/
 
 2. **Clone this repository**:
    ```bash
-   git clone <your-repo> ~/dotfiles
-   cd ~/dotfiles
+   git clone <your-repo> ~/projects/dotfiles
+   cd ~/projects/dotfiles
    ```
 
 3. **Apply configuration**:
    ```bash
-   nix run nix-darwin -- switch --flake .#Nathan-Macbook
+   nix run nix-darwin -- switch --flake .#Nathan-Macbook --accept-flake-config
    ```
 
 4. **Subsequent updates**:
    ```bash
    darwin-rebuild switch --flake .
+   # Or use the Makefile:
+   make darwin
    ```
+
+### What Gets Configured
+
+When you run the configuration, home-manager will automatically symlink all configs from this repo to your home directory:
+
+- **Shell configs** → `~/.zshrc`, `~/.bashrc`, `~/.profile`, etc.
+- **Terminal emulators** → `~/.config/alacritty/`, `~/.config/kitty/`, `~/.config/iterm2/`
+- **Window management** → `~/.config/yabai/`, `~/.config/skhd/`, `~/.config/sketchybar/`
+- **Development tools** → `~/.config/nvim/`, `~/.config/lazygit/`, `~/.config/lazydocker/`
+- **System monitoring** → `~/.config/htop/`, `~/.config/btop/`
+- **And more...** All configs in this repo are automatically linked!
 
 ### Android Installation (Nix-on-Droid)
 

@@ -1,46 +1,81 @@
-.PHONY: help darwin android update fmt check clean
+.PHONY: help install build switch decrypt-all decrypt-aws decrypt-ssh encrypt-aws encrypt-ssh test-decrypt clean
 
-# Default target
-help:
-	@echo "Available targets:"
-	@echo "  make darwin   - Apply macOS configuration"
-	@echo "  make android  - Apply Android configuration"
-	@echo "  make update   - Update all flake inputs"
-	@echo "  make fmt      - Format Nix files"
-	@echo "  make check    - Check flake validity"
-	@echo "  make clean    - Run garbage collection"
+# Configuration
+AGE_KEY := ~/.config/sops/age/keys.txt
+AGE_PUBKEY := age1h7y2etdv5r0nclaaavral84gcdd2kvvcu2h8yes3e3k3fcp03fzq306yas
+DOTFILES := $(shell pwd)
 
-# macOS configuration
-darwin:
-	sudo darwin-rebuild switch --flake .
+help: ## Show this help message
+	@echo "Dotfiles Management"
+	@echo ""
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Targets:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-# Android configuration (nix-on-droid)
-android:
-	nix-on-droid switch --flake .
+install: ## Install nix-darwin configuration
+	@echo "Installing nix-darwin configuration..."
+	darwin-rebuild switch --flake .
 
-# Update flake inputs
-update:
-	nix flake update
+build: ## Build nix-darwin configuration (without activation)
+	@echo "Building nix-darwin configuration..."
+	darwin-rebuild build --flake .
 
-# Format Nix code
-fmt:
-	nix fmt
+switch: decrypt-all ## Decrypt secrets and switch configuration
+	@echo "Switching nix-darwin configuration..."
+	darwin-rebuild switch --flake .
 
-# Check flake validity
-check:
-	nix flake check
+# Decryption targets (config-driven)
+decrypt-all: ## Decrypt all secrets based on secrets.yaml
+	@./scripts/decrypt-secrets.sh
 
-# Garbage collection
-clean:
-	@if command -v darwin-rebuild >/dev/null 2>&1; then \
-		echo "Running macOS garbage collection..."; \
-		nix-collect-garbage -d; \
-	elif command -v nix-on-droid >/dev/null 2>&1; then \
-		echo "Running Android garbage collection..."; \
-		nix-on-droid on-device nix-collect-garbage -d; \
-	else \
-		echo "No Nix Darwin or Nix-on-Droid detected"; \
-	fi
+# Encryption targets (config-driven)
+encrypt-all: ## Encrypt all secrets based on secrets.yaml
+	@./scripts/encrypt-secrets.sh
 
-# Default when just running 'make'
-default: help
+# Legacy individual targets (kept for backwards compatibility)
+decrypt-aws: ## Decrypt AWS credentials (uses config)
+	@echo "Note: Using config-driven decrypt. Run 'make decrypt-all' for all secrets."
+	@./scripts/decrypt-secrets.sh
+
+decrypt-ssh: ## Decrypt SSH keys (uses config)
+	@echo "Note: Using config-driven decrypt. Run 'make decrypt-all' for all secrets."
+	@./scripts/decrypt-secrets.sh
+
+encrypt-aws: ## Encrypt AWS credentials (uses config)
+	@echo "Note: Using config-driven encrypt. Run 'make encrypt-all' for all secrets."
+	@./scripts/encrypt-secrets.sh
+
+encrypt-ssh: ## Encrypt SSH keys (uses config)
+	@echo "Note: Using config-driven encrypt. Run 'make encrypt-all' for all secrets."
+	@./scripts/encrypt-secrets.sh
+
+# Testing
+test-decrypt: ## Test decryption to temporary directory
+	@echo "Testing decryption..."
+	@rm -rf /tmp/dotfiles-test
+	@mkdir -p /tmp/dotfiles-test/.config/sops/age
+	@cp $(AGE_KEY) /tmp/dotfiles-test/.config/sops/age/
+	@HOME=/tmp/dotfiles-test ./scripts/decrypt-secrets.sh
+	@echo ""
+	@echo "✓ Test successful! Files decrypted to /tmp/dotfiles-test"
+	@ls -la /tmp/dotfiles-test/.aws/ 2>/dev/null || true
+	@ls -la /tmp/dotfiles-test/.ssh/ 2>/dev/null || true
+
+# Cleanup
+clean: ## Clean build artifacts
+	@echo "Cleaning build artifacts..."
+	@rm -rf result result-*
+	@rm -rf /tmp/dotfiles-test
+	@echo "✓ Cleaned"
+
+# Generate new age key
+generate-key: ## Generate a new age encryption key
+	@echo "Generating new age key..."
+	@mkdir -p ~/.config/sops/age
+	@age-keygen -o ~/.config/sops/age/keys.txt
+	@echo ""
+	@echo "✓ New age key generated at: ~/.config/sops/age/keys.txt"
+	@echo ""
+	@echo "⚠️  IMPORTANT: Update AGE_PUBKEY in Makefile with the public key shown above!"
+	@echo "⚠️  IMPORTANT: Re-encrypt all secrets with the new key!"

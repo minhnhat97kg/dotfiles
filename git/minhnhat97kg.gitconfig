@@ -1,0 +1,7 @@
+[user]
+  email = minhnhat97kg@gmail.com
+  name = minhnhat97kg
+
+[core]
+  excludesfile = ~/.gitignore_global
+  sshCommand = "ssh -i ~/.ssh/id_minhnhat97kg"

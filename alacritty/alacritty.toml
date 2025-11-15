@@ -1,0 +1,58 @@
+# Configuration for Alacritty, the GPU-accelerated terminal emulator
+
+# Font configuration
+[font]
+# Normal (roman) font face
+normal.family = "JetBrainsMono Nerd Font"
+bold.family = "JetBrainsMono Nerd Font"
+italic.family = "JetBrainsMono Nerd Font"
+bold_italic.family = "JetBrainsMono Nerd Font"
+
+# Point size for the font
+size = 13.0
+
+# Offset is the extra space around characters. `offset.y` can be negative.
+offset = { x = 0, y = 2 }
+
+# Glyph offset determines the locations of the glyphs within their cells with
+# the default being at the bottom.
+glyph_offset = { x = 0, y = 0 }
+
+
+# Keyboard shortcuts
+[keyboard]
+bindings = [
+  # Add your custom keybindings here
+]
+
+# Mouse bindings
+[mouse]
+bindings = [
+  # Add your custom mouse bindings here
+]
+
+# Window configuration
+[window]
+
+option_as_alt="Both"
+# Window padding (pixels)
+padding = { x = 10, y = 10 }
+
+# Spread additional padding evenly around the terminal content.
+dynamic_padding = false
+
+# Decorations (None, Borderless, Full)
+decorations = "Full"
+
+
+# Allow terminal applications to change the window title.
+dynamic_title = true
+
+# Scrolling
+[scrolling]
+# Maximum number of lines in the scrollback buffer.
+history = 10000
+
+# Number of lines to scroll by when using the mouse wheel.
+multiplier = 3
+
