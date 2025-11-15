@@ -1,29 +1,100 @@
 .PHONY: help install build switch decrypt-all decrypt-aws decrypt-ssh encrypt-aws encrypt-ssh test-decrypt clean
+.PHONY: macos-install macos-build macos-switch android-install android-build android-switch
+.PHONY: check update format show platform generate-key
 
 # Configuration
 AGE_KEY := ~/.config/sops/age/keys.txt
 AGE_PUBKEY := age1h7y2etdv5r0nclaaavral84gcdd2kvvcu2h8yes3e3k3fcp03fzq306yas
 DOTFILES := $(shell pwd)
 
+# Platform detection
+UNAME := $(shell uname -s)
+ifeq ($(UNAME),Darwin)
+    PLATFORM := macos
+else ifeq ($(UNAME),Linux)
+    ifeq ($(shell test -d /data/data/com.termux.nix && echo 1),1)
+        PLATFORM := android
+    else
+        PLATFORM := linux
+    endif
+else
+    PLATFORM := unknown
+endif
+
 help: ## Show this help message
-	@echo "Dotfiles Management"
+	@echo "╔════════════════════════════════════════════════════════════════╗"
+	@echo "║              Dotfiles Management - Multi-Platform              ║"
+	@echo "╚════════════════════════════════════════════════════════════════╝"
+	@echo ""
+	@echo "Current platform: $(PLATFORM)"
 	@echo ""
 	@echo "Usage: make [target]"
 	@echo ""
-	@echo "Targets:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo "Common Targets:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | grep -v "macOS\|Android" | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "macOS Specific:"
+	@grep -E '^macos-[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "Android Specific:"
+	@grep -E '^android-[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-install: ## Install nix-darwin configuration
-	@echo "Installing nix-darwin configuration..."
+# Platform-agnostic targets
+install: ## Auto-detect platform and install
+ifeq ($(PLATFORM),macos)
+	@$(MAKE) macos-install
+else ifeq ($(PLATFORM),android)
+	@$(MAKE) android-install
+else
+	@echo "❌ Unknown platform: $(PLATFORM)"
+	@exit 1
+endif
+
+build: ## Auto-detect platform and build
+ifeq ($(PLATFORM),macos)
+	@$(MAKE) macos-build
+else ifeq ($(PLATFORM),android)
+	@$(MAKE) android-build
+else
+	@echo "❌ Unknown platform: $(PLATFORM)"
+	@exit 1
+endif
+
+switch: ## Auto-detect platform, decrypt secrets and switch
+ifeq ($(PLATFORM),macos)
+	@$(MAKE) macos-switch
+else ifeq ($(PLATFORM),android)
+	@$(MAKE) android-switch
+else
+	@echo "❌ Unknown platform: $(PLATFORM)"
+	@exit 1
+endif
+
+# macOS specific targets
+macos-install: ## macOS: Install nix-darwin configuration
+	@echo "📱 Installing nix-darwin configuration..."
 	darwin-rebuild switch --flake .
 
-build: ## Build nix-darwin configuration (without activation)
-	@echo "Building nix-darwin configuration..."
+macos-build: ## macOS: Build nix-darwin configuration (without activation)
+	@echo "🔨 Building nix-darwin configuration..."
 	darwin-rebuild build --flake .
 
-switch: decrypt-all ## Decrypt secrets and switch configuration
-	@echo "Switching nix-darwin configuration..."
+macos-switch: decrypt-all ## macOS: Decrypt secrets and switch configuration
+	@echo "🔄 Switching nix-darwin configuration..."
 	darwin-rebuild switch --flake .
+
+# Android specific targets
+android-install: ## Android: Install nix-on-droid configuration
+	@echo "🤖 Installing nix-on-droid configuration..."
+	nix-on-droid switch --flake .
+
+android-build: ## Android: Build nix-on-droid configuration (without activation)
+	@echo "🔨 Building nix-on-droid configuration..."
+	nix-on-droid build --flake .
+
+android-switch: decrypt-all ## Android: Decrypt secrets and switch configuration
+	@echo "🔄 Switching nix-on-droid configuration..."
+	nix-on-droid switch --flake .
 
 # Decryption targets (config-driven)
 decrypt-all: ## Decrypt all secrets based on secrets.yaml
@@ -79,3 +150,25 @@ generate-key: ## Generate a new age encryption key
 	@echo ""
 	@echo "⚠️  IMPORTANT: Update AGE_PUBKEY in Makefile with the public key shown above!"
 	@echo "⚠️  IMPORTANT: Re-encrypt all secrets with the new key!"
+
+# Flake management
+check: ## Check flake configuration for errors
+	@echo "🔍 Checking flake configuration..."
+	nix flake check
+
+update: ## Update flake inputs
+	@echo "⬆️  Updating flake inputs..."
+	nix flake update
+
+format: ## Format nix files
+	@echo "✨ Formatting nix files..."
+	nix fmt
+
+show: ## Show flake outputs
+	@echo "📋 Flake outputs:"
+	@nix flake show
+
+# Platform info
+platform: ## Show detected platform
+	@echo "Platform: $(PLATFORM)"
+	@echo "System: $(UNAME)"
