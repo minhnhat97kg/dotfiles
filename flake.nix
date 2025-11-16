@@ -70,9 +70,6 @@
 
           # Shell & Terminal
           # tmux - configured via programs.tmux instead
-          tmuxinator
-          ranger # File manager
-          htop # Process viewer
           coreutils # GNU core utilities
 
           # Development - General
@@ -94,30 +91,18 @@
           python3
           pipx
 
-          # Development - Ruby
-          rbenv
-          ruby
-
           # Cloud & DevOps
           terraform
 
           # Database Tools
           postgresql
           mysql80
-          redis
           mycli # MySQL CLI client
           pgcli # PostgreSQL CLI client
-          usql # Universal SQL CLI
-          pspg # PostgreSQL pager
-          # dblab # Database lab - currently broken, build fails
 
           # API & HTTP Tools
           httpie
           hurl # HTTP testing tool
-
-          # Container Tools
-          podman
-          lazydocker
 
           # Security & Auth
           age # Encryption tool
@@ -297,8 +282,6 @@
             programs.zsh.enable = true;
             environment.systemPackages = with nixpkgs.legacyPackages.aarch64-darwin; [
               nixfmt-rfc-style
-              yabai
-              skhd
             ];
 
             # Host & user configuration
@@ -331,11 +314,6 @@
                   home.username = username;
                   home.homeDirectory = "/Users/${username}";
 
-                  # macOS-specific home files
-                  home.file.".config/yabai/yabairc".source = ./yabai/yabairc;
-                  home.file.".config/zellij/config.kdl".source = ./zellij/config.kdl;
-                  home.file.".config/skhd/skhdrc".source = ./skhd/skhdrc;
-
                   # Terminal emulator (Alacritty only)
                   home.file.".config/alacritty/alacritty.toml".source = ./alacritty/alacritty.toml;
 
@@ -348,22 +326,6 @@
                   # Development tools
                   home.file.".config/lazygit/" = {
                     source = ./lazygit;
-                    recursive = true;
-                  };
-                  home.file.".config/lazydocker/" = {
-                    source = ./lazydocker;
-                    recursive = true;
-                  };
-
-                  # Keyboard customization
-                  home.file.".config/karabiner/" = {
-                    source = ./karabiner;
-                    recursive = true;
-                  };
-
-                  # Sketchybar
-                  home.file.".config/sketchybar/" = {
-                    source = ./sketchybar;
                     recursive = true;
                   };
 
@@ -436,11 +398,7 @@
                   # macOS-specific packages
                   home.packages = with pkgs; [
                     alacritty # Terminal emulator
-                    qmk # Keyboard firmware
-                    localstack # Local AWS cloud stack
                   ];
-
-                  programs.zellij.enable = true;
                 }
               ];
           }
