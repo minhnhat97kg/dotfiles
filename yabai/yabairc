@@ -1,0 +1,64 @@
+#!/usr/bin/env sh
+
+# ====================================================================
+# Yabai Configuration - Amethyst Style
+# ====================================================================
+
+# Global settings
+yabai -m config external_bar off:0:0
+
+# Layout
+yabai -m config layout bsp
+
+# Window modifications
+yabai -m config top_padding    10
+yabai -m config bottom_padding 10
+yabai -m config left_padding   10
+yabai -m config right_padding  10
+yabai -m config window_gap     10
+
+# Mouse settings
+yabai -m config mouse_follows_focus          off
+yabai -m config focus_follows_mouse          off
+yabai -m config mouse_modifier               fn
+yabai -m config mouse_action1                move
+yabai -m config mouse_action2                resize
+yabai -m config mouse_drop_action            swap
+
+# Window settings
+yabai -m config window_origin_display        default
+yabai -m config window_placement             second_child
+yabai -m config window_shadow                on
+yabai -m config window_opacity               off
+yabai -m config window_opacity_duration      0.0
+yabai -m config active_window_opacity        1.0
+yabai -m config normal_window_opacity        0.90
+
+# Split ratio
+yabai -m config auto_balance                 off
+yabai -m config split_ratio                  0.50
+
+# Window borders (requires disabling SIP for some features)
+yabai -m config window_border                off
+yabai -m config window_border_width          6
+yabai -m config active_window_border_color   0xff775759
+yabai -m config normal_window_border_color   0xff555555
+
+# Exclusions - apps to not manage
+yabai -m rule --add app="^System Settings$" manage=off
+yabai -m rule --add app="^System Preferences$" manage=off
+yabai -m rule --add app="^Archive Utility$" manage=off
+yabai -m rule --add app="^App Store$" manage=off
+yabai -m rule --add app="^Activity Monitor$" manage=off
+yabai -m rule --add app="^Calculator$" manage=off
+yabai -m rule --add app="^Dictionary$" manage=off
+yabai -m rule --add app="^Software Update$" manage=off
+yabai -m rule --add app="^About This Mac$" manage=off
+yabai -m rule --add app="^Finder$" title="(Co(py|nnect)|Move|Info|Pref)" manage=off
+
+# Alacritty - fix multi-tab issues
+# Only manage main windows, ignore popups and notifications
+yabai -m rule --add app="^Alacritty$" subrole!="^AXStandardWindow$" manage=off
+yabai -m rule --add app="^Alacritty$" title="^$" manage=off
+
+echo "yabai configuration loaded.."

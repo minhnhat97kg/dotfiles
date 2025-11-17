@@ -232,6 +232,87 @@ Nix-on-Droid requires ~2-3GB of storage. Ensure you have sufficient space before
 nix run nix-darwin -- switch --flake .
 ```
 
+### macOS: skhd not appearing in Accessibility settings
+
+skhd is a command-line tool without a proper .app bundle, so macOS doesn't automatically show it in Accessibility settings. Here are all working solutions:
+
+#### Solution 1: Run skhd manually to trigger permission prompt (Recommended)
+
+1. Stop the current skhd service:
+   ```bash
+   pkill -f skhd
+   ```
+
+2. Find the actual skhd binary path:
+   ```bash
+   readlink -f /run/current-system/sw/bin/skhd
+   # Output: /nix/store/XXXX-skhd-X.X.X/bin/skhd
+   ```
+
+3. Run skhd manually (replace with your actual path):
+   ```bash
+   /nix/store/wdw8kp8p3h7kz63wfg43nvjxzxybphjz-skhd-0.3.9/bin/skhd -c /etc/skhdrc
+   ```
+
+4. This should trigger a macOS permission dialog. Click "Open System Settings" and grant permission to **skhd**
+
+5. Press `Ctrl+C` to stop, then restart the service:
+   ```bash
+   launchctl kickstart -k gui/$(id -u)/org.nixos.skhd
+   ```
+
+#### Solution 2: Reset TCC permissions if no dialog appears
+
+If running skhd manually doesn't show a permission dialog, macOS has already decided on the permission:
+
+```bash
+# Reset Accessibility permissions
+tccutil reset Accessibility
+
+# Then try Solution 1 again
+```
+
+#### Solution 3: Manually add skhd to Accessibility
+
+If the dialog still doesn't appear:
+
+1. Open **System Settings** → **Privacy & Security** → **Accessibility**
+2. Click the lock icon to unlock
+3. Click the **"+"** button below the app list
+4. Press `Cmd+Shift+G` to open "Go to folder"
+5. Enter the actual nix store path (use `readlink -f /run/current-system/sw/bin/skhd` to find it):
+   ```
+   /nix/store/wdw8kp8p3h7kz63wfg43nvjxzxybphjz-skhd-0.3.9/bin/skhd
+   ```
+6. Select the `skhd` binary and add it
+7. Restart skhd:
+   ```bash
+   launchctl kickstart -k gui/$(id -u)/org.nixos.skhd
+   ```
+
+#### Solution 4: Grant permission to Terminal.app
+
+As a workaround, grant Accessibility permission to the Terminal app:
+
+1. Open **System Settings** → **Privacy & Security** → **Accessibility**
+2. Add **Terminal.app** (or **iTerm.app** if you use that)
+3. Restart skhd:
+   ```bash
+   launchctl kickstart -k gui/$(id -u)/org.nixos.skhd
+   ```
+
+#### Verify skhd is working
+
+After granting permissions, test your hotkeys. You can also check the service status:
+
+```bash
+# Check if skhd is running
+pgrep -l skhd
+
+# Check service status
+launchctl print gui/$(id -u)/org.nixos.skhd
+```
+
 ### Android: Build failures
 ```bash
 # Clear cache and rebuild

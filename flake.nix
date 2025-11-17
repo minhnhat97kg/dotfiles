@@ -105,12 +105,12 @@
           hurl # HTTP testing tool
 
           # Security & Auth
-          age # Encryption tool
+          # age # Encryption tool (installed via nix profile)
 
           # File & Text Processing
           delta # Better git diff (used in git config)
           diff-so-fancy # Git diff highlighting
-          yq-go # YAML processor (used by scripts)
+          # yq-go # YAML processor (installed via nix profile)
 
           # Monitoring & System
           # watchman # File watching
@@ -282,11 +282,95 @@
             programs.zsh.enable = true;
             environment.systemPackages = with nixpkgs.legacyPackages.aarch64-darwin; [
               nixfmt-rfc-style
+              yabai
+              skhd
+              sketchybar
+              jankyborders
+              jq # Required for skhd keybindings
             ];
+
+            # Window management services
+            services.yabai = {
+              enable = true;
+              enableScriptingAddition = false; # Requires SIP to be disabled
+              config = {
+                external_bar = "all:32:0"; # Reserve space for sketchybar
+                layout = "bsp";
+                top_padding = 10;
+                bottom_padding = 10;
+                left_padding = 10;
+                right_padding = 10;
+                window_gap = 10;
+                mouse_follows_focus = "off";
+                focus_follows_mouse = "off";
+                mouse_modifier = "fn";
+                mouse_action1 = "move";
+                mouse_action2 = "resize";
+                mouse_drop_action = "swap";
+                window_origin_display = "default";
+                window_placement = "second_child";
+                window_shadow = "on";
+                window_opacity = "off";
+                window_opacity_duration = "0.0";
+                active_window_opacity = "1.0";
+                normal_window_opacity = "0.90";
+                auto_balance = "off";
+                split_ratio = "0.50";
+                window_border = "off";
+                window_border_width = 6;
+                active_window_border_color = "0xff775759";
+                normal_window_border_color = "0xff555555";
+              };
+              extraConfig = ''
+                # Exclusions - apps to not manage
+                yabai -m rule --add app="^System Settings$" manage=off
+                yabai -m rule --add app="^System Preferences$" manage=off
+                yabai -m rule --add app="^Archive Utility$" manage=off
+                yabai -m rule --add app="^App Store$" manage=off
+                yabai -m rule --add app="^Activity Monitor$" manage=off
+                yabai -m rule --add app="^Calculator$" manage=off
+                yabai -m rule --add app="^Dictionary$" manage=off
+                yabai -m rule --add app="^Software Update$" manage=off
+                yabai -m rule --add app="^About This Mac$" manage=off
+                yabai -m rule --add app="^Finder$" title="(Co(py|nnect)|Move|Info|Pref)" manage=off
+
+                echo "yabai configuration loaded.."
+              '';
+            };
+
+            services.skhd = {
+              enable = true;
+              skhdConfig = builtins.readFile ./skhd/skhdrc;
+            };
+
+            services.sketchybar = {
+              enable = true;
+              config = builtins.readFile ./sketchybar/sketchybarrc;
+            };
+
+            # JankyBorders service (window borders)
+            launchd.user.agents.jankyborders = {
+              serviceConfig = {
+                ProgramArguments = [
+                  "${nixpkgs.legacyPackages.aarch64-darwin.jankyborders}/bin/borders"
+                  "active_color=0xff89b4fa"
+                  "inactive_color=0xff6c7086"
+                  "width=5.0"
+                  "style=round"
+                ];
+                KeepAlive = true;
+                RunAtLoad = true;
+                StandardOutPath = "/tmp/jankyborders.out.log";
+                StandardErrorPath = "/tmp/jankyborders.err.log";
+              };
+            };
 
             # Host & user configuration
             networking.hostName = "Nathan-Macbook";
             networking.computerName = "Nathan-Macbook";
+
+            # Primary user for services like yabai/skhd
+            system.primaryUser = username;
 
             users.users."${username}" = {
               home = "/Users/${username}";
@@ -316,6 +400,12 @@
 
                   # Terminal emulator (Alacritty only)
                   home.file.".config/alacritty/alacritty.toml".source = ./alacritty/alacritty.toml;
+
+                  # Window management
+                  home.file.".config/sketchybar/" = {
+                    source = ./sketchybar;
+                    recursive = true;
+                  };
 
                   # Shell configurations (zsh managed by programs.zsh in shared config)
                   home.file.".ideavimrc".source = ./shell/.ideavimrc;
@@ -394,6 +484,7 @@
                         echo "✓ Git work config decrypted"
                       fi
                     '';
+
 
                   # macOS-specific packages
                   home.packages = with pkgs; [

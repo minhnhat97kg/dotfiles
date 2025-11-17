@@ -1,0 +1,103 @@
+#!/bin/bash
+
+# Sketchybar Configuration
+
+# Color Palette (Catppuccin Mocha)
+export BLACK=0xff1e1e2e
+export WHITE=0xffcdd6f4
+export RED=0xfff38ba8
+export GREEN=0xffa6e3a1
+export BLUE=0xff89b4fa
+export YELLOW=0xfff9e2af
+export ORANGE=0xfffab387
+export MAGENTA=0xffcba6f7
+export GREY=0xff6c7086
+export TRANSPARENT=0x00000000
+
+# General bar settings
+sketchybar --bar \
+  height=32 \
+  blur_radius=30 \
+  position=top \
+  sticky=off \
+  padding_left=10 \
+  padding_right=10 \
+  color=$BLACK
+
+# Default item settings
+sketchybar --default \
+  icon.font="JetBrainsMono Nerd Font:Bold:16.0" \
+  icon.color=$WHITE \
+  label.font="SF Pro:Semibold:13.0" \
+  label.color=$WHITE \
+  padding_left=5 \
+  padding_right=5 \
+  label.padding_left=4 \
+  label.padding_right=10 \
+  icon.padding_left=10 \
+  icon.padding_right=4
+
+# Left Side Items - Spaces
+SPACE_ICONS=("1" "2" "3" "4" "5" "6" "7" "8" "9" "10")
+for i in "${!SPACE_ICONS[@]}"
+do
+  sid=$(($i+1))
+  sketchybar --add space space.$sid left \
+    --set space.$sid \
+      associated_space=$sid \
+      icon="${SPACE_ICONS[i]}" \
+      icon.padding_left=10 \
+      icon.padding_right=10 \
+      background.color=$TRANSPARENT \
+      background.corner_radius=5 \
+      background.height=24 \
+      label.drawing=off \
+      script="$HOME/.config/sketchybar/plugins/space.sh" \
+      click_script="yabai -m space --focus $sid"
+done
+
+# Front App
+sketchybar --add item front_app left \
+  --set front_app \
+    icon.drawing=off \
+    background.color=$TRANSPARENT \
+    label.color=$WHITE \
+    label.font="SF Pro:Bold:13.0" \
+    script="$HOME/.config/sketchybar/plugins/front_app.sh" \
+  --subscribe front_app front_app_switched
+
+# Right Side Items
+
+# Clock
+sketchybar --add item clock right \
+  --set clock \
+    update_freq=10 \
+    icon=󰥔 \
+    icon.color=$BLUE \
+    script="$HOME/.config/sketchybar/plugins/clock.sh"
+
+# Battery
+sketchybar --add item battery right \
+  --set battery \
+    update_freq=120 \
+    icon.color=$GREEN \
+    script="$HOME/.config/sketchybar/plugins/battery.sh" \
+  --subscribe battery system_woke power_source_change
+
+# Volume
+sketchybar --add item volume right \
+  --set volume \
+    icon.color=$YELLOW \
+    script="$HOME/.config/sketchybar/plugins/volume.sh" \
+  --subscribe volume volume_change
+
+# CPU
+sketchybar --add item cpu right \
+  --set cpu \
+    update_freq=5 \
+    icon=󰻠 \
+    icon.color=$MAGENTA \
+    script="$HOME/.config/sketchybar/plugins/cpu.sh"
+
+# Finalizing
+sketchybar --update
