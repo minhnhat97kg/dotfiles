@@ -19,13 +19,13 @@ deps: ## Install required dependencies (yq-go, age)
 	@echo "Installing dependencies..."
 	@if ! command -v yq-go &> /dev/null && ! command -v yq &> /dev/null; then \
 		echo "  Installing yq-go..."; \
-		nix profile install nixpkgs#yq-go || nix-env -f '<nixpkgs>' -iA yq-go; \
+		nix profile install nixpkgs#yq-go; \
 	else \
 		echo "  ✓ yq already installed"; \
 	fi
 	@if ! command -v age &> /dev/null; then \
 		echo "  Installing age..."; \
-		nix profile install nixpkgs#age || nix-env -f '<nixpkgs>' -iA age; \
+		nix profile install nixpkgs#age; \
 	else \
 		echo "  ✓ age already installed"; \
 	fi
@@ -70,11 +70,11 @@ encrypt: check-deps ## Encrypt all secrets (use AGE_KEY=/path to override)
 check-deps:
 	@if ! command -v yq-go &> /dev/null && ! command -v yq &> /dev/null; then \
 		echo "⚠️  yq-go not found, installing..."; \
-		nix profile install nixpkgs#yq-go 2>/dev/null || nix-env -f '<nixpkgs>' -iA yq-go; \
+		nix profile install nixpkgs#yq-go; \
 	fi
 	@if ! command -v age &> /dev/null; then \
 		echo "⚠️  age not found, installing..."; \
-		nix profile install nixpkgs#age 2>/dev/null || nix-env -f '<nixpkgs>' -iA age; \
+		nix profile install nixpkgs#age; \
 	fi
 
 test: ## Test decryption in /tmp
