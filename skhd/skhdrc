@@ -14,10 +14,11 @@
 # ====================================================================
 
 # Cycle layout forward (mod1 + space)
-alt + shift - space : yabai -m space --layout $(yabai -m query --spaces --space | jq -r 'if .type == "bsp" then "stack" elif .type == "stack" then "float" else "bsp" end')
+# Layouts: bsp → vertical → horizontal → master-stack → stack → float
+alt + shift - space : ~/Documents/projects/dotfiles/yabai/scripts/cycle-layout.sh forward
 
 # Cycle layout backwards (mod2 + space)
-ctrl + alt + shift - space : yabai -m space --layout $(yabai -m query --spaces --space | jq -r 'if .type == "float" then "stack" elif .type == "stack" then "bsp" else "float" end')
+ctrl + alt + shift - space : ~/Documents/projects/dotfiles/yabai/scripts/cycle-layout.sh backward
 
 # Select specific layouts
 alt + shift - a : yabai -m space --layout bsp        # Tall layout (mod1 + a)
@@ -26,7 +27,7 @@ alt + shift - d : yabai -m space --layout stack      # Fullscreen layout (mod1 +
 alt + shift - f : yabai -m space --layout bsp        # Column layout (mod1 + f)
 
 # Display current layout (mod1 + i)
-alt + shift - i : yabai -m query --spaces --space | jq -r '.type' | xargs -I {} osascript -e "display notification \"{}\" with title \"Current Layout\""
+alt + shift - i : ~/Documents/projects/dotfiles/yabai/scripts/cycle-layout.sh current
 
 # ====================================================================
 # PANE/WINDOW CONTROLS
@@ -71,11 +72,11 @@ alt + shift - g : yabai -m display --focus 5
 # WINDOW MOVEMENT
 # ====================================================================
 
-# Swap focused window to counter clockwise screen (mod2 + h)
-ctrl + alt + shift - h : yabai -m window --display prev || yabai -m window --display last
+# Throw focused window to space left (mod2 + h)
+ctrl + alt + shift - h : yabai -m window --space prev && yabai -m space --focus prev
 
-# Swap focused window to clockwise screen (mod2 + l)
-ctrl + alt + shift - l : yabai -m window --display next || yabai -m window --display first
+# Throw focused window to space right (mod2 + l)
+ctrl + alt + shift - l : yabai -m window --space next && yabai -m space --focus next
 
 # Swap focused window counter clockwise (mod2 + j)
 ctrl + alt + shift - j : yabai -m window --swap prev || yabai -m window --swap last
@@ -85,6 +86,27 @@ ctrl + alt + shift - k : yabai -m window --swap next || yabai -m window --swap f
 
 # Swap focused window with main window (mod1 + return)
 alt + shift - return : yabai -m window --swap first
+
+# ====================================================================
+# SPACE/DESKTOP MANAGEMENT
+# ====================================================================
+
+# Create new desktop (mod2 + c)
+ctrl + alt + shift - c : yabai -m space --create && \
+                         index=$(yabai -m query --spaces --display | jq 'map(select(."is-native-fullscreen" == false))[-1].index') && \
+                         yabai -m space --focus $index && \
+                         osascript -e "display notification \"Created space $index\" with title \"Yabai\""
+
+# Destroy current desktop (mod2 + d)
+ctrl + alt + shift - d : yabai -m space --destroy && \
+                         osascript -e "display notification \"Space destroyed\" with title \"Yabai\""
+
+# Create new desktop and move window to it (mod2 + m)
+ctrl + alt + shift - m : yabai -m space --create && \
+                         index=$(yabai -m query --spaces --display | jq 'map(select(."is-native-fullscreen" == false))[-1].index') && \
+                         yabai -m window --space $index && \
+                         yabai -m space --focus $index && \
+                         osascript -e "display notification \"Moved to new space $index\" with title \"Yabai\""
 
 # ====================================================================
 # SPACE/SCREEN SWITCHING
@@ -118,6 +140,9 @@ ctrl + alt + shift - g : yabai -m window --display 5 && yabai -m display --focus
 # ====================================================================
 # UTILITY
 # ====================================================================
+
+# Show all keybindings (mod1 + ?)
+alt + shift - 0x2C : ~/Documents/projects/dotfiles/skhd/scripts/show-keybindings.sh
 
 # Toggle float for focused window (mod1 + t)
 alt + shift - t : yabai -m window --toggle float && yabai -m window --grid 4:4:1:1:2:2

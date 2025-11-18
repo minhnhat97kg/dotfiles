@@ -110,6 +110,31 @@ When you run the configuration, home-manager will automatically symlink all conf
 - Zellij (terminal multiplexer)
 - Harlequin (database GUI)
 
+### Yabai Setup (Apple Silicon)
+
+Yabai requires additional setup on Apple Silicon Macs to enable window movement between spaces:
+
+#### 1. Disable SIP (Recovery Mode)
+Boot into Recovery Mode (hold Power button) and run:
+```bash
+csrutil disable
+```
+
+#### 2. Set Boot Argument (Recovery Mode)
+Still in Recovery Mode, run:
+```bash
+nvram boot-args=-arm64e_preview_abi
+```
+
+#### 3. Restart and Load Scripting Addition
+After reboot, run:
+```bash
+sudo yabai --install-sa
+sudo yabai --load-sa
+```
+
+**Note**: Without these steps, yabai cannot move windows between spaces or focus spaces programmatically. You'll see the error: `cannot focus space due to an error with the scripting-addition`
+
 ### Android-Specific
 - Optimized for Termux environment
 - Touch-friendly terminal fonts

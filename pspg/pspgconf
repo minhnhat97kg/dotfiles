@@ -1,0 +1,50 @@
+# pspg configuration file
+# See: https://github.com/okbob/pspg
+
+# Theme (5 = Mutt)
+theme=5
+
+# Vim-style navigation
+vi_mode=true
+
+# Bold labels
+bold_labels=true
+
+# Bold cursor
+bold_cursor=true
+
+# Cursor style (0 = default, 1 = line, 2 = block)
+cursor_shape=2
+
+# Show line numbers
+show_rownum=false
+
+# Show cursor position in footer
+show_cursor=true
+
+# Highlight odd/even rows
+highlight_odd_rec=false
+
+# Border style (0 = none, 1 = ascii, 2 = unicode)
+border_type=2
+
+# Vertical cursor mode
+vertical_cursor=false
+
+# Sound
+sound=false
+
+# Case insensitive search
+icase=true
+
+# Highlight search results
+highlight_search=true
+
+# Menu on top
+menu_always_show=true
+
+# Null string
+nullstr=[NULL]
+
+# Clipboard format (0 = text, 1 = csv, 2 = tsv, 3 = insert)
+clipboard_format=1

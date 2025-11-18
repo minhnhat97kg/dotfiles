@@ -9,7 +9,7 @@ italic.family = "JetBrainsMono Nerd Font"
 bold_italic.family = "JetBrainsMono Nerd Font"
 
 # Point size for the font
-size = 13.0
+size = 12.0
 
 # Offset is the extra space around characters. `offset.y` can be negative.
 offset = { x = 0, y = 2 }
@@ -17,6 +17,45 @@ offset = { x = 0, y = 2 }
 # Glyph offset determines the locations of the glyphs within their cells with
 # the default being at the bottom.
 glyph_offset = { x = 0, y = 0 }
+
+# Colors (Tokyo Night theme)
+[colors]
+# Default colors
+[colors.primary]
+background = "#1a1b26"
+foreground = "#c0caf5"
+
+# Normal colors
+[colors.normal]
+black   = "#15161e"
+red     = "#f7768e"
+green   = "#9ece6a"
+yellow  = "#e0af68"
+blue    = "#7aa2f7"
+magenta = "#bb9af7"
+cyan    = "#7dcfff"
+white   = "#a9b1d6"
+
+# Bright colors
+[colors.bright]
+black   = "#414868"
+red     = "#f7768e"
+green   = "#9ece6a"
+yellow  = "#e0af68"
+blue    = "#7aa2f7"
+magenta = "#bb9af7"
+cyan    = "#7dcfff"
+white   = "#c0caf5"
+
+# Cursor colors
+[colors.cursor]
+text   = "#1a1b26"
+cursor = "#c0caf5"
+
+# Selection colors
+[colors.selection]
+text       = "#c0caf5"
+background = "#33467c"
 
 
 # Keyboard shortcuts
@@ -33,20 +72,42 @@ bindings = [
 
 # Window configuration
 [window]
+# Window opacity (0.0 - 1.0, where 1.0 is fully opaque)
+opacity = 0.92
+
+# Background blur (macOS only)
+blur = true
 
 option_as_alt="Both"
-# Window padding (pixels)
-padding = { x = 10, y = 10 }
+
+# Window padding (pixels) - increased for better aesthetics
+padding = { x = 15, y = 15 }
 
 # Spread additional padding evenly around the terminal content.
 dynamic_padding = false
 
-# Decorations (None, Borderless, Full)
-decorations = "Full"
-
+# Decorations (None, Buttonless, Transparent, Full)
+decorations = "None"
 
 # Allow terminal applications to change the window title.
 dynamic_title = true
+
+# Startup mode (Windowed, Maximized, Fullscreen)
+startup_mode = "Windowed"
+
+# Cursor style
+[cursor]
+# Cursor style (Block, Underline, Beam)
+style = { shape = "Block", blinking = "On" }
+
+# Cursor blink interval in milliseconds
+blink_interval = 750
+
+# Vi mode cursor style
+vi_mode_style = { shape = "Block" }
+
+# Cursor thickness (for Beam and Underline)
+thickness = 0.15
 
 # Scrolling
 [scrolling]
@@ -55,4 +116,15 @@ history = 10000
 
 # Number of lines to scroll by when using the mouse wheel.
 multiplier = 3
+
+# Bell configuration
+[bell]
+# Visual bell animation (Ease, EaseOut, EaseOutSine, EaseOutQuad, EaseOutCubic, EaseOutQuart, EaseOutQuint, EaseOutExpo, EaseOutCirc, Linear)
+animation = "EaseOutExpo"
+
+# Duration of the visual bell flash in milliseconds
+duration = 0
+
+# Bell command to run on bell
+command = "None"
 

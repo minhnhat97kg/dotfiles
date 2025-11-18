@@ -99,6 +99,7 @@
           mysql80
           mycli # MySQL CLI client
           pgcli # PostgreSQL CLI client
+          pspg # Postgres pager for tabular data
 
           # API & HTTP Tools
           httpie
@@ -287,6 +288,7 @@
               sketchybar
               jankyborders
               jq # Required for skhd keybindings
+              qutebrowser
             ];
 
             # Window management services
@@ -418,6 +420,12 @@
                     source = ./lazygit;
                     recursive = true;
                   };
+
+                  # Database tools
+                  home.file.".pspgconf".source = ./pspg/pspgconf;
+
+                  # Browser (qutebrowser)
+                  home.file.".qutebrowser/config.py".source = ./qutebrowser/config.py;
 
                   # Decrypt AWS configuration on activation
                   home.activation.decryptAwsConfig =

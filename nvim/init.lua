@@ -245,6 +245,7 @@ require("lazy").setup({
 				{ "<leader>h", group = "Git [H]unk", mode = { "n", "v" } },
 				{ "<leader>l", group = "[L]SP" },
 				{ "<leader>b", group = "[B]uffer" },
+				{ "<leader>D", group = "[D]atabase" },
 			},
 		},
 	},
@@ -415,6 +416,7 @@ require("lazy").setup({
 				"query",
 				"vim",
 				"vimdoc",
+				"sql",
 			},
 			auto_install = true,
 			highlight = {
@@ -567,6 +569,172 @@ require("lazy").setup({
 	{
 		"mfussenegger/nvim-jdtls",
 		ft = { "java" },
+	},
+
+	-- Database client (vim-dadbod)
+	{
+		"kristijanhusak/vim-dadbod-ui",
+		dependencies = {
+			{ "tpope/vim-dadbod", lazy = true },
+			{ "kristijanhusak/vim-dadbod-completion", ft = { "sql", "mysql", "plsql" }, lazy = true },
+		},
+		cmd = { "DBUI", "DBUIToggle", "DBUIAddConnection", "DBUIFindBuffer" },
+		init = function()
+			-- UI configuration
+			vim.g.db_ui_use_nerd_fonts = 1
+			vim.g.db_ui_show_database_icon = 1
+			vim.g.db_ui_force_echo_notifications = 1
+			vim.g.db_ui_win_position = "left"
+			vim.g.db_ui_winwidth = 40
+
+			-- Table helpers - useful queries for each database type
+			vim.g.db_ui_table_helpers = {
+				postgresql = {
+					Count = "SELECT COUNT(*) FROM {table}",
+					Columns = "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table}'",
+				},
+				mysql = {
+					Count = "SELECT COUNT(*) FROM {table}",
+					Columns = "DESCRIBE {table}",
+				},
+				sqlite = {
+					Count = "SELECT COUNT(*) FROM {table}",
+					Schema = "SELECT sql FROM sqlite_master WHERE name = '{table}'",
+				},
+			}
+
+			-- Auto-execute query on save
+			vim.g.db_ui_execute_on_save = 0
+		end,
+		config = function()
+			-- Keymaps for database operations
+			vim.keymap.set("n", "<leader>Du", "<cmd>DBUIToggle<cr>", { desc = "[D]atabase [U]I toggle" })
+			vim.keymap.set("n", "<leader>Da", "<cmd>DBUIAddConnection<cr>", { desc = "[D]atabase [A]dd connection" })
+			vim.keymap.set("n", "<leader>Df", "<cmd>DBUIFindBuffer<cr>", { desc = "[D]atabase [F]ind buffer" })
+			vim.keymap.set("n", "<leader>Dr", "<cmd>DBUIRenameBuffer<cr>", { desc = "[D]atabase [R]ename buffer" })
+			vim.keymap.set("n", "<leader>Dl", "<cmd>DBUILastQueryInfo<cr>", { desc = "[D]atabase [L]ast query info" })
+
+			-- SQL file specific keymaps
+			vim.api.nvim_create_autocmd("FileType", {
+				pattern = { "sql", "mysql", "plsql" },
+				callback = function()
+					-- Execute query and send to pspg
+					local function execute_to_pspg(is_visual)
+						local query
+						if is_visual then
+							-- Get visual selection
+							local start_pos = vim.fn.getpos("'<")
+							local end_pos = vim.fn.getpos("'>")
+							local lines = vim.api.nvim_buf_get_lines(0, start_pos[2] - 1, end_pos[2], false)
+							if #lines == 1 then
+								lines[1] = string.sub(lines[1], start_pos[3], end_pos[3])
+							else
+								lines[1] = string.sub(lines[1], start_pos[3])
+								lines[#lines] = string.sub(lines[#lines], 1, end_pos[3])
+							end
+							query = table.concat(lines, "\n")
+						else
+							-- Get current paragraph (query block)
+							local cursor = vim.api.nvim_win_get_cursor(0)
+							local start_line = cursor[1]
+							local end_line = cursor[1]
+							local total_lines = vim.api.nvim_buf_line_count(0)
+
+							-- Find start of paragraph
+							while start_line > 1 do
+								local line = vim.api.nvim_buf_get_lines(0, start_line - 2, start_line - 1, false)[1]
+								if line == "" then break end
+								start_line = start_line - 1
+							end
+
+							-- Find end of paragraph
+							while end_line < total_lines do
+								local line = vim.api.nvim_buf_get_lines(0, end_line, end_line + 1, false)[1]
+								if line == "" then break end
+								end_line = end_line + 1
+							end
+
+							local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+							query = table.concat(lines, "\n")
+						end
+
+						-- Get database URL from DBUI
+						local db_url = vim.b.db or vim.g.db
+						if not db_url then
+							vim.notify("No database connection found", vim.log.levels.ERROR)
+							return
+						end
+
+						-- Execute query using vim-dadbod and capture output
+						local tmpfile = vim.fn.tempname() .. ".txt"
+
+						-- Write query to temp file and execute
+						local queryfile = vim.fn.tempname() .. ".sql"
+						vim.fn.writefile(vim.split(query, "\n"), queryfile)
+
+						-- Execute via DB command with file input
+						vim.cmd("DB < " .. queryfile)
+
+						-- Wait for execution then get result
+						vim.defer_fn(function()
+							vim.fn.delete(queryfile)
+
+							-- Find the most recent dbout buffer and get its content
+							local dbout_buf = nil
+							for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+								if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].filetype == "dbout" then
+									dbout_buf = buf
+								end
+							end
+
+							if dbout_buf then
+								local lines = vim.api.nvim_buf_get_lines(dbout_buf, 0, -1, false)
+								if #lines > 0 and lines[1] ~= "" then
+									vim.fn.writefile(lines, tmpfile)
+
+									-- Close the result buffer/window
+									for _, win in ipairs(vim.api.nvim_list_wins()) do
+										if vim.api.nvim_win_get_buf(win) == dbout_buf then
+											vim.api.nvim_win_close(win, true)
+											break
+										end
+									end
+
+									-- Open in pspg floating terminal
+									require("snacks").terminal("pspg " .. tmpfile .. " && rm " .. tmpfile, {
+										win = {
+											style = "float",
+											width = 0.9,
+											height = 0.9,
+											border = "rounded",
+										},
+									})
+								else
+									vim.notify("No results from query", vim.log.levels.WARN)
+									vim.fn.delete(tmpfile)
+								end
+							else
+								vim.notify("No result buffer found", vim.log.levels.ERROR)
+								vim.fn.delete(tmpfile)
+							end
+						end, 500)
+					end
+
+					-- Execute query to pspg
+					vim.keymap.set("n", "<leader>De", function() execute_to_pspg(false) end, { buffer = true, desc = "[D]atabase [E]xecute to pspg" })
+					vim.keymap.set("v", "<leader>De", function() execute_to_pspg(true) end, { buffer = true, desc = "[D]atabase [E]xecute selection to pspg" })
+
+					-- Execute query to buffer (original behavior)
+					vim.keymap.set("n", "<leader>Db", "<Plug>(DBUI_ExecuteQuery)", { buffer = true, desc = "[D]atabase execute to [B]uffer" })
+					vim.keymap.set("v", "<leader>Db", "<Plug>(DBUI_ExecuteQuery)", { buffer = true, desc = "[D]atabase execute to [B]uffer" })
+
+					-- Save query to file
+					vim.keymap.set("n", "<leader>Ds", "<Plug>(DBUI_SaveQuery)", { buffer = true, desc = "[D]atabase [S]ave query" })
+					-- Toggle result layout (expanded view)
+					vim.keymap.set("n", "<leader>Dt", "<Plug>(DBUI_ToggleResultLayout)", { buffer = true, desc = "[D]atabase [T]oggle result layout" })
+				end,
+			})
+		end,
 	},
 
 	-- Theme
