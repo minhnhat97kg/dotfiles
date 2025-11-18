@@ -1,4 +1,4 @@
-.PHONY: help install build switch decrypt encrypt test clean check update format deps
+.PHONY: help install build switch decrypt encrypt test clean check update format deps darwin android
 
 # Configuration - can override via: make decrypt AGE_KEY=/path/to/key.txt
 AGE_KEY ?= ~/.config/sops/age/keys.txt
@@ -32,12 +32,18 @@ deps: ## Install required dependencies (yq-go, age)
 	@echo "✓ All dependencies installed"
 
 # Main targets
-install: decrypt ## Decrypt and install configuration
+install: decrypt ## Decrypt and install configuration (auto-detect platform)
 ifeq ($(PLATFORM),macos)
 	darwin-rebuild switch --flake .
 else
 	nix-on-droid switch --flake .
 endif
+
+darwin: decrypt ## Install on macOS (nix-darwin)
+	darwin-rebuild switch --flake .
+
+android: ## Install on Android (nix-on-droid)
+	nix-on-droid switch --flake .
 
 build: ## Build configuration without installing
 ifeq ($(PLATFORM),macos)
