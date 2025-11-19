@@ -13,7 +13,7 @@ help: ## Show available commands
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Options:"
-	@echo "  AGE_KEY=/path/to/key.txt  Override age key location"
+	@echo "  (sops-nix handles secrets; age targets removed)"
 
 deps: ## Install required dependencies (yq-go, age)
 	@echo "Installing dependencies..."
@@ -32,14 +32,14 @@ deps: ## Install required dependencies (yq-go, age)
 	@echo "✓ All dependencies installed"
 
 # Main targets
-install: decrypt ## Decrypt and install configuration (auto-detect platform)
+install: ## Install configuration (auto-detect platform)
 ifeq ($(PLATFORM),macos)
 	darwin-rebuild switch --flake .
 else
 	nix-on-droid switch --flake .
 endif
 
-darwin: decrypt ## Install on macOS (nix-darwin)
+darwin: ## Install on macOS (nix-darwin)
 	darwin-rebuild switch --flake .
 
 android: ## Install on Android (nix-on-droid)
@@ -52,25 +52,11 @@ else
 	nix-on-droid build --flake .
 endif
 
-switch: decrypt install ## Decrypt secrets and switch configuration
+switch: install ## Switch configuration
 
-decrypt: check-deps ## Decrypt all secrets (use AGE_KEY=/path to override)
-	@expanded_key=$$(echo "$(AGE_KEY)" | sed "s|^~|$$HOME|"); \
-	if [ ! -f "$$expanded_key" ]; then \
-		echo "❌ Age key not found at: $(AGE_KEY)"; \
-		echo "   Generate one with: make gen-key"; \
-		echo "   Or specify: make decrypt AGE_KEY=/path/to/key.txt"; \
-		exit 1; \
-	fi
-	@AGE_KEY="$(AGE_KEY)" ./scripts/decrypt-secrets.sh
+# decrypt target removed (sops-nix handles secrets)
 
-encrypt: check-deps ## Encrypt all secrets (use AGE_KEY=/path to override)
-	@expanded_key=$$(echo "$(AGE_KEY)" | sed "s|^~|$$HOME|"); \
-	if [ ! -f "$$expanded_key" ]; then \
-		echo "❌ Age key not found at: $(AGE_KEY)"; \
-		exit 1; \
-	fi
-	@AGE_KEY="$(AGE_KEY)" ./scripts/encrypt-secrets.sh
+# encrypt target removed (sops-nix handles secrets)
 
 # Internal target - check and auto-install dependencies
 check-deps:
@@ -93,7 +79,7 @@ test: ## Test decryption in /tmp
 clean: ## Clean build artifacts
 	@rm -rf result result-* /tmp/dotfiles-test
 
-gen-key: ## Generate or import age encryption key
+# gen-key target removed (age key no longer used)
 	@echo "Choose an option:"
 	@echo "  1) Generate new age key"
 	@echo "  2) Import existing age key"
