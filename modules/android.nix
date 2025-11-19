@@ -18,25 +18,73 @@
 
   user.shell = "${pkgs.zsh}/bin/zsh";
 
+  # All packages must be here for Android (not in home.packages)
+  # due to nix-env/nix profile compatibility issues
   environment.packages = with pkgs; [
+    # Core utilities
     git
+    gh
     fzf
+    ripgrep
+    fd
+    jq
+    jless
     procps
     gnugrep
     gnused
     gawk
     coreutils
+
+    # Development
     go
     gcc
     gnumake
+    nodejs
+    delve
+    goimports-reviser
+
+    # Rust
+    cargo
+    rustc
+    rustfmt
+    clippy
+    rust-analyzer
+
+    # Python
+    python3
+    pipx
+
+    # Shell
     zsh
     oh-my-zsh
+
+    # Network
     openssh
     net-tools
     mosh
     tailscale
+
+    # Secrets
     sops
     age
+
+    # Databases
+    postgresql
+    mysql80
+    mycli
+    pgcli
+    pspg
+
+    # HTTP
+    httpie
+    hurl
+
+    # Diff/formatting
+    delta
+    diff-so-fancy
+
+    # Utilities
+    fx
   ];
 
   terminal.font = "${pkgs.nerd-fonts.fira-code}/share/fonts/truetype/NerdFonts/FiraCodeNerdFont-Regular.ttf";
@@ -127,6 +175,10 @@ EOS
         {
           home.stateVersion = "24.05";
           nixpkgs.config.allowUnfree = true;
+
+          # Disable home.packages for Android - use environment.packages instead
+          # This avoids nix-env/nix profile compatibility issues
+          home.packages = lib.mkForce [];
 
           # Android-specific zsh config
           programs.zsh.initContent = lib.mkAfter ''
