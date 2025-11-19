@@ -218,7 +218,7 @@
       # ============================================================================
       # macOS Configuration (nix-darwin, trimmed)
       # ============================================================================
-      darwinConfigurations."Nathan-Macbook" = nix-darwin.lib.darwinSystem {
+      darwinConfigurations."Nathan-Macbook" = nix-darwin.lib.darwinSystem { modules = [ (import ./modules/darwin.nix { inputs = inputs; pkgs = nixpkgs.legacyPackages.aarch64-darwin; inherit username sharedHomeConfig; }) home-manager.darwinModules.home-manager ];
         system = "aarch64-darwin";
         specialArgs = inputs // {
           inherit username useremail;
@@ -485,7 +485,7 @@
       # ============================================================================
       # Android Configuration (nix-on-droid)
       # ============================================================================
-      nixOnDroidConfigurations.default =
+      nixOnDroidConfigurations.default = let pkgs = import nixpkgs { system = "aarch64-linux"; config.allowUnfree = true; }; in nix-on-droid.lib.nixOnDroidConfiguration { modules = [ (import ./modules/android.nix { inherit pkgs; }) ]; }
         let
           system = "aarch64-linux";
           pkgs = import nixpkgs {
