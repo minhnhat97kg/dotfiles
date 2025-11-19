@@ -13,9 +13,9 @@ SSH_SOPS_DIR="$SECRETS_DIR/ssh"
 GIT_SOPS_DIR="$SECRETS_DIR/git"
 AWS_SOPS_DIR="$SECRETS_DIR"
 
-# Auto-detect sources by scanning directories
-# SSH keys
-# Git work config and AWS config are expected in secrets/git and secrets respectively
+# Auto-detect sources by scanning directories listed in SOURCES_DIRS
+# Define directories via SOURCES_DIRS env (comma-separated) or default set.
+
 
 need_cmd() { command -v "$1" >/dev/null || { echo "Missing required command: $1"; exit 1; }; }
 
@@ -109,10 +109,30 @@ process_aws() {
 
 main() {
   need_cmd sops
+  # Allow user-defined directories to supplement defaults
+  local default_dirs=("$SSH_DIR" "$ROOT_DIR/secrets/git" "$ROOT_DIR/secrets")
+  local extra=()
+  if [[ -n "${SOURCES_DIRS:-}" ]]; then IFS=',' read -r -a extra <<<"$SOURCES_DIRS"; fi
+  local all=("${default_dirs[@]}" "${extra[@]}")
   mkdir -p "$SSH_SOPS_DIR" "$GIT_SOPS_DIR" "$AWS_SOPS_DIR"
   process_ssh_dir
   process_git
   process_aws
+  for d in "${all[@]}"; do
+    [[ -d "$d" ]] || continue
+    # Generic catch-all: encrypt any *.secret, *.secret.txt, *.secret.env files
+    shopt -s nullglob
+    for f in "$d"/*.secret "$d"/*.secret.*; do
+      [[ -f "$f" ]] || continue
+      local tag="$(basename "$f")"
+      local name="generic-${tag%%.*}"
+      local out="$SECRETS_DIR/${tag}.sops.yaml"
+      build_yaml "$name" value "$f" > "$out"
+      encrypt_in_place "$out"
+      echo "Synced generic $out"
+    done
+    shopt -u nullglob
+  done
   echo "All secrets processed. Commit only encrypted *.sops.yaml files."
 }
 
