@@ -42,7 +42,22 @@ encrypt_in_place() {
 
 process_ssh_dir() {
   mkdir -p "$SSH_SOPS_DIR"
-  for key in id_rsa id_ed25519 cuong_rsa id_minhnhat97kg bitbucket-ssh; do
+  # Accept override list via SSH_KEYS env or default pattern matching
+  local default_keys=(id_* *_rsa bitbucket-ssh)
+  local keys=()
+  if [[ -n "${SSH_KEYS:-}" ]]; then
+    IFS=',' read -r -a keys <<<"$SSH_KEYS"
+  else
+    for pat in "${default_keys[@]}"; do
+      for f in $SSH_DIR/$pat; do
+        [[ -f "$f" ]] && keys+=("$(basename "$f")")
+      done
+    done
+  fi
+  # De-duplicate
+  local uniq=(); declare -A seen
+  for k in "${keys[@]}"; do [[ -n "${seen[$k]:-}" ]] || { uniq+=("$k"); seen[$k]=1; }; done
+  for key in "${uniq[@]}"; do
     local src="$SSH_DIR/$key"
     [[ -f "$src" ]] || { echo "Skip ssh-$key (missing)"; continue; }
     local out="$SSH_SOPS_DIR/${key}.sops.yaml"
@@ -61,28 +76,35 @@ process_ssh_dir() {
 
 process_git() {
   mkdir -p "$GIT_SOPS_DIR"
-  local src="$GIT_SOPS_DIR/../work.gitconfig"
-  if [[ -f "$ROOT_DIR/secrets/git/work.gitconfig" ]]; then
-    src="$ROOT_DIR/secrets/git/work.gitconfig"
-    local out="$GIT_SOPS_DIR/work.gitconfig.sops.yaml"
-    build_yaml "git-work-config" config "$src" > "$out"
-    encrypt_in_place "$out"
-    echo "Synced $out"
+  local base="$ROOT_DIR/secrets/git"
+  if [[ -d "$base" ]]; then
+    for f in "$base"/*.gitconfig; do
+      [[ -f "$f" ]] || continue
+      local name="git-$(basename "$f" .gitconfig)"
+      local out="$GIT_SOPS_DIR/$(basename "$f").sops.yaml"
+      build_yaml "$name" config "$f" > "$out"
+      encrypt_in_place "$out"
+      echo "Synced $out"
+    done
   else
-    echo "Skip git-work-config (missing secrets/git/work.gitconfig)"
+    echo "Skip git (directory $base missing)"
   fi
 }
 
 process_aws() {
-  local src="$ROOT_DIR/secrets/aws-config"
-  if [[ -f "$src" ]]; then
-    local out="$AWS_SOPS_DIR/aws-config.sops.yaml"
-    build_yaml "aws-config" config "$src" > "$out"
+  # Any file named aws-* or ending with -config treated
+  local base="$ROOT_DIR/secrets"
+  shopt -s nullglob
+  for f in "$base"/aws-* "$base"/*-aws-config" "$base"/aws-config; do
+    [[ -f "$f" ]] || continue
+    local tag="$(basename "$f")"
+    local name="${tag%%.*}" # strip extension if any
+    local out="$AWS_SOPS_DIR/${tag}.sops.yaml"
+    build_yaml "$name" config "$f" > "$out"
     encrypt_in_place "$out"
     echo "Synced $out"
-  else
-    echo "Skip aws-config (missing secrets/aws-config)"
-  fi
+  done
+  shopt -u nullglob
 }
 
 main() {
