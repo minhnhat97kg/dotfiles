@@ -165,6 +165,14 @@
                 bind | split-window -h -c "#{pane_current_path}"
                 bind - split-window -v -c "#{pane_current_path}"
 
+                # Pane border highlighting
+                set -g pane-border-style "fg=#313244"
+                set -g pane-active-border-style "fg=#89b4fa,bold"
+
+                # Dim inactive panes
+                set -g window-style "fg=#585b70,bg=#181825"
+                set -g window-active-style "fg=#cdd6f4,bg=#1e1e2e"
+
                 # Vim-like pane navigation
                 is_vim="ps -o state= -o comm= -t '#{pane_tty}' | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|n?vim?x?)(diff)?$'"
                 bind -n C-h run "($is_vim && tmux send-keys C-h) || tmux select-pane -L"
@@ -180,6 +188,10 @@
                 (lib.mkOrder 550 ''
                   export GOPATH=$HOME/go
                   export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
+
+                  # npm global packages directory (avoid writing to Nix store)
+                  export NPM_CONFIG_PREFIX="$HOME/.npm-global"
+                  export PATH="$HOME/.npm-global/bin:$PATH"
                 '')
                 ''
                   # Load aliases from YAML config if available
@@ -814,6 +826,14 @@ SHOW_KEY
                           bind | split-window -h -c "#{pane_current_path}"
                           bind - split-window -v -c "#{pane_current_path}"
 
+                          # Pane border highlighting
+                          set -g pane-border-style "fg=#313244"
+                          set -g pane-active-border-style "fg=#89b4fa,bold"
+
+                          # Dim inactive panes
+                          set -g window-style "fg=#585b70,bg=#181825"
+                          set -g window-active-style "fg=#cdd6f4,bg=#1e1e2e"
+
                           # Vim-like pane navigation
                           is_vim="ps -o state= -o comm= -t '#{pane_tty}' | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|n?vim?x?)(diff)?$'"
                           bind -n C-h run "($is_vim && tmux send-keys C-h) || tmux select-pane -L"
@@ -829,6 +849,10 @@ SHOW_KEY
                           export GOPATH=$HOME/go
                           export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 
+                          # Global npm prefix for Copilot CLI
+                          export NPM_CONFIG_PREFIX="$HOME/.npm-global"
+                          export PATH="$HOME/.npm-global/bin:$PATH"
+
                           # Termux-specific
                           export TMPDIR=/data/data/com.termux.nix/files/usr/tmp
 
@@ -841,6 +865,7 @@ SHOW_KEY
                           ll = "ls -l";
                           lg = "lazygit";
                           e = "nvim";
+                          copilot = "github-copilot-cli";
                         };
                         oh-my-zsh = {
                           enable = true;

@@ -48,6 +48,7 @@ secrets/**/*
 !secrets/aws-credentials
 !secrets/ssh/*.enc
 !secrets/git/*.enc
+!secrets/github-copilot/*.enc
 !secrets/README.md
 *.tmp
 
