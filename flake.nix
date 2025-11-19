@@ -405,6 +405,11 @@
                   # Browser (qutebrowser)
                   home.file.".qutebrowser/config.py".source = ./qutebrowser/config.py;
 
+                  # sops-nix integration
+                  imports = [ inputs.sops-nix.homeManagerModules.sops ];
+                  sops.defaultSopsFile = ./secrets/aws-config.sops.yaml;
+                  sops.secrets."aws-config" = { path = "${config.home.homeDirectory}/.aws/config"; };
+
                   # AWS configuration now managed by sops-nix (manual decrypt removed)
                   home.activation.decryptAwsConfig =
                     let
