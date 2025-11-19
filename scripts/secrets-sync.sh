@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# scripts/secrets-sync.sh
-# Unified secret sync (generate/update sops-encrypted secrets) - 2025-11-19T08:33:05.120Z
-# Combines previous migration & update scripts.
-# Requires: sops, age key (public recipient already embedded), optional yq.
+# minimal secrets-sync 2025-11-19T15:00:36Z
 
 set -euo pipefail
 AGE_RECIP="age1h7y2etdv5r0nclaaavral84gcdd2kvvcu2h8yes3e3k3fcp03fzq306yas"
@@ -12,9 +9,6 @@ SECRETS_DIR="$ROOT_DIR/secrets"
 SSH_SOPS_DIR="$SECRETS_DIR/ssh"
 GIT_SOPS_DIR="$SECRETS_DIR/git"
 AWS_SOPS_DIR="$SECRETS_DIR"
-
-# Auto-detect sources by scanning directories listed in SOURCES_DIRS
-# Define directories via SOURCES_DIRS env (comma-separated) or default set.
 
 
 need_cmd() { command -v "$1" >/dev/null || { echo "Missing required command: $1"; exit 1; }; }
@@ -42,21 +36,9 @@ encrypt_in_place() {
 
 process_ssh_dir() {
   mkdir -p "$SSH_SOPS_DIR"
-  # Accept override list via SSH_KEYS env or default pattern matching
-  local default_keys=(id_* *_rsa bitbucket-ssh)
   local keys=()
-  if [[ -n "${SSH_KEYS:-}" ]]; then
-    IFS=',' read -r -a keys <<<"$SSH_KEYS"
-  else
-    for pat in "${default_keys[@]}"; do
-      for f in $SSH_DIR/$pat; do
-        [[ -f "$f" ]] && keys+=("$(basename "$f")")
-      done
-    done
-  fi
-  # De-duplicate
-  local uniq=(); declare -A seen
-  for k in "${keys[@]}"; do [[ -n "${seen[$k]:-}" ]] || { uniq+=("$k"); seen[$k]=1; }; done
+  if [[ -n "${SSH_KEYS:-}" ]]; then IFS=',' read -r -a keys <<<"$SSH_KEYS"; else for f in $SSH_DIR/id_* $SSH_DIR/*_rsa $SSH_DIR/bitbucket-ssh; do [[ -f "$f" ]] && keys+=("$(basename "$f")"); done; fi
+  local uniq=(); declare -A seen; for k in "${keys[@]}"; do [[ -n "${seen[$k]:-}" ]] || { uniq+=("$k"); seen[$k]=1; }; done
   for key in "${uniq[@]}"; do
     local src="$SSH_DIR/$key"
     [[ -f "$src" ]] || { echo "Skip ssh-$key (missing)"; continue; }
@@ -92,7 +74,7 @@ process_git() {
 }
 
 process_aws() {
-  # Any file named aws-* or ending with -config treated
+  # aws-* auto
   local base="$ROOT_DIR/secrets"
   shopt -s nullglob
   for f in "$base"/aws-* "$base"/*-aws-config" "$base"/aws-config; do
@@ -109,7 +91,7 @@ process_aws() {
 
 main() {
   need_cmd sops
-  # Allow user-defined directories to supplement defaults
+  # Optional extra dirs SOURCES_DIRS
   local default_dirs=("$SSH_DIR" "$ROOT_DIR/secrets/git" "$ROOT_DIR/secrets")
   local extra=()
   if [[ -n "${SOURCES_DIRS:-}" ]]; then IFS=',' read -r -a extra <<<"$SOURCES_DIRS"; fi
