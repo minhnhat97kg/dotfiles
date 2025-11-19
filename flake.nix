@@ -409,6 +409,13 @@
                   imports = [ inputs.sops-nix.homeManagerModules.sops ];
                   sops.defaultSopsFile = ./secrets/aws-config.sops.yaml;
                   sops.secrets."aws-config" = { path = "${config.home.homeDirectory}/.aws/config"; };
+                  sops.secrets."ssh-id_rsa" = { path = "${config.home.homeDirectory}/.ssh/id_rsa"; mode = "0600"; };
+                  sops.secrets."ssh-id_ed25519" = { path = "${config.home.homeDirectory}/.ssh/id_ed25519"; mode = "0600"; };
+                  sops.secrets."ssh-cuong_rsa" = { path = "${config.home.homeDirectory}/.ssh/cuong_rsa"; mode = "0600"; };
+                  sops.secrets."ssh-id_minhnhat97kg" = { path = "${config.home.homeDirectory}/.ssh/id_minhnhat97kg"; mode = "0600"; };
+                  sops.secrets."ssh-bitbucket" = { path = "${config.home.homeDirectory}/.ssh/bitbucket-ssh"; mode = "0600"; };
+                  sops.secrets."ssh-config" = { path = "${config.home.homeDirectory}/.ssh/config"; mode = "0600"; };
+                  sops.secrets."git-work-config" = { path = "${config.home.homeDirectory}/.config/git/work.gitconfig"; mode = "0644"; };
 
                   # (Removed manual age-based decrypt activation entries; migrate remaining secrets to sops-nix)
 

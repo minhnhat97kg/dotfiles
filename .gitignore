@@ -48,7 +48,9 @@ secrets/**/*
 !secrets/aws-config.sops.yaml
 !secrets/aws-credentials
 !secrets/ssh/*.enc
+!secrets/ssh/*.sops.yaml
 !secrets/git/*.enc
+!secrets/git/*.sops.yaml
 !secrets/github-copilot/*.enc
 !secrets/README.md
 *.tmp
