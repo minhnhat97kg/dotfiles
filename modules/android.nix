@@ -180,6 +180,9 @@ EOS
           # This avoids nix-env/nix profile compatibility issues
           home.packages = lib.mkForce [];
 
+          # Disable problematic activation scripts that use nix-env
+          home.activation.installPackages = lib.mkForce (lib.hm.dag.entryAfter ["writeBoundary"] "");
+
           # Android-specific zsh config
           programs.zsh.initContent = lib.mkAfter ''
             export TMPDIR=/data/data/com.termux.nix/files/usr/tmp
