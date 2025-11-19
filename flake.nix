@@ -60,67 +60,23 @@
         pkgs: with pkgs; [
           # Core tools
           git
-          gh # GitHub CLI
+          gh
           fzf
-          # neovim - configured via programs.neovim instead
-          ripgrep # rg - fast grep alternative
-          fd # fast find alternative
-          jq # JSON processor
-          jless # JSON viewer
+          ripgrep
+          fd
+          jq
 
-          # Shell & Terminal
-          # tmux - configured via programs.tmux instead
-          coreutils # GNU core utilities
-
-          # Development - General
+          # Dev essentials
+          nodejs
           go
-          delve # Go debugger
-          goimports-reviser # Go imports formatter
-          maven
-          gradle
-          nodejs # Node.js runtime
+          cargo rustc rustfmt clippy rust-analyzer
+          python3 pipx
 
-          # Development - Rust
-          cargo
-          rustc
-          rustfmt
-          clippy
-          rust-analyzer
-
-          # Development - Python
-          python3
-          pipx
-
-          # Cloud & DevOps
-          terraform
-
-          # Database Tools
-          postgresql
-          mysql80
-          mycli # MySQL CLI client
-          pgcli # PostgreSQL CLI client
-          pspg # Postgres pager for tabular data
-
-          # API & HTTP Tools
-          httpie
-          hurl # HTTP testing tool
-
-          # Security & Auth
-          # age # Encryption tool (installed via nix profile)
-
-          # File & Text Processing
-          delta # Better git diff (used in git config)
-          diff-so-fancy # Git diff highlighting
-          # yq-go # YAML processor (installed via nix profile)
-
-          # Monitoring & System
-          # watchman # File watching
+          # Diff & formatting
+          delta diff-so-fancy
 
           # Utilities
-          fx # JSON viewer
-
-          # AWS
-          awscli2
+          fx jless
         ];
 
       # Shared home-manager configuration
