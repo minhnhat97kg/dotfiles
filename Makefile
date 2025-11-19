@@ -135,3 +135,25 @@ update: ## Update flake inputs
 
 format: ## Format nix files
 	nix fmt
+
+pre-commit-install: ## Install git pre-commit hook (nix fmt + flake check + secret scan)
+	@mkdir -p .git/hooks
+	@cat > .git/hooks/pre-commit <<'EOF'
+	#!/usr/bin/env bash
+	set -euo pipefail
+	echo '[pre-commit] Formatting Nix files...'
+	nix fmt >/dev/null 2>&1 || true
+	echo '[pre-commit] Running flake check...'
+	if ! nix flake check; then
+	  echo '[pre-commit] flake check failed';
+	  exit 1;
+	fi
+	echo '[pre-commit] Scanning for plaintext secrets...'
+	if grep -R --exclude-dir=secrets --exclude='*.enc' -E '(AWS_SECRET_ACCESS_KEY|AGE-SECRET-KEY|BEGIN [A-Z ]*PRIVATE KEY|oauth_token)' . >/dev/null 2>&1; then
+	  echo '[pre-commit] Potential secret detected. Commit aborted.';
+	  exit 1;
+	fi
+	echo '[pre-commit] OK'
+	EOF
+	@chmod +x .git/hooks/pre-commit
+	@echo '✓ Pre-commit hook installed'
