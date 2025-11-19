@@ -86,16 +86,8 @@
           fx
         ];
 
-      # Shared home-manager configuration
-      sharedHomeConfig =
-        { pkgs, lib, ... }:
-        {
-          home.stateVersion = "24.05";
-
-          # Allow unfree packages in home-manager
-          nixpkgs.config.allowUnfree = true;
-
-          home.packages = sharedPackages pkgs;
+      # Shared home-manager configuration extracted to modules/shared.nix
+      sharedHomeConfig = import ./modules/shared.nix;
 
           programs = {
             neovim = {
