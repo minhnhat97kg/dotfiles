@@ -42,17 +42,10 @@ modules.old/
 # Claude Code
 .claude/settings.local.json
 
-# Secrets - NEVER COMMIT unencrypted files or age keys
-secrets/**/*
-!secrets/aws-config.enc
-!secrets/aws-config.sops.yaml
-!secrets/aws-credentials
-!secrets/ssh/*.enc
-!secrets/ssh/*.sops.yaml
-!secrets/git/*.enc
-!secrets/git/*.sops.yaml
-!secrets/github-copilot/*.enc
+# Secrets - commit only encrypted .sops.yaml files and README
+secrets/*
 !secrets/README.md
+!secrets/encrypted/
 *.tmp
 
 # Age encryption keys - NEVER COMMIT

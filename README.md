@@ -1,179 +1,151 @@
-# Minimal Cross-Platform Dotfiles
+# Cross-Platform Dotfiles
 
-A minimal, consolidated Nix configuration supporting both **macOS** (via nix-darwin) and **Android** (via nix-on-droid).
+Nix configuration for **macOS** (nix-darwin) and **Android** (nix-on-droid).
 
-## 📁 Structure
+## Structure
 
 ```
 dotfiles/
-├── flake.nix              # Single unified configuration (all platforms)
-├── nvim/                  # Neovim editor configuration
-│   ├── init.lua          # Minimized Neovim config (630 lines)
-│   ├── lsp/              # LSP server configurations
-│   │   ├── lua_ls.lua
-│   │   ├── ts_ls.lua
-│   │   └── golsp.lua
-│   └── ftplugin/
-│       └── java.lua      # Java-specific settings
-├── shell/                 # Shell dotfiles
-│   ├── .zshrc            # Zsh configuration
-│   ├── .bashrc           # Bash configuration
-│   ├── .profile          # Shell profile
-│   ├── .zprofile         # Zsh profile
-│   └── .ideavimrc        # IdeaVim configuration
-├── yabai/yabairc         # macOS window manager
-├── skhd/skhdrc           # macOS hotkey daemon
-├── zellij/config.kdl     # Terminal multiplexer
-├── alacritty/            # Alacritty terminal emulator config
-├── kitty/                # Kitty terminal emulator config
-├── iterm2/               # iTerm2 configuration
-├── fish/                 # Fish shell configuration
-├── git/                  # Git global ignore patterns
-├── htop/                 # htop system monitor config
-├── btop/                 # btop system monitor config
-├── lazygit/              # Lazygit TUI configuration
-├── lazydocker/           # Lazydocker TUI configuration
-├── karabiner/            # Karabiner keyboard customization
-├── sketchybar/           # Sketchybar macOS status bar
-├── aws/                  # AWS CLI configuration
-├── secrets/              # Encrypted secrets (managed by sops)
-└── README.md             # This file
+├── flake.nix                 # Main configuration entry
+├── Makefile                  # Build/encrypt/decrypt commands
+├── modules/
+│   ├── darwin.nix            # macOS system config
+│   ├── android.nix           # Android system config
+│   └── shared.nix            # Shared home-manager config
+├── alacritty/                # Terminal emulator
+├── git/                      # Git configuration
+├── lazygit/                  # Lazygit TUI
+├── nvim/                     # Neovim configuration
+│   ├── init.lua
+│   ├── lsp/                  # LSP configs (lua, ts, go)
+│   └── ftplugin/             # Filetype plugins
+├── pspg/                     # PostgreSQL pager
+├── qutebrowser/              # Browser config
+├── shell/                    # Shell dotfiles
+├── sketchybar/               # macOS status bar
+├── skhd/                     # macOS hotkey daemon
+├── scripts/
+│   ├── secrets-sync.sh       # Encrypt secrets to sops format
+│   └── load-aliases.sh       # Load shell aliases
+└── secrets/
+    └── encrypted/            # sops-encrypted secrets
+        ├── ssh/
+        └── aws/
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
-### macOS Installation
+### macOS
 
-1. **Install Nix**:
-   ```bash
-   sh <(curl -L https://nixos.org/nix/install)
-   ```
+```bash
+# Install Nix
+sh <(curl -L https://nixos.org/nix/install)
 
-2. **Clone this repository**:
-   ```bash
-   git clone <your-repo> ~/projects/dotfiles
-   cd ~/projects/dotfiles
-   ```
+# Clone and apply
+git clone <repo> ~/projects/dotfiles
+cd ~/projects/dotfiles
+make install
+```
 
-3. **Apply configuration**:
-   ```bash
-   nix run nix-darwin -- switch --flake .#Nathan-Macbook --accept-flake-config
-   ```
+### Android (Nix-on-Droid)
 
-4. **Subsequent updates**:
-   ```bash
-   darwin-rebuild switch --flake .
-   # Or use the Makefile:
-   make darwin
-   ```
+```bash
+# Install from F-Droid: https://f-droid.org/packages/com.termux.nix/
+git clone <repo> ~/dotfiles
+cd ~/dotfiles
+nix-on-droid switch --flake .
+```
 
-### What Gets Configured
+## Makefile Commands
 
-When you run the configuration, home-manager will automatically symlink all configs from this repo to your home directory:
+```bash
+make help              # Show all commands
 
-- **Shell configs** → `~/.zshrc`, `~/.bashrc`, `~/.profile`, etc.
-- **Terminal emulators** → `~/.config/alacritty/`, `~/.config/kitty/`, `~/.config/iterm2/`
-- **Window management** → `~/.config/yabai/`, `~/.config/skhd/`, `~/.config/sketchybar/`
-- **Development tools** → `~/.config/nvim/`, `~/.config/lazygit/`, `~/.config/lazydocker/`
-- **System monitoring** → `~/.config/htop/`, `~/.config/btop/`
-- **And more...** All configs in this repo are automatically linked!
+# Configuration
+make install           # Apply configuration (auto-detect platform)
+make darwin            # Apply macOS config
+make android           # Apply Android config
+make build             # Build without applying
 
-### Android Installation (Nix-on-Droid)
+# Secrets management
+make encrypt           # Encrypt all secrets (SSH, AWS, Git)
+make encrypt-ssh       # Encrypt SSH keys from ~/.ssh
+make encrypt-aws       # Encrypt AWS config from ~/.aws
+make decrypt           # Decrypt all secrets
+make list-secrets      # List encrypted files
 
-1. **Install Nix-on-Droid app** from F-Droid:
-   - https://f-droid.org/packages/com.termux.nix/
+# Maintenance
+make check             # Check flake configuration
+make update            # Update flake inputs
+make format            # Format nix files
+make clean             # Clean build artifacts
+make gen-key           # Generate/import age key
+```
 
-2. **Open the app and run**:
-   ```bash
-   nix-on-droid switch --flake github:your-username/dotfiles
-   ```
+## Features
 
-3. **Or clone locally**:
-   ```bash
-   git clone <your-repo> ~/dotfiles
-   cd ~/dotfiles
-   nix-on-droid switch --flake .
-   ```
-
-## 🎯 Features (Full Dev Set)
-
-### Shared Across Platforms
-- **Editor**: Neovim (LSP: Lua, TS, Go, Rust, Java)
-- **Terminal**: Tmux (vim-like navigation)
+### Shared (All Platforms)
+- **Editor**: Neovim with LSP (Lua, TypeScript, Go, Rust, Java)
+- **Terminal**: Tmux with vim navigation
 - **Shell**: Zsh + oh-my-zsh
-- **Languages & Toolchains**: Node.js, Go (+delve, goimports-reviser), Rust (cargo, rustc, rustfmt, clippy, rust-analyzer), Python (python3 + pipx), Java (maven, gradle)
-- **Cloud & Infra**: terraform
-- **Databases**: postgresql, mysql, pgcli, mycli, pspg
-- **API / HTTP**: httpie, hurl
-- **Git UX**: delta, diff-so-fancy
-- **Utilities**: fzf, ripgrep, fd, jq, jless, fx, lazygit, direnv
+- **Languages**: Node.js, Go, Rust, Python, Java (Maven/Gradle)
+- **Tools**: fzf, ripgrep, fd, jq, lazygit, direnv
+- **Databases**: PostgreSQL, MySQL, pgcli, mycli, pspg
+- **HTTP**: httpie, hurl
 
-### macOS-Specific (Optional Extras still in flake)
-- Yabai + SKHD + Sketchybar (can be disabled)
-
-### Yabai Setup (Apple Silicon)
-
-Yabai requires additional setup on Apple Silicon Macs to enable window movement between spaces:
-
-#### 1. Disable SIP (Recovery Mode)
-Boot into Recovery Mode (hold Power button) and run:
-```bash
-csrutil disable
-```
-
-#### 2. Set Boot Argument (Recovery Mode)
-Still in Recovery Mode, run:
-```bash
-nvram boot-args=-arm64e_preview_abi
-```
-
-#### 3. Restart and Load Scripting Addition
-After reboot, run:
-```bash
-sudo yabai --install-sa
-sudo yabai --load-sa
-```
-
-**Note**: Without these steps, yabai cannot move windows between spaces or focus spaces programmatically. You'll see the error: `cannot focus space due to an error with the scripting-addition`
+### macOS-Specific
+- Yabai (window manager)
+- skhd (hotkey daemon)
+- Sketchybar (status bar)
+- JankyBorders (window borders)
+- Alacritty terminal
 
 ### Android-Specific
+- SSH server with auto-generated keys
 - Optimized for Termux environment
-- Touch-friendly terminal fonts
-- Mobile-optimized paths
+- Mobile-friendly configuration
 
-## 📝 Key Changes from Original
+## Secrets Management
 
-### Consolidated Structure
-**Before**: 5 separate Nix modules (401 lines)
-**After**: 1 unified flake.nix (307 lines)
+Secrets are encrypted with [sops](https://github.com/getsops/sops) using age encryption.
 
-**Reduction**: ~24% smaller, much easier to maintain
+### First-time Setup
 
-### Removed Modules
-- ❌ `modules/core.nix` → Merged into flake.nix
-- ❌ `modules/system.nix` → Merged into flake.nix
-- ❌ `modules/home.nix` → Merged into flake.nix
-- ❌ `modules/host-users.nix` → Merged into flake.nix
+```bash
+# Generate age key
+make gen-key
 
-### Neovim Configuration
-**Before**: 1134 lines with commented code
-**After**: 630 lines, clean and modern
+# Encrypt your secrets
+make encrypt
+```
 
-**Improvements**:
-- Removed ~400 lines of commented Java/Debug configs
-- Uses Neovim 0.11+ native `vim.lsp.enable()`
-- Removed duplicate autocmds and diagnostics
-- Cleaner section headers
+### Encrypt Secrets
 
-### New Capabilities
-- ✅ **Android support** via nix-on-droid
-- ✅ **Shared configuration** reduces duplication
-- ✅ **Platform-specific overrides** where needed
-- ✅ **Single source of truth** for all platforms
+```bash
+# Encrypt all
+make encrypt
 
-## 🛠️ Customization
+# Encrypt specific directories
+make encrypt-ssh                    # ~/.ssh
+make encrypt-aws                    # ~/.aws
+make encrypt-custom DIR=/path/to    # Custom directory
+```
 
-### Change Username/Email
+### Decrypt Secrets
+
+```bash
+# Decrypt all
+make decrypt
+
+# Decrypt to specific locations
+make decrypt-ssh SSH_DIR=~/.ssh
+make decrypt-aws AWS_DIR=~/.aws
+```
+
+## Customization
+
+### Change Username
+
 Edit `flake.nix`:
 ```nix
 username = "your-username";
@@ -181,189 +153,90 @@ useremail = "your-email@example.com";
 ```
 
 ### Add Packages
-Edit the `sharedPackages` function in `flake.nix`:
+
+Edit `sharedPackages` in `flake.nix`:
 ```nix
 sharedPackages = pkgs: with pkgs; [
-  git
-  fzf
-  neovim
-  # Add your packages here
-  ripgrep
-  bat
+  git fzf ripgrep
+  # Add packages here
 ];
 ```
 
-### Platform-Specific Packages
+### Platform-Specific
 
-**macOS only**:
+**macOS** - Edit `modules/darwin.nix`:
 ```nix
-# In darwinConfigurations section
-environment.systemPackages = with nixpkgs.legacyPackages.aarch64-darwin; [
-  your-macos-package
+environment.systemPackages = with pkgs; [
+  your-package
 ];
 ```
 
-**Android only**:
+**Android** - Edit `modules/android.nix`:
 ```nix
-# In nixOnDroidConfigurations section
-environment.packages = with nixpkgs.legacyPackages.aarch64-linux; [
-  your-android-package
+environment.packages = with pkgs; [
+  your-package
 ];
 ```
 
-## 🔧 Maintenance
+## Yabai Setup (Apple Silicon)
 
-### Update flake inputs
+Yabai requires SIP to be partially disabled for full functionality:
+
 ```bash
-nix flake update
+# Boot into Recovery Mode (hold Power button)
+csrutil disable
+nvram boot-args=-arm64e_preview_abi
+
+# After reboot
+sudo yabai --install-sa
+sudo yabai --load-sa
 ```
 
-### Format Nix code
-```bash
-nix fmt
-```
+## Troubleshooting
 
-### Garbage collection
-Automatic weekly cleanup is enabled. Manual cleanup:
-```bash
-# macOS
-nix-collect-garbage -d
+### darwin-rebuild not found
 
-# Android
-nix-on-droid on-device nix-collect-garbage -d
-```
-
-### Check flake
-```bash
-nix flake check
-```
-
-## 📱 Android-Specific Tips
-
-### Terminal Recommendations
-- Use **Termux:Widget** for quick shortcuts
-- Enable **Termux:Styling** for better themes
-- Install **Termux:API** for device integration
-
-### Building on Android
-The first build on Android takes ~30-60 minutes. Subsequent builds are much faster thanks to caching.
-
-### Storage Considerations
-Nix-on-Droid requires ~2-3GB of storage. Ensure you have sufficient space before installation.
-
-## 🐛 Troubleshooting
-
-### macOS: "command not found: darwin-rebuild"
 ```bash
 nix run nix-darwin -- switch --flake .
 ```
 
-### macOS: skhd not appearing in Accessibility settings
-
-skhd is a command-line tool without a proper .app bundle, so macOS doesn't automatically show it in Accessibility settings. Here are all working solutions:
-
-#### Solution 1: Run skhd manually to trigger permission prompt (Recommended)
-
-1. Stop the current skhd service:
-   ```bash
-   pkill -f skhd
-   ```
-
-2. Find the actual skhd binary path:
-   ```bash
-   readlink -f /run/current-system/sw/bin/skhd
-   # Output: /nix/store/XXXX-skhd-X.X.X/bin/skhd
-   ```
-
-3. Run skhd manually (replace with your actual path):
-   ```bash
-   /nix/store/wdw8kp8p3h7kz63wfg43nvjxzxybphjz-skhd-0.3.9/bin/skhd -c /etc/skhdrc
-   ```
-
-4. This should trigger a macOS permission dialog. Click "Open System Settings" and grant permission to **skhd**
-
-5. Press `Ctrl+C` to stop, then restart the service:
-   ```bash
-   launchctl kickstart -k gui/$(id -u)/org.nixos.skhd
-   ```
-
-#### Solution 2: Reset TCC permissions if no dialog appears
-
-If running skhd manually doesn't show a permission dialog, macOS has already decided on the permission:
+### skhd not in Accessibility settings
 
 ```bash
-# Reset Accessibility permissions
-tccutil reset Accessibility
+# Find skhd path
+readlink -f /run/current-system/sw/bin/skhd
 
-# Then try Solution 1 again
+# Run manually to trigger permission dialog
+/nix/store/XXX-skhd-X.X.X/bin/skhd -c /etc/skhdrc
+
+# Grant permission in System Settings > Privacy > Accessibility
+# Then restart
+launchctl kickstart -k gui/$(id -u)/org.nixos.skhd
 ```
 
-#### Solution 3: Manually add skhd to Accessibility
-
-If the dialog still doesn't appear:
-
-1. Open **System Settings** → **Privacy & Security** → **Accessibility**
-2. Click the lock icon to unlock
-3. Click the **"+"** button below the app list
-4. Press `Cmd+Shift+G` to open "Go to folder"
-5. Enter the actual nix store path (use `readlink -f /run/current-system/sw/bin/skhd` to find it):
-   ```
-   /nix/store/wdw8kp8p3h7kz63wfg43nvjxzxybphjz-skhd-0.3.9/bin/skhd
-   ```
-6. Select the `skhd` binary and add it
-7. Restart skhd:
-   ```bash
-   launchctl kickstart -k gui/$(id -u)/org.nixos.skhd
-   ```
-
-#### Solution 4: Grant permission to Terminal.app
-
-As a workaround, grant Accessibility permission to the Terminal app:
-
-1. Open **System Settings** → **Privacy & Security** → **Accessibility**
-2. Add **Terminal.app** (or **iTerm.app** if you use that)
-3. Restart skhd:
-   ```bash
-   launchctl kickstart -k gui/$(id -u)/org.nixos.skhd
-   ```
-
-#### Verify skhd is working
-
-After granting permissions, test your hotkeys. You can also check the service status:
+### Secrets decryption fails
 
 ```bash
-# Check if skhd is running
-pgrep -l skhd
+# Ensure age key exists
+ls ~/.config/sops/age/keys.txt
 
-# Check service status
-launchctl print gui/$(id -u)/org.nixos.skhd
+# Test decryption
+make test-decrypt
 ```
 
-### Android: Build failures
+## Maintenance
+
 ```bash
-# Clear cache and rebuild
-nix-on-droid on-device nix-store --verify --check-contents --repair
+# Update flake inputs
+make update
+
+# Format nix files
+make format
+
+# Garbage collection
+nix-collect-garbage -d
 ```
 
-### LSP not working in Neovim
-The LSP configs in `nvim/lsp/` are auto-discovered by Neovim 0.11+. Ensure you have:
-```bash
-# Install language servers via Mason in Neovim
-:Mason
-```
+## License
 
-## 📚 Resources
-
-- [Nix Flakes](https://nixos.wiki/wiki/Flakes)
-- [nix-darwin](https://github.com/LnL7/nix-darwin)
-- [nix-on-droid](https://github.com/nix-community/nix-on-droid)
-- [home-manager](https://github.com/nix-community/home-manager)
-- [Neovim 0.11](https://neovim.io/doc/user/news-0.11.html)
-
-## 📄 License
-
-MIT License - Feel free to use and modify.
-
----
-
-**Note**: This configuration has been minimized and consolidated from a multi-file setup. All the functionality is preserved while significantly reducing complexity and duplication.
+MIT
