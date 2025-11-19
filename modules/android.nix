@@ -35,6 +35,8 @@
     net-tools
     mosh
     tailscale
+    sops
+    age
   ];
 
   terminal.font = "${pkgs.nerd-fonts.fira-code}/share/fonts/truetype/NerdFonts/FiraCodeNerdFont-Regular.ttf";
