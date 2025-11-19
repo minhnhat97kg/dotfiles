@@ -87,7 +87,7 @@
         ];
 
       # Shared home-manager configuration extracted to modules/shared.nix
-      sharedHomeConfig = import ./modules/shared.nix;
+      sharedHomeConfig = args: import ./modules/shared.nix (args // { inherit sharedPackages; });
 
           programs = {
             neovim = {
@@ -405,7 +405,7 @@
                   # Browser (qutebrowser)
                   home.file.".qutebrowser/config.py".source = ./qutebrowser/config.py;
 
-                  # Decrypt AWS configuration on activation
+                  # AWS configuration now managed by sops-nix (manual decrypt removed)
                   home.activation.decryptAwsConfig =
                     let
                       awsConfigFile = ./secrets/aws-config.enc;

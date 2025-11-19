@@ -45,6 +45,7 @@ modules.old/
 # Secrets - NEVER COMMIT unencrypted files or age keys
 secrets/**/*
 !secrets/aws-config.enc
+!secrets/aws-config.sops.yaml
 !secrets/aws-credentials
 !secrets/ssh/*.enc
 !secrets/git/*.enc
