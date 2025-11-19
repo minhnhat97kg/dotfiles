@@ -169,6 +169,7 @@ EOS
   home-manager = {
     backupFileExtension = "hm-bak";
     useGlobalPkgs = true;
+    useUserPackages = true;  # Install packages via environment.packages, not nix-env
     config = { config, pkgs, lib, ... }:
       lib.mkMerge [
         (sharedHomeConfig { inherit pkgs lib; })
@@ -179,9 +180,6 @@ EOS
           # Disable home.packages for Android - use environment.packages instead
           # This avoids nix-env/nix profile compatibility issues
           home.packages = lib.mkForce [];
-
-          # Disable problematic activation scripts that use nix-env
-          home.activation.installPackages = lib.mkForce (lib.hm.dag.entryAfter ["writeBoundary"] "");
 
           # Android-specific zsh config
           programs.zsh.initContent = lib.mkAfter ''
