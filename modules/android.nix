@@ -21,6 +21,10 @@
   # All packages must be here for Android (not in home.packages)
   # due to nix-env/nix profile compatibility issues
   environment.packages = with pkgs; [
+    # Editor & Terminal
+    neovim
+    tmux
+
     # Core utilities
     git
     gh
@@ -42,6 +46,8 @@
     nodejs
     delve
     goimports-reviser
+    maven
+    gradle
 
     # Rust
     cargo
@@ -85,6 +91,9 @@
 
     # Utilities
     fx
+    terraform
+    direnv
+    lazygit
   ];
 
   terminal.font = "${pkgs.nerd-fonts.fira-code}/share/fonts/truetype/NerdFonts/FiraCodeNerdFont-Regular.ttf";
@@ -177,7 +186,7 @@ EOS
           home.stateVersion = "24.05";
           nixpkgs.config.allowUnfree = true;
 
-          # Disable home.packages for Android - use environment.packages instead
+          # Disable home.packages for Android - packages must be in environment.packages
           # This avoids nix-env/nix profile compatibility issues
           home.packages = lib.mkForce [];
 
