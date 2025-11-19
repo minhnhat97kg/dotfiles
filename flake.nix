@@ -410,72 +410,7 @@
                   sops.defaultSopsFile = ./secrets/aws-config.sops.yaml;
                   sops.secrets."aws-config" = { path = "${config.home.homeDirectory}/.aws/config"; };
 
-                  # AWS configuration now managed by sops-nix (manual decrypt removed)
-                  home.activation.decryptAwsConfig =
-                    let
-                      awsConfigFile = ./secrets/aws-config.enc;
-                      awsCredsFile = ./secrets/aws-credentials;
-                      ageKey = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
-                    in
-                    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-                      if [ -f ${ageKey} ]; then
-                        echo "Decrypting AWS configuration..."
-                        $DRY_RUN_CMD mkdir -p $HOME/.aws
-
-                        if [ -f ${awsConfigFile} ]; then
-                          ${pkgs.age}/bin/age --decrypt -i ${ageKey} ${awsConfigFile} > $HOME/.aws/config
-                          $DRY_RUN_CMD chmod 644 $HOME/.aws/config
-                          echo "  ✓ AWS config decrypted"
-                        fi
-
-                        if [ -f ${awsCredsFile} ]; then
-                          ${pkgs.age}/bin/age --decrypt -i ${ageKey} ${awsCredsFile} > $HOME/.aws/credentials
-                          $DRY_RUN_CMD chmod 600 $HOME/.aws/credentials
-                          echo "  ✓ AWS credentials decrypted"
-                        fi
-                      fi
-                    '';
-
-                  # Decrypt SSH keys on activation
-                  home.activation.decryptSshKeys =
-                    let
-                      secretsDir = ./secrets/ssh;
-                      ageKey = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
-                    in
-                    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-                      if [ -d ${secretsDir} ] && [ -f ${ageKey} ]; then
-                        echo "Decrypting SSH keys..."
-                        $DRY_RUN_CMD mkdir -p $HOME/.ssh
-
-                        for encrypted in ${secretsDir}/*.enc; do
-                          if [ -f "$encrypted" ]; then
-                            filename=$(basename "$encrypted" .enc)
-                            echo "  → $filename"
-                            ${pkgs.age}/bin/age --decrypt -i ${ageKey} "$encrypted" > $HOME/.ssh/$filename
-                            $DRY_RUN_CMD chmod 600 $HOME/.ssh/$filename
-                          fi
-                        done
-
-                        echo "✓ SSH keys decrypted"
-                      fi
-                    '';
-
-                  # Decrypt git work config on activation
-                  home.activation.decryptGitWorkConfig =
-                    let
-                      secretsFile = ./secrets/git/work.gitconfig.enc;
-                      ageKey = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
-                    in
-                    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-                      if [ -f ${secretsFile} ] && [ -f ${ageKey} ]; then
-                        echo "Decrypting git work config..."
-                        $DRY_RUN_CMD mkdir -p $HOME/.config/git
-                        ${pkgs.age}/bin/age --decrypt -i ${ageKey} ${secretsFile} > $HOME/.config/git/work.gitconfig
-                        $DRY_RUN_CMD chmod 644 $HOME/.config/git/work.gitconfig
-                        echo "✓ Git work config decrypted"
-                      fi
-                    '';
-
+                  # (Removed manual age-based decrypt activation entries; migrate remaining secrets to sops-nix)
 
                   # macOS-specific packages
                   home.packages = with pkgs; [
