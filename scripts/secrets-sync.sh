@@ -13,19 +13,9 @@ SSH_SOPS_DIR="$SECRETS_DIR/ssh"
 GIT_SOPS_DIR="$SECRETS_DIR/git"
 AWS_SOPS_DIR="$SECRETS_DIR"
 
-# Definition format:
-# folder:type:source_file:target_sops_filename:mode[:stringData_field]
-# folder key maps to handling logic; currently only 'ssh', 'git', 'aws'.
-SOURCES=(
-  "ssh:id_rsa:id_rsa:id_rsa.sops.yaml:0600"
-  "ssh:id_ed25519:id_ed25519:id_ed25519.sops.yaml:0600"
-  "ssh:cuong_rsa:cuong_rsa:cuong_rsa.sops.yaml:0600"
-  "ssh:id_minhnhat97kg:id_minhnhat97kg:id_minhnhat97kg.sops.yaml:0600"
-  "ssh:bitbucket-ssh:bitbucket-ssh:bitbucket-ssh.sops.yaml:0600"
-  "ssh:config:config:config.sops.yaml:0600:key"  # SSH config (field name key)
-  "aws:config:aws-config:aws-config.sops.yaml:0644:config" # AWS config (field name config)
-  "git:work.gitconfig:work.gitconfig:work.gitconfig.sops.yaml:0644:config" # work gitconfig
-)
+# Auto-detect sources by scanning directories
+# SSH keys
+# Git work config and AWS config are expected in secrets/git and secrets respectively
 
 need_cmd() { command -v "$1" >/dev/null || { echo "Missing required command: $1"; exit 1; }; }
 
@@ -50,47 +40,57 @@ encrypt_in_place() {
   fi
 }
 
-process_source() {
-  local spec="$1"
-  IFS=':' read -r kind type src target mode field <<<"$spec"
-  local source_path
-  local out_dir
-  local name
-  local field_name="key"
-
-  case "$kind" in
-    ssh)
-      out_dir="$SSH_SOPS_DIR"; source_path="$SSH_DIR/$src"; name="ssh-$src" ;;
-    git)
-      out_dir="$GIT_SOPS_DIR"; source_path="$ROOT_DIR/secrets/git/$src"; name="git-work-config" ;;
-    aws)
-      out_dir="$AWS_SOPS_DIR"; source_path="$ROOT_DIR/secrets/$src"; name="aws-config" ;;
-    *) echo "Unknown kind: $kind"; return 1 ;;
-  esac
-
-  [[ -n "$field" ]] && field_name="$field"
-  mkdir -p "$out_dir"
-  local target_path="$out_dir/$target"
-
-  if [[ ! -f "$source_path" ]]; then
-    echo "Skip $target (missing source: $source_path)"
-    return
+process_ssh_dir() {
+  mkdir -p "$SSH_SOPS_DIR"
+  for key in id_rsa id_ed25519 cuong_rsa id_minhnhat97kg bitbucket-ssh; do
+    local src="$SSH_DIR/$key"
+    [[ -f "$src" ]] || { echo "Skip ssh-$key (missing)"; continue; }
+    local out="$SSH_SOPS_DIR/${key}.sops.yaml"
+    build_yaml "ssh-$key" key "$src" > "$out"
+    encrypt_in_place "$out"
+    echo "Synced $out"
+  done
+  # SSH config
+  if [[ -f "$SSH_DIR/config" ]]; then
+    local out="$SSH_SOPS_DIR/config.sops.yaml"
+    build_yaml "ssh-config" key "$SSH_DIR/config" > "$out"
+    encrypt_in_place "$out"
+    echo "Synced $out"
   fi
+}
 
-  local tmp_plain; tmp_plain=$(mktemp)
-  build_yaml "$name" "$field_name" "$source_path" > "$tmp_plain"
-  mv "$tmp_plain" "$target_path"
-  encrypt_in_place "$target_path"
-  chmod "$mode" "$target_path" || true
-  echo "Synced $target_path (mode $mode)"
+process_git() {
+  mkdir -p "$GIT_SOPS_DIR"
+  local src="$GIT_SOPS_DIR/../work.gitconfig"
+  if [[ -f "$ROOT_DIR/secrets/git/work.gitconfig" ]]; then
+    src="$ROOT_DIR/secrets/git/work.gitconfig"
+    local out="$GIT_SOPS_DIR/work.gitconfig.sops.yaml"
+    build_yaml "git-work-config" config "$src" > "$out"
+    encrypt_in_place "$out"
+    echo "Synced $out"
+  else
+    echo "Skip git-work-config (missing secrets/git/work.gitconfig)"
+  fi
+}
+
+process_aws() {
+  local src="$ROOT_DIR/secrets/aws-config"
+  if [[ -f "$src" ]]; then
+    local out="$AWS_SOPS_DIR/aws-config.sops.yaml"
+    build_yaml "aws-config" config "$src" > "$out"
+    encrypt_in_place "$out"
+    echo "Synced $out"
+  else
+    echo "Skip aws-config (missing secrets/aws-config)"
+  fi
 }
 
 main() {
   need_cmd sops
   mkdir -p "$SSH_SOPS_DIR" "$GIT_SOPS_DIR" "$AWS_SOPS_DIR"
-  for s in "${SOURCES[@]}"; do
-    process_source "$s"
-  done
+  process_ssh_dir
+  process_git
+  process_aws
   echo "All secrets processed. Commit only encrypted *.sops.yaml files."
 }
 
