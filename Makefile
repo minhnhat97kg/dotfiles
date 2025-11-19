@@ -1,12 +1,12 @@
 .PHONY: help install build switch encrypt decrypt encrypt-ssh encrypt-aws encrypt-git decrypt-ssh decrypt-aws decrypt-git test clean check update format deps darwin android
 
 # Configuration
-AGE_KEY ?= ~/.config/sops/age/keys.txt
+AGE_KEY ?= $(HOME)/.config/sops/age/keys.txt
 AGE_PUBKEY := age1h7y2etdv5r0nclaaavral84gcdd2kvvcu2h8yes3e3k3fcp03fzq306yas
 
 # Secret directories - customize these paths
-SSH_DIR ?= ~/.ssh
-AWS_DIR ?= ~/.aws
+SSH_DIR ?= $(HOME)/.ssh
+AWS_DIR ?= $(HOME)/.aws
 GIT_SECRETS_DIR ?= ./secrets/git
 
 # Output directory for encrypted secrets
