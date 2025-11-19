@@ -95,15 +95,18 @@ When you run the configuration, home-manager will automatically symlink all conf
    nix-on-droid switch --flake .
    ```
 
-## 🎯 Features (Minimal Set)
+## 🎯 Features (Full Dev Set)
 
 ### Shared Across Platforms
-- **Editor**: Neovim (LSP: Lua, TS, Go, Rust)
+- **Editor**: Neovim (LSP: Lua, TS, Go, Rust, Java)
 - **Terminal**: Tmux (vim-like navigation)
 - **Shell**: Zsh + oh-my-zsh
-- **Languages**: Node.js, Go, Rust toolchain, Python
+- **Languages & Toolchains**: Node.js, Go (+delve, goimports-reviser), Rust (cargo, rustc, rustfmt, clippy, rust-analyzer), Python (python3 + pipx), Java (maven, gradle)
+- **Cloud & Infra**: terraform
+- **Databases**: postgresql, mysql, pgcli, mycli, pspg
+- **API / HTTP**: httpie, hurl
 - **Git UX**: delta, diff-so-fancy
-- **Utilities**: fzf, ripgrep, fd, jq, fx, jless, lazygit, direnv
+- **Utilities**: fzf, ripgrep, fd, jq, jless, fx, lazygit, direnv
 
 ### macOS-Specific (Optional Extras still in flake)
 - Yabai + SKHD + Sketchybar (can be disabled)

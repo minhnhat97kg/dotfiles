@@ -98,7 +98,9 @@ ctrl + alt + shift - c : yabai -m space --create && \
                          osascript -e "display notification \"Created space $index\" with title \"Yabai\""
 
 # Destroy current desktop (mod2 + d)
-ctrl + alt + shift - d : yabai -m space --destroy && \
+# Note: Requires yabai scripting addition (SIP partially disabled) OR uses Mission Control
+ctrl + alt + shift - d : yabai -m space --destroy || \
+                         osascript -e 'tell application "System Events" to key code 27 using {control down}' && \
                          osascript -e "display notification \"Space destroyed\" with title \"Yabai\""
 
 # Create new desktop and move window to it (mod2 + m)
@@ -112,11 +114,7 @@ ctrl + alt + shift - m : yabai -m space --create && \
 # SPACE/SCREEN SWITCHING
 # ====================================================================
 
-# Throw focused window to space left (mod2 + left)
-ctrl + alt + shift - left : yabai -m window --space prev && yabai -m space --focus prev
-
-# Throw focused window to space right (mod2 + right)
-ctrl + alt + shift - right : yabai -m window --space next && yabai -m space --focus next
+# Note: mod2 + h/l for space left/right are defined in WINDOW MOVEMENT section above
 
 # Throw focused window to spaces 1-10 (mod2 + 1-0)
 ctrl + alt + shift - 1 : yabai -m window --space 1 && yabai -m space --focus 1
@@ -160,8 +158,8 @@ ctrl + alt + shift - z : launchctl kickstart -k "gui/${UID}/homebrew.mxcl.yabai"
 # ADDITIONAL USEFUL BINDINGS
 # ====================================================================
 
-# Rotate tree (mod1 + r)
-alt + shift - r : yabai -m space --rotate 90
+# Rotate tree (mod1 + o) - Using 'o' to avoid conflict with display focus
+alt + shift - o : yabai -m space --rotate 90
 
 # Mirror tree y-axis (mod1 + y)
 alt + shift - y : yabai -m space --mirror y-axis

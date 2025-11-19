@@ -62,7 +62,7 @@ yabai -m rule --add app="^Finder$" title="(Co(py|nnect)|Move|Info|Pref)" manage=
 
 # Alacritty - fix multi-tab issues
 # Only manage main windows, ignore popups and notifications
-yabai -m rule --add app="^Alacritty$" subrole!="^AXStandardWindow$" manage=off
-yabai -m rule --add app="^Alacritty$" title="^$" manage=off
+# yabai -m rule --add app="^Alacritty$" subrole!="^AXStandardWindow$" manage=off
+# yabai -m rule --add app="^Alacritty$" title="^$" manage=off
 
 echo "yabai configuration loaded.."

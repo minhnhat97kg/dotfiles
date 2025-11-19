@@ -59,24 +59,31 @@
       sharedPackages =
         pkgs: with pkgs; [
           # Core tools
-          git
-          gh
-          fzf
-          ripgrep
-          fd
-          jq
+          git gh fzf ripgrep fd jq jless coreutils
 
-          # Dev essentials
-          nodejs
-          go
+          # Dev - General
+          nodejs go delve goimports-reviser maven gradle
+
+          # Dev - Rust
           cargo rustc rustfmt clippy rust-analyzer
+
+          # Dev - Python
           python3 pipx
+
+          # Cloud & DevOps
+          terraform
+
+          # Databases & clients
+          postgresql mysql80 mycli pgcli pspg
+
+          # HTTP / API tools
+          httpie hurl
 
           # Diff & formatting
           delta diff-so-fancy
 
           # Utilities
-          fx jless
+          fx
         ];
 
       # Shared home-manager configuration

@@ -17,12 +17,13 @@ export TRANSPARENT=0x00000000
 # General bar settings
 sketchybar --bar \
   height=32 \
-  blur_radius=30 \
+  blur_radius=0 \
   position=top \
   sticky=off \
   padding_left=10 \
   padding_right=10 \
-  color=$BLACK
+  color=$BLACK \
+  shadow=on
 
 # Default item settings
 sketchybar --default \
