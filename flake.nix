@@ -213,7 +213,7 @@
     in
     {
       # ============================================================================
-      # macOS Configuration (nix-darwin)
+      # macOS Configuration (nix-darwin, trimmed)
       # ============================================================================
       darwinConfigurations."Nathan-Macbook" = nix-darwin.lib.darwinSystem {
         system = "aarch64-darwin";
