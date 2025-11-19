@@ -213,6 +213,17 @@
     in
     {
       # ============================================================================
+      # Dev Shells (language/tool specific isolated envs)
+      # ============================================================================
+      devShells = {
+        aarch64-darwin.go = let pkgs = nixpkgs.legacyPackages.aarch64-darwin; in pkgs.mkShell { buildInputs = [ pkgs.go pkgs.delve pkgs.goimports-reviser pkgs.golangci-lint ]; }; 
+        aarch64-darwin.java = let pkgs = nixpkgs.legacyPackages.aarch64-darwin; in pkgs.mkShell { buildInputs = [ pkgs.maven pkgs.gradle ]; }; 
+        aarch64-darwin.rust = let pkgs = nixpkgs.legacyPackages.aarch64-darwin; in pkgs.mkShell { buildInputs = [ pkgs.rustc pkgs.cargo pkgs.clippy pkgs.rustfmt pkgs.rust-analyzer ]; }; 
+        aarch64-linux.go = let pkgs = nixpkgs.legacyPackages.aarch64-linux; in pkgs.mkShell { buildInputs = [ pkgs.go pkgs.delve pkgs.goimports-reviser pkgs.golangci-lint ]; }; 
+        aarch64-linux.rust = let pkgs = nixpkgs.legacyPackages.aarch64-linux; in pkgs.mkShell { buildInputs = [ pkgs.rustc pkgs.cargo pkgs.clippy pkgs.rustfmt pkgs.rust-analyzer ]; }; 
+      };
+
+      # ============================================================================
       # macOS Configuration (nix-darwin, trimmed)
       # ============================================================================
       darwinConfigurations."Nathan-Macbook" = nix-darwin.lib.darwinSystem {
