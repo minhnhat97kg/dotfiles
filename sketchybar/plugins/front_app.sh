@@ -3,9 +3,16 @@
 # Use provided $INFO (fast) or fallback if empty
 APP="$INFO"
 if [ -z "$APP" ]; then
-  # Fallback using lsappinfo (no AppleScript permissions needed)
   APP=$(lsappinfo front | awk -F '"' '/"name"/ {print $4; exit}')
 fi
-# Fallback if NAME not provided (manual test run)
+# Icon mapping (add more as needed)
+case "$APP" in
+  "Firefox"|"Google Chrome"|"Safari") ICON="󰖟" ;; # browser
+  "Alacritty"|"iTerm2"|"Terminal") ICON="󰆍" ;; # terminal
+  "Code"|"Visual Studio Code") ICON="󰨞" ;; # vscode
+  "Finder") ICON="󰀶" ;;
+  "Music"|"Spotify") ICON="󰝚" ;;
+  *) ICON="󰘔" ;; # generic app icon
+esac
 [ -z "$NAME" ] && NAME=front_app
-sketchybar --set $NAME label="$APP"
+sketchybar --set $NAME icon="$ICON" label="$APP"

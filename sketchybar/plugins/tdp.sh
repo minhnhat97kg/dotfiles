@@ -12,7 +12,7 @@ if command -v powermetrics >/dev/null 2>&1; then
 fi
 # Fallback: estimate via ioreg (may be empty on some Macs)
 if [ -z "$VALUE" ]; then
-  VALUE=$(ioreg -r -n AppleSmartBattery 2>/dev/null | awk -F'= ' '/Watts/ {print $2; exit}')
+  VALUE=$(ioreg -r -n AppleSmartBattery 2>/dev/null | sed -n 's/.*"Watts"=\([0-9]*\).*/\1/p' | head -n1)
 fi
 # Final fallback to blank
 [ -z "$VALUE" ] && VALUE="?"
