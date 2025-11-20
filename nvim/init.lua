@@ -156,6 +156,27 @@ end
 
 -- ============================================================================
 -- KEYMAPS
+-- Vimdiff enhancements
+vim.api.nvim_create_autocmd("VimEnter", {
+  callback = function()
+    if vim.opt.diff:get() then
+      vim.opt.wrap = false
+      vim.opt.list = false
+      vim.opt.colorcolumn = ""
+      vim.opt.scrolloff = 2
+      vim.cmd("highlight DiffAdd    cterm=bold gui=bold guibg=#2b303b guifg=#a6e3a1")
+      vim.cmd("highlight DiffChange gui=bold guibg=#2b303b guifg=#89b4fa")
+      vim.cmd("highlight DiffDelete gui=bold guibg=#2b303b guifg=#f38ba8")
+      vim.cmd("highlight DiffText   gui=bold guibg=#45475a guifg=#cdd6f4")
+      -- Custom signs for diff mode using gutter symbols
+      vim.fn.sign_define("DiffAdd", { text = "+", texthl = "DiffAdd" })
+      vim.fn.sign_define("DiffChange", { text = "~", texthl = "DiffChange" })
+      vim.fn.sign_define("DiffDelete", { text = "-", texthl = "DiffDelete" })
+      -- Faster diff options
+      vim.opt.diffopt:append({ "vertical", "iwhite", "indent-heuristic", "algorithm:histogram" })
+    end
+  end,
+})
 -- ============================================================================
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
 vim.keymap.set("n", "<leader>q", vim.diagnostic.setloclist, { desc = "Open diagnostic [Q]uickfix list" })
