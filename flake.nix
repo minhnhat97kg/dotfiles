@@ -116,7 +116,7 @@
                     home.username = username;
                     home.homeDirectory = "/Users/${username}";
                     home.file.".config/alacritty/alacritty.toml".source = ./alacritty/alacritty.toml;
-                    home.file.".config/sketchybar/" = { source = ./sketchybar; recursive = true; };
+                    home.file.".config/sketchybar/" = { source = ./sketchybar; recursive = true; executable = true; };
                     home.file.".ideavimrc".source = ./shell/.ideavimrc;
                     home.file.".config/skhd/skhdrc".source = ./skhd/skhdrc;
                     home.file.".config/git/ignore".source = ./git/ignore;

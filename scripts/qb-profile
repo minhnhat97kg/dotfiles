@@ -21,7 +21,7 @@ mkdir -p "$PROFILE_DIR"
 
 # Launch qutebrowser with profile-specific data directory
 # The config is shared across all profiles
-QB_PROFILE="$PROFILE" exec qutebrowser \
+QB_PROFILE="$PROFILE" nohup qutebrowser \
     --basedir "$PROFILE_DIR" \
     --config-py "$CONFIG_DIR/config.py" \
-    "${@:2}"
+    "${@:2}" >/dev/null 2>&1 & disown
