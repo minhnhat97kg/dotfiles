@@ -2,6 +2,7 @@
 # Beautiful Catppuccin Mocha theme
 
 config.load_autoconfig(False)
+import os
 
 # =============================================================================
 # CATPPUCCIN MOCHA PALETTE
@@ -45,7 +46,11 @@ c.tabs.position = 'top'
 c.tabs.padding = {'top': 6, 'bottom': 6, 'left': 8, 'right': 8}
 c.tabs.indicator.width = 0
 c.tabs.favicons.scale = 1.0
-c.tabs.title.format = '{audio}{current_title}'
+profile_name = os.environ.get('QB_PROFILE')
+if profile_name:
+    c.tabs.title.format = f'[{profile_name}] ' + '{audio}{current_title}'
+else:
+    c.tabs.title.format = '{audio}{current_title}'
 c.tabs.last_close = 'close'
 
 c.url.start_pages = ['https://start.duckduckgo.com']

@@ -26,7 +26,7 @@ alt + shift - s : yabai -m space --layout bsp && yabai -m window --ratio rel:0.5
 alt + shift - d : yabai -m space --layout stack      # Fullscreen layout (mod1 + d)
 alt + shift - f : /bin/bash -c 'wid=$(yabai -m query --windows | jq -r ".[] | select(.title==\"float-term\") | .id"); if [ "$wid" != "" ]; then yabai -m window $wid --focus; else (alacritty --title "float-term" & sleep 0.3 && yabai -m window --toggle float && yabai -m window --resize abs:900:600 && yabai -m window --move abs:520:140); fi'  # Toggle floating Alacritty terminal
 
-# Display current layout (mod1 + i)
+alt + shift - w : (alacritty --title "window-picker" -e ~/Documents/projects/dotfiles/skhd/scripts/window-picker.sh & sleep 0.3 && yabai -m window --toggle float && yabai -m window --resize abs:900:600 && yabai -m window --move abs:520:140)
 alt + shift - i : ~/Documents/projects/dotfiles/yabai/scripts/cycle-layout.sh current
 
 # ====================================================================
@@ -60,13 +60,6 @@ alt + shift - p : yabai -m display --focus prev || yabai -m display --focus last
 
 # Move focus to clockwise screen (mod1 + n)
 alt + shift - n : yabai -m display --focus next || yabai -m display --focus first
-
-# Focus specific screens (mod1 + w/e/r/q/g for screens 1-5)
-alt + shift - w : yabai -m display --focus 1
-alt + shift - e : yabai -m display --focus 2
-alt + shift - r : yabai -m display --focus 3
-alt + shift - q : yabai -m display --focus 4
-alt + shift - g : yabai -m display --focus 5
 
 # ====================================================================
 # WINDOW MOVEMENT
