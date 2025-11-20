@@ -5,18 +5,16 @@
 STATE_FILE="/tmp/sketchybar_tdp"
 NOW=$(date +%s)
 VALUE=""
-# Try powermetrics (fast sample)
+# Try powermetrics (no deprecated sampler flag)
 if command -v powermetrics >/dev/null 2>&1; then
-  # Use a short sample duration
-  VALUE=$(sudo powermetrics --samplers smc -n1 2>/dev/null | awk -F':' '/CPU Power/ {gsub(/W| /, "", $2); print $2; exit}')
-fi
-# Attempt powermetrics without password if sudo fails earlier
-if [ -z "$VALUE" ]; then
-  if sudo -n true 2>/dev/null; then
-    VALUE=$(sudo powermetrics --samplers smc -n1 2>/dev/null | awk -F':' '/CPU Power/ {gsub(/W| /, "", $2); print $2; exit}')
-  else
-    VALUE=$(powermetrics --samplers smc -n1 2>/dev/null | awk -F':' '/CPU Power/ {gsub(/W| /, "", $2); print $2; exit}')
+  VALUE=$(sudo powermetrics -n1 2>/dev/null | awk -F':' '/CPU Power/ {gsub(/W| /, "", $2); print $2; exit}')
+  if [ -z "$VALUE" ]; then
+    VALUE=$(powermetrics -n1 2>/dev/null | awk -F':' '/CPU Power/ {gsub(/W| /, "", $2); print $2; exit}')
   fi
+fi
+# Fallback via pmset thermlog
+if [ -z "$VALUE" ]; then
+  VALUE=$(pmset -g thermlog 2>/dev/null | awk -F'=' '/CPU Power/ {gsub(/W| /, "", $2); print $2; exit}')
 fi
 # Remove incorrect adapter watt fallback (was always 60W)
 # Final fallback to blank
