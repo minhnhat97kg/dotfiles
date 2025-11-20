@@ -81,25 +81,6 @@
       sharedHomeConfig = args: import ./modules/shared.nix (args // { inherit sharedPackages; });
 
       pkgsDarwin = nixpkgs.legacyPackages.aarch64-darwin;
-      jiratui-src = pkgsDarwin.fetchFromGitHub {
-        owner = "whyisdifficult";
-        repo = "jiratui";
-        rev = "a617b6addc8e8e51c90356a14d2bf800ccd2d27b";
-        sha256 = "sha256-sbQxDRJ6RSHfrE9Fy0GyT+AJ9+wehO9LWtlqy+e36C0=";
-      };
-      jiratui = pkgsDarwin.python3Packages.buildPythonApplication {
-        pname = "jiratui";
-        version = "unstable-2025-11-20";
-        src = jiratui-src;
-        format = "pyproject";
-        # Use python build backend override (setuptools) since upstream uses uv_build which isn't packaged
-        postPatch = ''
-          substituteInPlace pyproject.toml \
-            --replace 'uv_build' 'setuptools.build_meta'
-        '';
-        nativeBuildInputs = with pkgsDarwin.python3Packages; [ setuptools wheel ];
-        propagatedBuildInputs = with pkgsDarwin.python3Packages; [ click gitpython httpx pydantic-settings python-dateutil python-json-logger python-magic textual-image textual xdg-base-dirs ];
-      };
     in
     {
       # ============================================================================
