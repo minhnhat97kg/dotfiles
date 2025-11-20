@@ -95,7 +95,6 @@
 
   services.skhd = {
     enable = true;
-    skhdConfig = builtins.readFile ../skhd/skhdrc;
   };
 
   services.sketchybar = {
