@@ -15,10 +15,10 @@
 
 # Cycle layout forward (mod1 + space)
 # Layouts: bsp → vertical → horizontal → master-stack → stack → float
-alt + shift - space : ~/Documents/projects/dotfiles/yabai/scripts/cycle-layout.sh forward
+alt + shift - space : ~/.scripts/cycle-layout.sh forward
 
 # Cycle layout backwards (mod2 + space)
-ctrl + alt + shift - space : ~/Documents/projects/dotfiles/yabai/scripts/cycle-layout.sh backward
+ctrl + alt + shift - space : ~/.scripts/cycle-layout.sh backward
 
 # Select specific layouts
 alt + shift - a : yabai -m space --layout bsp        # Tall layout (mod1 + a)
@@ -26,8 +26,8 @@ alt + shift - s : yabai -m space --layout bsp && yabai -m window --ratio rel:0.5
 alt + shift - d : yabai -m space --layout stack      # Fullscreen layout (mod1 + d)
 alt + shift - f : /bin/bash -c 'wid=$(yabai -m query --windows | jq -r ".[] | select(.title==\"float-term\") | .id"); if [ "$wid" != "" ]; then yabai -m window $wid --focus; else (alacritty --title "float-term" & sleep 0.3 && yabai -m window --toggle float && yabai -m window --resize abs:900:600 && yabai -m window --move abs:520:140); fi'  # Toggle floating Alacritty terminal
 
-alt + shift - w : (alacritty --title "window-picker" -e ~/Documents/projects/dotfiles/skhd/scripts/window-picker.sh & sleep 0.3 && yabai -m window --toggle float && yabai -m window --resize abs:900:600 && yabai -m window --move abs:520:140)
-alt + shift - i : ~/Documents/projects/dotfiles/yabai/scripts/cycle-layout.sh current
+alt + shift - w : (alacritty --title "window-picker" -e ~/.scripts/window-picker.sh & sleep 0.3 && yabai -m window --toggle float && yabai -m window --resize abs:900:600 && yabai -m window --move abs:520:140)
+alt + shift - i : ~/.scripts/cycle-layout.sh current
 
 # ====================================================================
 # PANE/WINDOW CONTROLS
@@ -132,7 +132,7 @@ ctrl + alt + shift - g : yabai -m window --display 5 && yabai -m display --focus
 # ====================================================================
 
 # Show all keybindings with fzf picker (mod1 + /)
-alt + shift - 0x2C : (alacritty --title "skhd-whichkey" -e ~/Documents/projects/dotfiles/skhd/scripts/whichkey-fzf.sh & sleep 0.3 && yabai -m window --toggle float && yabai -m window --resize abs:900:600 && yabai -m window --move abs:520:140)
+alt + shift - 0x2C : (alacritty --title "skhd-whichkey" -e ~/.scripts/whichkey-fzf.sh & sleep 0.3 && yabai -m window --toggle float && yabai -m window --resize abs:900:600 && yabai -m window --move abs:520:140)
 
 # Toggle float for focused window (mod1 + t)
 alt + shift - t : yabai -m window --toggle float && yabai -m window --grid 4:4:1:1:2:2

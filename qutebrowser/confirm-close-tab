@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# qutebrowser userscript: confirm-close-tab
+# Uses macOS AppleScript dialog to confirm tab close.
+# qutebrowser passes $QUTE_FIFO for sending commands back.
+
+choice=$(osascript -e 'display dialog "Close current tab?" buttons {"Cancel", "Close"} default button "Cancel" with icon caution' 2>/dev/null)
+if [[ $? -eq 0 ]]; then
+  # User pressed Close
+  echo "tab-close" >> "$QUTE_FIFO"
+fi

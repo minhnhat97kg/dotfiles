@@ -77,6 +77,7 @@
       { condition = "gitdir:~/projects/**"; path = "~/.config/git/minhnhat97kg.gitconfig"; }
     ];
   };
+  home.file.".scripts/" = { source = ../scripts; recursive = true; executable = true; };
   home.file.".config/git/gitconfig".source = ../git/gitconfig;
   home.file.".config/git/minhnhat97kg.gitconfig".source = ../git/minhnhat97kg.gitconfig;
   home.file.".gitignore_global".source = ../git/gitignore_global;

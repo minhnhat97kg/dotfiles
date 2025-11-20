@@ -52,7 +52,8 @@ if profile_name:
 else:
     c.tabs.title.format = '{audio}{current_title}'
 c.tabs.last_close = 'close'
-
+# Alias to spawn a new qutebrowser instance with specified profile (usage: :profile work)
+c.aliases['profile'] = 'spawn qb-profile'
 c.url.start_pages = ['https://start.duckduckgo.com']
 c.url.default_page = 'https://start.duckduckgo.com'
 c.url.searchengines = {
@@ -223,7 +224,10 @@ c.colors.webpage.preferred_color_scheme = 'dark'
 # =============================================================================
 config.bind('J', 'tab-prev')
 config.bind('K', 'tab-next')
-config.bind('x', 'tab-close')
+# Prefill close command (d)
+config.bind('d', 'set-cmd-text :tab-close')
+# Prefill close command (x)
+config.bind('x', 'set-cmd-text :tab-close')
 config.bind('X', 'undo')
 config.bind('<Ctrl-Shift-Tab>', 'tab-prev')
 config.bind('<Ctrl-Tab>', 'tab-next')

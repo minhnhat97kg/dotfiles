@@ -17,6 +17,8 @@ PROFILE_DIR="$BASE_DIR/profiles/$PROFILE"
 # Create profile directory if it doesn't exist
 mkdir -p "$PROFILE_DIR"
 
+# Userscripts are managed via home-manager (flake); no runtime copy needed
+
 # Launch qutebrowser with profile-specific data directory
 # The config is shared across all profiles
 QB_PROFILE="$PROFILE" exec qutebrowser \

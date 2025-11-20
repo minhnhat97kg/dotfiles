@@ -4,6 +4,27 @@
 # WhichKey-style FZF Keybinding Picker for SKHD/Yabai
 # ====================================================================
 
+# Helper functions for executing NVIM and TMUX entries
+execute_nvim_key() {
+  local key="$1"
+  if [ -n "$NVIM_LISTEN_ADDRESS" ] && command -v nvim >/dev/null 2>&1; then
+    nvim --server "$NVIM_LISTEN_ADDRESS" --remote-send "$key"
+  elif command -v nvr >/dev/null 2>&1; then
+    nvr --remote-send "$key"
+  else
+    echo "[whichkey-fzf] No running nvim remote server (NVIM_LISTEN_ADDRESS or nvr)." >&2
+  fi
+}
+
+execute_tmux_key() {
+  local key="$1"
+  if command -v tmux >/dev/null 2>&1 && tmux has-session 2>/dev/null; then
+    tmux send-keys "$key"
+  else
+    echo "[whichkey-fzf] No active tmux session." >&2
+  fi
+}
+
 SKHDRC="${HOME}/Documents/projects/dotfiles/skhd/skhdrc"
 
 # Parse skhdrc and create a searchable list
@@ -92,6 +113,51 @@ BEGIN {
 ' "$SKHDRC")
 
 # Use fzf to select a binding
+# Integrate NVIM and TMUX keymaps
+# Collect NVIM keymaps for multiple modes via headless nvim
+if command -v nvim >/dev/null 2>&1; then
+  nvim_kms=$(nvim --headless -u "$HOME/.config/nvim/init.lua" -c 'lua local modes={"n","v","x","s","o","i","t","c"}; for _,md in ipairs(modes) do for _,m in ipairs(vim.api.nvim_get_keymap(md)) do local d=m.desc or ("NVIM "..md.." mapping"); d=d:gsub("|"," "); local display=m.lhs:gsub("<leader>","␣"):gsub("<C%-(%a)>","⌃%1"):gsub("<Esc>","⎋"):gsub("<Tab>","⇥"); print(string.format("[NVIM-%s] %s|%s|NVIM:%s", md, d, display, m.lhs)) end end' +qa 2>/dev/null)
+  if [ -n "$nvim_kms" ]; then
+    bindings+=$'\n'"$nvim_kms"
+  else
+    echo "[whichkey-fzf] No NVIM keymaps found or failed to retrieve." >&2
+  fi
+fi
+# Collect tmux keymaps via tmux list-keys (covers all tables)
+if command -v tmux >/dev/null 2>&1; then
+  tmux_kms=$(tmux list-keys 2>/dev/null | awk '
+    /^bind-key/ {
+      no_prefix="prefix"; table="root"; key=""; cmd="";
+      for (i=2; i<=NF; i++) {
+        if ($i == "-n") { no_prefix="no-prefix"; continue }
+        if ($i == "-T") { table=$(i+1); i++; continue }
+        if ($i ~ /^-/) { continue }
+        if (key == "") { key=$i; continue }
+        cmd = (cmd " " $i)
+      }
+      sub(/^ /, "", cmd)
+      desc=cmd
+      if (cmd ~ /select-pane -L/) desc="Focus pane Left";
+      else if (cmd ~ /select-pane -R/) desc="Focus pane Right";
+      else if (cmd ~ /select-pane -U/) desc="Focus pane Up";
+      else if (cmd ~ /select-pane -D/) desc="Focus pane Down";
+      else if (cmd ~ /split-window -h/) desc="Horizontal split";
+      else if (cmd ~ /split-window -v/) desc="Vertical split";
+      else if (cmd ~ /new-window/) desc="New window";
+      else if (cmd ~ /send-prefix/) desc="Send prefix";
+      else if (cmd ~ /copy-mode/) desc="Enter copy mode";
+      gsub(/\|/, " ", desc)
+      printf("[TMUX] %s (%s %s)|%s|TMUX:%s\n", desc, table, no_prefix, key, key)
+    }
+  ' | sed -E 's/C-([A-Za-z])/⌃\1/g')
+  if [ -n "$tmux_kms" ]; then
+    bindings+=$'\n'"$tmux_kms"
+  else 
+    echo "[whichkey-fzf] No TMUX keymaps found or failed to retrieve." >&2
+  fi
+fi
+
+echo "$bindings" | sort -u > whichkey_bindings.txt
 selected=$(echo "$bindings" | fzf \
     --ansi \
     --height=100% \
@@ -111,6 +177,17 @@ selected=$(echo "$bindings" | fzf \
 # Execute the selected command
 if [ -n "$selected" ]; then
     command=$(echo "$selected" | cut -d'|' -f3)
-    # Execute the command
-    eval "$command"
+    if [[ $command == NVIM:* ]]; then
+        exec_key="${command#NVIM:}"
+        execute_nvim_key "$exec_key"
+    elif [[ $command == TMUX:* ]]; then
+        exec_key="${command#TMUX:}"
+        execute_tmux_key "$exec_key"
+    elif [[ $command == TMUXP:* ]]; then
+        exec_key="${command#TMUXP:}"
+        # Send tmux prefix (default C-b) then key
+        tmux send-keys C-b "$exec_key"
+    else
+        eval "$command"
+    fi
 fi

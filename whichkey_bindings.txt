@@ -1,0 +1,49 @@
+[Create new desktop (mod2 + c)] Focus window/space|⌃⌥⇧ c|/bin/bash -c 'count=$(yabai -m query --spaces --display | jq "[.[] | select(.\"is-native-fullscreen\"==false)] | length"); if [ "$count" -ge 3 ]; then osascript -e "display notification \"Max 3 spaces reached\" with title \"Yabai\""; else yabai -m space --create && index=$(yabai -m query --spaces --display | jq "[.[] | select(.\"is-native-fullscreen\"==false)][-1].index") && yabai -m space --focus $index && osascript -e "display notification \"Created space $index\" with title \"Yabai\""; fi'
+[Create new desktop and move window to it (mod2 + m)] Create space|⌃⌥⇧ m|yabai -m space --create && \
+[Cycle layout backwards (mod2 + space)] Execute command|⌃⌥⇧ ␣|~/.scripts/cycle-layout.sh backward
+[Decrease main pane count (mod1 + .)] Balance windows|⌥⇧ .|yabai -m space --balance
+[Expand the main pane (mod1 + l)] Resize window|⌥⇧ l|yabai -m window --ratio rel:0.05
+[Focus previous/next space (cmd + j/k)] Focus window/space|⌘ j|yabai -m space --focus prev || yabai -m space --focus last
+[Focus previous/next space (cmd + j/k)] Focus window/space|⌘ k|yabai -m space --focus next || yabai -m space --focus first
+[Force windows to be reevaluated (mod1 + z)] Balance windows|⌥⇧ z|yabai -m space --balance
+[Increase main pane count (mod1 + ,)] Balance windows|⌥⇧ ,|yabai -m space --balance
+[Layouts: bsp → vertical → horizontal → master-stack → stack → float] Execute command|⌥⇧ ␣|~/.scripts/cycle-layout.sh forward
+[Mirror tree x-axis (mod1 + x)] Execute command|⌥⇧ x|yabai -m space --mirror x-axis
+[Mirror tree y-axis (mod1 + y)] Execute command|⌥⇧ y|yabai -m space --mirror y-axis
+[Move focus clockwise (mod1 + k)] Focus window/space|⌥⇧ k|yabai -m window --focus next || yabai -m window --focus first
+[Move focus counter clockwise (mod1 + j)] Focus window/space|⌥⇧ j|yabai -m window --focus prev || yabai -m window --focus last
+[Move focus to clockwise screen (mod1 + n)] Focus window/space|⌥⇧ n|yabai -m display --focus next || yabai -m display --focus first
+[Move focus to counter clockwise screen (mod1 + p)] Focus window/space|⌥⇧ p|yabai -m display --focus prev || yabai -m display --focus last
+[Note: Requires yabai scripting addition (SIP partially disabled) OR uses Mission Control] Destroy space|⌃⌥⇧ d|/bin/bash -c 'res=$(osascript -e "button returned of (display dialog \"Destroy current space?\" buttons {\"Cancel\",\"Destroy\"} default button \"Cancel\")"); if [ "$res" = "Destroy" ]; then out=$(yabai -m space --destroy 2>&1); if [ $? -eq 0 ]; then osascript -e "display notification \"Space destroyed\" with title \"Yabai\""; else osascript -e "display notification \"Destroy failed: $out\" with title \"Yabai\""; fi; else osascript -e "display notification \"Cancelled\" with title \"Yabai\""; fi'
+[Reload skhd config (cmd + r)] Execute command|⌘⇧ r|skhd -r
+[Restart yabai (mod2 + z)] Execute command|⌃⌥⇧ z|launchctl kickstart -k "gui/${UID}/homebrew.mxcl.yabai"
+[Rotate tree (mod1 + o) - Using 'o' to avoid conflict with display focus] Execute command|⌥⇧ o|yabai -m space --rotate 90
+[Select specific layouts] Execute command|⌥⇧ i|~/.scripts/cycle-layout.sh current
+[Select specific layouts] Fullscreen layout|⌥⇧ d|yabai -m space --layout stack      # Fullscreen layout (mod1 + d)
+[Select specific layouts] Tall layout|⌥⇧ a|yabai -m space --layout bsp        # Tall layout (mod1 + a)
+[Select specific layouts] Toggle floating Alacritty terminal|⌥⇧ f|/bin/bash -c 'wid=$(yabai -m query --windows | jq -r ".[] | select(.title==\"float-term\") | .id"); if [ "$wid" != "" ]; then yabai -m window $wid --focus; else (alacritty --title "float-term" & sleep 0.3 && yabai -m window --toggle float && yabai -m window --resize abs:900:600 && yabai -m window --move abs:520:140); fi'  # Toggle floating Alacritty terminal
+[Select specific layouts] Toggle option|⌥⇧ w|(alacritty --title "window-picker" -e ~/.scripts/window-picker.sh & sleep 0.3 && yabai -m window --toggle float && yabai -m window --resize abs:900:600 && yabai -m window --move abs:520:140)
+[Select specific layouts] Wide layout|⌥⇧ s|yabai -m space --layout bsp && yabai -m window --ratio rel:0.5  # Wide layout (mod1 + s)
+[Shrink the main pane (mod1 + h)] Resize window|⌥⇧ h|yabai -m window --ratio rel:-0.05
+[Swap focused window clockwise (mod2 + k)] Swap windows|⌃⌥⇧ k|yabai -m window --swap next || yabai -m window --swap first
+[Swap focused window counter clockwise (mod2 + j)] Swap windows|⌃⌥⇧ j|yabai -m window --swap prev || yabai -m window --swap last
+[Swap focused window with main window (mod1 + return)] Swap windows|⌥⇧ ↩|yabai -m window --swap first
+[Throw focused window to space left (mod2 + h)] Focus window/space|⌃⌥⇧ h|yabai -m window --space prev && yabai -m space --focus prev
+[Throw focused window to space right (mod2 + l)] Focus window/space|⌃⌥⇧ l|yabai -m window --space next && yabai -m space --focus next
+[Throw focused window to spaces 1-10 (mod2 + 1-0)] Focus window/space|⌃⌥⇧ 0|yabai -m window --space 10 && yabai -m space --focus 10
+[Throw focused window to spaces 1-10 (mod2 + 1-0)] Focus window/space|⌃⌥⇧ 1|yabai -m window --space 1 && yabai -m space --focus 1
+[Throw focused window to spaces 1-10 (mod2 + 1-0)] Focus window/space|⌃⌥⇧ 2|yabai -m window --space 2 && yabai -m space --focus 2
+[Throw focused window to spaces 1-10 (mod2 + 1-0)] Focus window/space|⌃⌥⇧ 3|yabai -m window --space 3 && yabai -m space --focus 3
+[Throw focused window to spaces 1-10 (mod2 + 1-0)] Focus window/space|⌃⌥⇧ 4|yabai -m window --space 4 && yabai -m space --focus 4
+[Throw focused window to spaces 1-10 (mod2 + 1-0)] Focus window/space|⌃⌥⇧ 5|yabai -m window --space 5 && yabai -m space --focus 5
+[Throw focused window to spaces 1-10 (mod2 + 1-0)] Focus window/space|⌃⌥⇧ 6|yabai -m window --space 6 && yabai -m space --focus 6
+[Throw focused window to spaces 1-10 (mod2 + 1-0)] Focus window/space|⌃⌥⇧ 7|yabai -m window --space 7 && yabai -m space --focus 7
+[Throw focused window to spaces 1-10 (mod2 + 1-0)] Focus window/space|⌃⌥⇧ 8|yabai -m window --space 8 && yabai -m space --focus 8
+[Throw focused window to spaces 1-10 (mod2 + 1-0)] Focus window/space|⌃⌥⇧ 9|yabai -m window --space 9 && yabai -m space --focus 9
+[Throw window to specific screens (mod2 + w/e/r/q/g for screens 1-5)] Focus window/space|⌃⌥⇧ e|yabai -m window --display 2 && yabai -m display --focus 2
+[Throw window to specific screens (mod2 + w/e/r/q/g for screens 1-5)] Focus window/space|⌃⌥⇧ g|yabai -m window --display 5 && yabai -m display --focus 5
+[Throw window to specific screens (mod2 + w/e/r/q/g for screens 1-5)] Focus window/space|⌃⌥⇧ q|yabai -m window --display 4 && yabai -m display --focus 4
+[Throw window to specific screens (mod2 + w/e/r/q/g for screens 1-5)] Focus window/space|⌃⌥⇧ r|yabai -m window --display 3 && yabai -m display --focus 3
+[Throw window to specific screens (mod2 + w/e/r/q/g for screens 1-5)] Focus window/space|⌃⌥⇧ w|yabai -m window --display 1 && yabai -m display --focus 1
+[Toggle float for focused window (mod1 + t)] Toggle option|⌥⇧ t|yabai -m window --toggle float && yabai -m window --grid 4:4:1:1:2:2
+[Toggle global tiling (mod2 + t)] Change layout|⌃⌥⇧ t|yabai -m space --layout $(yabai -m query --spaces --space | jq -r 'if .type == "bsp" then "float" else "bsp" end')

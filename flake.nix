@@ -24,6 +24,8 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+
   };
 
   nixConfig = {
@@ -35,6 +37,8 @@
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
     ];
+    # Suppress dirty tree warning once flake config is trusted
+    warn-dirty = false;
   };
 
   outputs = inputs@{ self, nixpkgs, nix-darwin, nix-on-droid, home-manager, ... }:
@@ -75,6 +79,25 @@
 
       # Shared home-manager configuration
       sharedHomeConfig = args: import ./modules/shared.nix (args // { inherit sharedPackages; });
+
+      pkgsDarwin = nixpkgs.legacyPackages.aarch64-darwin;
+      jiratui-src = pkgsDarwin.fetchFromGitHub {
+        owner = "whyisdifficult";
+        repo = "jiratui";
+        rev = "a617b6addc8e8e51c90356a14d2bf800ccd2d27b";
+        sha256 = pkgsDarwin.lib.fakeSha256; # fill after nix-prefetch
+      };
+      jiratui = pkgsDarwin.rustPlatform.buildRustPackage {
+        pname = "jiratui";
+        version = "unstable-2025-11-20";
+        src = jiratui-src;
+        cargoLock = {
+          lockFile = jiratui-src + "/Cargo.lock";
+        };
+        cargoHash = pkgsDarwin.lib.fakeSha256; # fill after first build attempt
+        nativeBuildInputs = [ pkgsDarwin.pkg-config ];
+        buildInputs = [ pkgsDarwin.openssl ];
+      };
     in
     {
       # ============================================================================
@@ -118,11 +141,12 @@
                     home.file.".pspgconf".source = ./pspg/pspgconf;
                     home.file.".config/qutebrowser/config.py".source = ./qutebrowser/config.py;
                     home.file.".config/qutebrowser/profiles.yaml".source = ./qutebrowser/profiles.yaml;
+                    # Userscript deployment removed; using command prefill for tab close
                     home.file.".local/bin/qb-profile" = {
                       source = ./qutebrowser/qb-profile;
                       executable = true;
                     };
-                    home.packages = with pkgs; [ alacritty ];
+                    home.packages = with pkgs; [ alacritty jiratui ];
                   }
                 ];
             };
@@ -157,5 +181,7 @@
         aarch64-linux = nixpkgs.legacyPackages.aarch64-linux.alejandra;
         x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.alejandra;
       };
+
+      packages.aarch64-darwin.jiratui = jiratui;
     };
 }
