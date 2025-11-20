@@ -85,18 +85,20 @@
         owner = "whyisdifficult";
         repo = "jiratui";
         rev = "a617b6addc8e8e51c90356a14d2bf800ccd2d27b";
-        sha256 = pkgsDarwin.lib.fakeSha256; # fill after nix-prefetch
+        sha256 = "sha256-sbQxDRJ6RSHfrE9Fy0GyT+AJ9+wehO9LWtlqy+e36C0=";
       };
-      jiratui = pkgsDarwin.rustPlatform.buildRustPackage {
+      jiratui = pkgsDarwin.python3Packages.buildPythonApplication {
         pname = "jiratui";
         version = "unstable-2025-11-20";
         src = jiratui-src;
-        cargoLock = {
-          lockFile = jiratui-src + "/Cargo.lock";
-        };
-        cargoHash = pkgsDarwin.lib.fakeSha256; # fill after first build attempt
-        nativeBuildInputs = [ pkgsDarwin.pkg-config ];
-        buildInputs = [ pkgsDarwin.openssl ];
+        format = "pyproject";
+        # Use python build backend override (setuptools) since upstream uses uv_build which isn't packaged
+        postPatch = ''
+          substituteInPlace pyproject.toml \
+            --replace 'uv_build' 'setuptools.build_meta'
+        '';
+        nativeBuildInputs = with pkgsDarwin.python3Packages; [ setuptools wheel ];
+        propagatedBuildInputs = with pkgsDarwin.python3Packages; [ click gitpython httpx pydantic-settings python-dateutil python-json-logger python-magic textual-image textual xdg-base-dirs ];
       };
     in
     {
@@ -182,6 +184,6 @@
         x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.alejandra;
       };
 
-      packages.aarch64-darwin.jiratui = jiratui;
+
     };
 }

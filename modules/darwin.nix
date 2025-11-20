@@ -31,6 +31,7 @@
 
   homebrew = {
     enable = true;
+    brews = [ "jiratui" ];
     casks = [ ];
   };
 
