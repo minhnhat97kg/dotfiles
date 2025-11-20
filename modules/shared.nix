@@ -19,6 +19,8 @@
             set-option -ga terminal-overrides ",xterm-256color:Tc"
             set -g @catppuccin_flavor "mocha"
             set -g @catppuccin_window_status_style "rounded"
+            set -g @catppuccin_window_default_text "#{b:pane_current_path}"
+            set -g @catppuccin_window_current_text "#{b:pane_current_path}"
           '';
         }
       ];
@@ -47,15 +49,23 @@
         export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
         export NPM_CONFIG_PREFIX="$HOME/.npm-global"
         export PATH="$HOME/.npm-global/bin:$PATH"
+        export PATH="$HOME/.local/bin:$PATH"
         ALIASES_SCRIPT="$HOME/.config/dotfiles/scripts/load-aliases.sh"
         if [ -f "$ALIASES_SCRIPT" ]; then
           eval "$($ALIASES_SCRIPT)"
         fi
       '';
-      shellAliases = { ll = "ls -l"; lg = "lazygit"; e = "nvim"; };
+      shellAliases = {
+        ll = "ls -l";
+        e = "nvim";
+        lg = "lazygit";
+      };
       oh-my-zsh = { enable = true; theme = "robbyrussell"; };
     };
-    lazygit.enable = true;
+    lazygit = {
+      enable = true;
+      enableZshIntegration = false;  # Disable lg() function, use simple alias instead
+    };
     direnv.enable = true;
   };
   home.file.".config/nvim/" = { source = ../nvim; recursive = true; };

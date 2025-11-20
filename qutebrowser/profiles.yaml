@@ -1,0 +1,32 @@
+# Qutebrowser profile configurations
+# This file defines available profiles and their settings
+
+profiles:
+  default:
+    description: "Default browsing profile"
+    icon: "🌐"
+
+  personal:
+    description: "Personal browsing"
+    icon: "👤"
+
+  work:
+    description: "Work-related browsing"
+    icon: "💼"
+
+  dev:
+    description: "Development and testing"
+    icon: "🔧"
+
+# Usage:
+# Launch with: qb-profile <profile-name>
+# Each profile has isolated:
+#   - Session (tabs/windows)
+#   - History
+#   - Cookies
+#   - Cache
+#   - Downloaded files list
+#
+# Shared across profiles:
+#   - Configuration (config.py)
+#   - Bookmarks (optional, can be separated)

@@ -112,10 +112,16 @@
                     home.file.".config/alacritty/alacritty.toml".source = ./alacritty/alacritty.toml;
                     home.file.".config/sketchybar/" = { source = ./sketchybar; recursive = true; };
                     home.file.".ideavimrc".source = ./shell/.ideavimrc;
+                    
                     home.file.".config/git/ignore".source = ./git/ignore;
                     home.file.".config/lazygit/" = { source = ./lazygit; recursive = true; };
                     home.file.".pspgconf".source = ./pspg/pspgconf;
-                    home.file.".qutebrowser/config.py".source = ./qutebrowser/config.py;
+                    home.file.".config/qutebrowser/config.py".source = ./qutebrowser/config.py;
+                    home.file.".config/qutebrowser/profiles.yaml".source = ./qutebrowser/profiles.yaml;
+                    home.file.".local/bin/qb-profile" = {
+                      source = ./qutebrowser/qb-profile;
+                      executable = true;
+                    };
                     home.packages = with pkgs; [ alacritty ];
                   }
                 ];

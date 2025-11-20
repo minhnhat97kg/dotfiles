@@ -24,7 +24,7 @@ ctrl + alt + shift - space : ~/Documents/projects/dotfiles/yabai/scripts/cycle-l
 alt + shift - a : yabai -m space --layout bsp        # Tall layout (mod1 + a)
 alt + shift - s : yabai -m space --layout bsp && yabai -m window --ratio rel:0.5  # Wide layout (mod1 + s)
 alt + shift - d : yabai -m space --layout stack      # Fullscreen layout (mod1 + d)
-alt + shift - f : yabai -m space --layout bsp        # Column layout (mod1 + f)
+alt + shift - f : /bin/bash -c 'wid=$(yabai -m query --windows | jq -r ".[] | select(.title==\"float-term\") | .id"); if [ "$wid" != "" ]; then yabai -m window $wid --focus; else (alacritty --title "float-term" & sleep 0.3 && yabai -m window --toggle float && yabai -m window --resize abs:900:600 && yabai -m window --move abs:520:140); fi'  # Toggle floating Alacritty terminal
 
 # Display current layout (mod1 + i)
 alt + shift - i : ~/Documents/projects/dotfiles/yabai/scripts/cycle-layout.sh current
@@ -92,16 +92,11 @@ alt + shift - return : yabai -m window --swap first
 # ====================================================================
 
 # Create new desktop (mod2 + c)
-ctrl + alt + shift - c : yabai -m space --create && \
-                         index=$(yabai -m query --spaces --display | jq 'map(select(."is-native-fullscreen" == false))[-1].index') && \
-                         yabai -m space --focus $index && \
-                         osascript -e "display notification \"Created space $index\" with title \"Yabai\""
+ctrl + alt + shift - c : /bin/bash -c 'count=$(yabai -m query --spaces --display | jq "[.[] | select(.\"is-native-fullscreen\"==false)] | length"); if [ "$count" -ge 3 ]; then osascript -e "display notification \"Max 3 spaces reached\" with title \"Yabai\""; else yabai -m space --create && index=$(yabai -m query --spaces --display | jq "[.[] | select(.\"is-native-fullscreen\"==false)][-1].index") && yabai -m space --focus $index && osascript -e "display notification \"Created space $index\" with title \"Yabai\""; fi'
 
 # Destroy current desktop (mod2 + d)
 # Note: Requires yabai scripting addition (SIP partially disabled) OR uses Mission Control
-ctrl + alt + shift - d : yabai -m space --destroy || \
-                         osascript -e 'tell application "System Events" to key code 27 using {control down}' && \
-                         osascript -e "display notification \"Space destroyed\" with title \"Yabai\""
+ctrl + alt + shift - d : /bin/bash -c 'res=$(osascript -e "button returned of (display dialog \"Destroy current space?\" buttons {\"Cancel\",\"Destroy\"} default button \"Cancel\")"); if [ "$res" = "Destroy" ]; then out=$(yabai -m space --destroy 2>&1); if [ $? -eq 0 ]; then osascript -e "display notification \"Space destroyed\" with title \"Yabai\""; else osascript -e "display notification \"Destroy failed: $out\" with title \"Yabai\""; fi; else osascript -e "display notification \"Cancelled\" with title \"Yabai\""; fi'
 
 # Create new desktop and move window to it (mod2 + m)
 ctrl + alt + shift - m : yabai -m space --create && \
@@ -115,6 +110,10 @@ ctrl + alt + shift - m : yabai -m space --create && \
 # ====================================================================
 
 # Note: mod2 + h/l for space left/right are defined in WINDOW MOVEMENT section above
+
+# Focus previous/next space (cmd + j/k)
+cmd - j : yabai -m space --focus prev || yabai -m space --focus last
+cmd - k : yabai -m space --focus next || yabai -m space --focus first
 
 # Throw focused window to spaces 1-10 (mod2 + 1-0)
 ctrl + alt + shift - 1 : yabai -m window --space 1 && yabai -m space --focus 1
@@ -139,8 +138,8 @@ ctrl + alt + shift - g : yabai -m window --display 5 && yabai -m display --focus
 # UTILITY
 # ====================================================================
 
-# Show all keybindings (mod1 + ?)
-alt + shift - 0x2C : ~/Documents/projects/dotfiles/skhd/scripts/show-keybindings.sh
+# Show all keybindings with fzf picker (mod1 + /)
+alt + shift - 0x2C : (alacritty --title "skhd-whichkey" -e ~/Documents/projects/dotfiles/skhd/scripts/whichkey-fzf.sh & sleep 0.3 && yabai -m window --toggle float && yabai -m window --resize abs:900:600 && yabai -m window --move abs:520:140)
 
 # Toggle float for focused window (mod1 + t)
 alt + shift - t : yabai -m window --toggle float && yabai -m window --grid 4:4:1:1:2:2
@@ -154,9 +153,13 @@ alt + shift - z : yabai -m space --balance
 # Restart yabai (mod2 + z)
 ctrl + alt + shift - z : launchctl kickstart -k "gui/${UID}/homebrew.mxcl.yabai"
 
+# Reload skhd config (cmd + r)
+cmd + shift - r : skhd -r
+
 # ====================================================================
 # ADDITIONAL USEFUL BINDINGS
 # ====================================================================
+
 
 # Rotate tree (mod1 + o) - Using 'o' to avoid conflict with display focus
 alt + shift - o : yabai -m space --rotate 90

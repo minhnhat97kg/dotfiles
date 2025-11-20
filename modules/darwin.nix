@@ -29,6 +29,11 @@
   # macOS-specific settings
   programs.zsh.enable = true;
 
+  homebrew = {
+    enable = true;
+    casks = [ ];
+  };
+
   environment.systemPackages = with pkgs; [
     nixfmt-rfc-style
     yabai
@@ -42,7 +47,7 @@
   # Window management services
   services.yabai = {
     enable = true;
-    enableScriptingAddition = false;
+    enableScriptingAddition = true;
     config = {
       external_bar = "all:32:0";
       layout = "bsp";
@@ -82,6 +87,7 @@
       yabai -m rule --add app="^Software Update$" manage=off
       yabai -m rule --add app="^About This Mac$" manage=off
       yabai -m rule --add app="^Finder$" title="(Co(py|nnect)|Move|Info|Pref)" manage=off
+      yabai -m rule --add title="^skhd-whichkey$" manage=off sticky=on layer=above
       echo "yabai configuration loaded.."
     '';
   };
@@ -112,6 +118,8 @@
       StandardErrorPath = "/tmp/jankyborders.err.log";
     };
   };
+
+
 
   # Host & user configuration
   networking.hostName = "Nathan-Macbook";

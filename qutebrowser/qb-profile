@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# qutebrowser profile launcher
+# Usage: qb-profile <profile-name>
+# Examples:
+#   qb-profile personal
+#   qb-profile work
+
+set -euo pipefail
+
+PROFILE="${1:-default}"
+CONFIG_DIR="$HOME/.config/qutebrowser"
+BASE_DIR="$HOME/.local/share/qutebrowser"
+
+# Profile-specific data directory
+PROFILE_DIR="$BASE_DIR/profiles/$PROFILE"
+
+# Create profile directory if it doesn't exist
+mkdir -p "$PROFILE_DIR"
+
+# Launch qutebrowser with profile-specific data directory
+# The config is shared across all profiles
+exec qutebrowser \
+    --basedir "$PROFILE_DIR" \
+    --config-py "$CONFIG_DIR/config.py" \
+    "${@:2}"
