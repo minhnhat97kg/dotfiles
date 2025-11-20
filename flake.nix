@@ -129,7 +129,7 @@
                       source = ./qutebrowser/qb-profile;
                       executable = true;
                     };
-                    home.packages = with pkgs; [ alacritty jiratui ];
+                    home.packages = with pkgs; [ alacritty ];
                   }
                 ];
             };
