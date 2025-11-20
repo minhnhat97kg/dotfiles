@@ -82,4 +82,26 @@
   home.file.".config/git/minhnhat97kg.gitconfig".source = ../git/minhnhat97kg.gitconfig;
   home.file.".gitignore_global".source = ../git/gitignore_global;
   home.file.".config/dotfiles/scripts/load-aliases.sh" = { source = ../scripts/load-aliases.sh; executable = true; };
+  home.file."Applications/Qutebrowser Profile.app" = {
+    source = pkgs.runCommand "Qutebrowser-Profile-app" { } ''
+      mkdir -p $out/Contents/MacOS $out/Contents/Resources
+      cat > $out/Contents/Info.plist <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleExecutable</key><string>qutebrowser-profile-wrapper</string>
+  <key>CFBundleIdentifier</key><string>org.nixos.qutebrowser.profile</string>
+  <key>CFBundleName</key><string>Qutebrowser Profile</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleVersion</key><string>1.0</string>
+</dict></plist>
+PLIST
+      cat > $out/Contents/MacOS/qutebrowser-profile-wrapper <<'WRAP'
+#!/usr/bin/env bash
+exec "$HOME/.local/bin/qb-profile" default "$@"
+WRAP
+      chmod +x $out/Contents/MacOS/qutebrowser-profile-wrapper
+    '';
+    recursive = true;
+  };
 }
