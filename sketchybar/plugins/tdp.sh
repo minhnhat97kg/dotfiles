@@ -10,10 +10,15 @@ if command -v powermetrics >/dev/null 2>&1; then
   # Use a short sample duration
   VALUE=$(sudo powermetrics --samplers smc -n1 2>/dev/null | awk -F':' '/CPU Power/ {gsub(/W| /, "", $2); print $2; exit}')
 fi
-# Fallback: estimate via ioreg (may be empty on some Macs)
+# Attempt powermetrics without password if sudo fails earlier
 if [ -z "$VALUE" ]; then
-  VALUE=$(ioreg -r -n AppleSmartBattery 2>/dev/null | sed -n 's/.*"Watts"=\([0-9]*\).*/\1/p' | head -n1)
+  if sudo -n true 2>/dev/null; then
+    VALUE=$(sudo powermetrics --samplers smc -n1 2>/dev/null | awk -F':' '/CPU Power/ {gsub(/W| /, "", $2); print $2; exit}')
+  else
+    VALUE=$(powermetrics --samplers smc -n1 2>/dev/null | awk -F':' '/CPU Power/ {gsub(/W| /, "", $2); print $2; exit}')
+  fi
 fi
+# Remove incorrect adapter watt fallback (was always 60W)
 # Final fallback to blank
 [ -z "$VALUE" ] && VALUE="?"
 LABEL="${VALUE}W"
