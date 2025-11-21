@@ -54,6 +54,7 @@
         if [ -f "$ALIASES_SCRIPT" ]; then
           eval "$($ALIASES_SCRIPT)"
         fi
+        [ -f ~/.fzf.zsh ]  && source ~/.fzf.zsh
       '';
       shellAliases = {
         ll = "ls -l";
@@ -82,6 +83,7 @@
   home.file.".config/git/minhnhat97kg.gitconfig".source = ../git/minhnhat97kg.gitconfig;
   home.file.".gitignore_global".source = ../git/gitignore_global;
   home.file.".config/dotfiles/scripts/load-aliases.sh" = { source = ../scripts/load-aliases.sh; executable = true; };
+  home.file.".fzf.zsh".source = ../fzf/fzf.zsh;
   home.file."Applications/Qutebrowser Profile.app" = {
     source = pkgs.runCommand "Qutebrowser-Profile-app" { } ''
       mkdir -p $out/Contents/MacOS $out/Contents/Resources

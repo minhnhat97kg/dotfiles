@@ -18,12 +18,22 @@ lg = lg1
     dark = true      # or light = true, or omit for auto-detection
     side-by-side = true
 
-[merge]
-    conflictstyle = zdiff3
-
 [paging]
     colorArg = always
     pager = diff-so-fancy
 
 # includeIf for different git identities
 # Managed by nix home-manager
+[diff]
+    tool = nvimdiff
+[difftool]
+    prompt = false
+[difftool "nvimdiff"]
+    cmd = "nvim -d \"$LOCAL\" \"$REMOTE\""
+[merge]
+    tool = nvimdiff
+[mergetool]
+    prompt = true
+    conflictstyle = zdiff3
+[mergetool "nvimdiff"]
+    cmd = "nvim -d \"$LOCAL\" \"$REMOTE\" \"$MERGED\" -c 'wincmd w' -c 'wincmd J'"

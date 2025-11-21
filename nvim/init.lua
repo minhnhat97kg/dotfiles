@@ -574,6 +574,7 @@ require("lazy").setup({
 			global_keymaps = false,
 			global_keymaps_prefix = "<leader>R",
 		},
+    lazy = false
 	},
 
 	-- Markdown rendering (disabled in SSH - heavy rendering)
