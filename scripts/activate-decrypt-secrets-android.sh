@@ -21,12 +21,44 @@ log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
+# Check for required commands
+check_dependencies() {
+  local missing=()
+  for cmd in sops yq-go; do
+    if ! command -v "$cmd" &> /dev/null; then
+      missing+=("$cmd")
+    fi
+  done
+
+  # Also check for yq if yq-go is missing
+  if [[ " ${missing[@]} " =~ " yq-go " ]] && ! command -v yq &> /dev/null; then
+    : # yq-go is already in missing list
+  elif [[ " ${missing[@]} " =~ " yq-go " ]] && command -v yq &> /dev/null; then
+    # Remove yq-go from missing since we have yq
+    missing=("${missing[@]/yq-go/}")
+  fi
+
+  if [ ${#missing[@]} -gt 0 ]; then
+    log_error "Missing required commands: ${missing[*]}"
+    log_warn "Please install missing packages and rebuild:"
+    log_warn "  nix-on-droid switch --flake ."
+    return 1
+  fi
+  return 0
+}
+
 # Print header
 echo ""
 echo "┌────────────────────────────────────────────────────┐"
 echo "│  Secrets Management                                │"
 echo "└────────────────────────────────────────────────────┘"
 echo ""
+
+# Check dependencies first
+if ! check_dependencies; then
+  echo ""
+  exit 0  # Don't fail the build, just skip
+fi
 
 # Check if age key exists
 if [ ! -f "$AGE_KEY_FILE" ]; then

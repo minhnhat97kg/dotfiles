@@ -76,6 +76,9 @@
         # SSH tools
         sshpass
 
+        # Clipboard management
+        clipboard-jh
+
         # Utilities
         fx
       ];

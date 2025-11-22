@@ -73,6 +73,7 @@
     # Secrets
     sops
     age
+    yq-go
 
     # Databases
     postgresql
