@@ -98,6 +98,19 @@
 
   terminal.font = "${pkgs.nerd-fonts.fira-code}/share/fonts/truetype/NerdFonts/FiraCodeNerdFont-Regular.ttf";
 
+  # Secrets decryption activation script
+  build.activation.secrets = ''
+    # Run secrets activation script for Android
+    DOTFILES_DIR="$HOME/dotfiles"
+    ACTIVATION_SCRIPT="$DOTFILES_DIR/scripts/activate-decrypt-secrets-android.sh"
+
+    if [ -f "$ACTIVATION_SCRIPT" ]; then
+      "$ACTIVATION_SCRIPT" "$DOTFILES_DIR"
+    else
+      echo "⚠️  Warning: Secrets activation script not found: $ACTIVATION_SCRIPT"
+    fi
+  '';
+
   # SSH server setup
   build.activation.sshd = ''
     mkdir -p "$HOME/.ssh"
@@ -190,12 +203,22 @@ EOS
           # This avoids nix-env/nix profile compatibility issues
           home.packages = lib.mkForce [];
 
+          # Disable programs that are installed via environment.packages
+          # to avoid conflicts on Android
+          programs.neovim.enable = lib.mkForce false;
+          programs.tmux.enable = lib.mkForce false;
+          programs.lazygit.enable = lib.mkForce false;
+
           # Android-specific zsh config
           programs.zsh.initContent = lib.mkAfter ''
             export TMPDIR=/data/data/com.termux.nix/files/usr/tmp
             if [ -n "$SSH_CONNECTION" ] || [ -n "$SSH_CLIENT" ] || [ -n "$SSH_TTY" ]; then
               export TERM=xterm-256color
             fi
+
+            # Set default editor since programs.neovim is disabled
+            export EDITOR=nvim
+            export VISUAL=nvim
           '';
 
           programs.zsh.shellAliases.copilot = "github-copilot-cli";

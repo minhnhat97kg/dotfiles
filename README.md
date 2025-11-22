@@ -82,11 +82,21 @@ make clean             # Clean build artifacts
 make gen-key           # Generate/import age key
 ```
 
+## Keybindings
+
+**📖 See [KEYBINDINGS.md](KEYBINDINGS.md) for complete keyboard shortcuts reference**
+
+Quick overview:
+- **Tmux resize panes**: `Alt+h/j/k/l` (no prefix needed)
+- **Tmux switch windows**: `Alt+,` / `Alt+.`
+- **Tmux navigate panes**: `Ctrl+h/j/k/l` (vim-aware)
+- **Window manager help**: `Alt+Shift+/` (show all bindings)
+
 ## Features
 
 ### Shared (All Platforms)
 - **Editor**: Neovim with LSP (Lua, TypeScript, Go, Rust, Java)
-- **Terminal**: Tmux with vim navigation
+- **Terminal**: Tmux with vim navigation and easy pane resizing
 - **Shell**: Zsh + oh-my-zsh
 - **Languages**: Node.js, Go, Rust, Python, Java (Maven/Gradle)
 - **Tools**: fzf, ripgrep, fd, jq, lazygit, direnv

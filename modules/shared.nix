@@ -41,9 +41,15 @@
         bind -n C-k run "($is_vim && tmux send-keys C-k) || tmux select-pane -U"
         bind -n C-l run "($is_vim && tmux send-keys C-l) || tmux select-pane -R"
 
-        # Window navigation (vim-style)
-        bind -n M-h previous-window
-        bind -n M-l next-window
+        # Pane resizing with Alt+hjkl (no prefix needed)
+        bind -n M-h resize-pane -L 5
+        bind -n M-j resize-pane -D 5
+        bind -n M-k resize-pane -U 5
+        bind -n M-l resize-pane -R 5
+
+        # Window navigation moved to Alt+,/.
+        bind -n M-, previous-window
+        bind -n M-. next-window
 
         # Alt+number to jump to window directly
         bind -n M-1 select-window -t 1

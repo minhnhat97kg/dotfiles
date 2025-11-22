@@ -34,7 +34,7 @@ deps: ## Install required dependencies (yq-go, age)
 # Main targets
 install: ## Install configuration (auto-detect platform)
 ifeq ($(PLATFORM),macos)
-	darwin-rebuild switch --flake .
+	sudo darwin-rebuild switch --flake .
 	@echo ""
 	@echo "Checking yabai scripting addition LaunchDaemon..."
 	@if [ -f /Library/LaunchDaemons/org.nixos.yabai-sa.plist ]; then \
@@ -48,7 +48,7 @@ else
 endif
 
 darwin: ## Install on macOS (nix-darwin)
-	darwin-rebuild switch --flake .
+	sudo darwin-rebuild switch --flake .
 	@echo ""
 	@echo "Checking yabai scripting addition LaunchDaemon..."
 	@if [ -f /Library/LaunchDaemons/org.nixos.yabai-sa.plist ]; then \

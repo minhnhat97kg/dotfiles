@@ -145,14 +145,16 @@ You can also run the scripts directly:
 
 ## Automatic Decryption
 
-When you run `darwin-rebuild switch` or `darwin-rebuild build`, the system will automatically:
+When you run `darwin-rebuild switch` or `nix-on-droid switch`, the system will automatically:
 
 1. Show a prompt asking if you want to decrypt secrets
 2. If you answer "yes", decrypt all secrets to their destinations
 3. Set proper file permissions
 4. Report success/failure
 
-This happens through a nix-darwin activation script in `modules/darwin.nix`.
+This happens through activation scripts:
+- **macOS**: `scripts/activate-decrypt-secrets.sh` (called from `modules/darwin.nix`)
+- **Android**: `scripts/activate-decrypt-secrets-android.sh` (called from `modules/android.nix`)
 
 ## How It Works
 
