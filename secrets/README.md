@@ -114,13 +114,14 @@ aws ec2 describe-instances --profile fl-prod
 - Buuuk: https://buuuk-dev.awsapps.com/start
 - JPAS: https://d-9667464356.awsapps.com/start
 
-### SSH Keys
+### SSH Keys & Passwords
 - **ssh-id_rsa** - Main RSA key (encrypted)
 - **ssh-id_ed25519** - Ed25519 key (encrypted)
 - **ssh-cuong_rsa** - Cuong's RSA key (encrypted)
 - **ssh-id_minhnhat97kg** - GitHub key (encrypted)
 - **ssh-bitbucket** - Bitbucket key (encrypted)
 - **ssh-config** - SSH config file (encrypted)
+- **ssh-passwords** - SSH passwords for servers (encrypted) - See [SSH-PASSWORDS.md](../SSH-PASSWORDS.md)
 
 ## How It Works
 

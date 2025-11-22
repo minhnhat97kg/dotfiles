@@ -47,12 +47,28 @@ deps: ## Install required dependencies (yq-go, age)
 install: ## Install configuration (auto-detect platform)
 ifeq ($(PLATFORM),macos)
 	darwin-rebuild switch --flake .
+	@echo ""
+	@echo "Checking yabai scripting addition LaunchDaemon..."
+	@if [ -f /Library/LaunchDaemons/org.nixos.yabai-sa.plist ]; then \
+		sudo launchctl bootout system/org.nixos.yabai-sa 2>/dev/null || true; \
+		sudo launchctl bootstrap system /Library/LaunchDaemons/org.nixos.yabai-sa.plist; \
+		sudo launchctl enable system/org.nixos.yabai-sa; \
+		echo "✓ yabai scripting addition LaunchDaemon loaded"; \
+	fi
 else
 	nix-on-droid switch --flake .
 endif
 
 darwin: ## Install on macOS (nix-darwin)
 	darwin-rebuild switch --flake .
+	@echo ""
+	@echo "Checking yabai scripting addition LaunchDaemon..."
+	@if [ -f /Library/LaunchDaemons/org.nixos.yabai-sa.plist ]; then \
+		sudo launchctl bootout system/org.nixos.yabai-sa 2>/dev/null || true; \
+		sudo launchctl bootstrap system /Library/LaunchDaemons/org.nixos.yabai-sa.plist; \
+		sudo launchctl enable system/org.nixos.yabai-sa; \
+		echo "✓ yabai scripting addition LaunchDaemon loaded"; \
+	fi
 
 android: ## Install on Android (nix-on-droid)
 	nix-on-droid switch --flake .
@@ -95,9 +111,15 @@ decrypt-ssh: ## Decrypt SSH keys to SSH_DIR
 	@for f in $(SECRETS_OUTPUT_DIR)/ssh/*.sops.yaml; do \
 		[ -f "$$f" ] || continue; \
 		name=$$(basename "$$f" .sops.yaml); \
-		echo "  Decrypting $$name..."; \
-		SOPS_AGE_KEY_FILE=$(AGE_KEY) sops --decrypt --extract '["stringData"]["key"]' "$$f" > "$(SSH_DIR)/$$name"; \
-		chmod 600 "$(SSH_DIR)/$$name"; \
+		if [ "$$name" = "passwords" ] || [ "$$name" = "tunnels" ]; then \
+			echo "  Decrypting $$name..."; \
+			SOPS_AGE_KEY_FILE=$(AGE_KEY) sops --decrypt "$$f" > "$(SSH_DIR)/$$name.yaml"; \
+			chmod 600 "$(SSH_DIR)/$$name.yaml"; \
+		else \
+			echo "  Decrypting $$name..."; \
+			SOPS_AGE_KEY_FILE=$(AGE_KEY) sops --decrypt --extract '["stringData"]["key"]' "$$f" > "$(SSH_DIR)/$$name"; \
+			chmod 600 "$(SSH_DIR)/$$name"; \
+		fi \
 	done
 	@echo "✓ SSH secrets decrypted"
 
@@ -125,96 +147,3 @@ decrypt-git: ## Decrypt git configs to GIT_SECRETS_DIR
 	done
 	@echo "✓ Git secrets decrypted"
 
-decrypt-custom: ## Decrypt custom secrets (usage: make decrypt-custom SRC=ssh DEST=~/.ssh)
-	@if [ -z "$(SRC)" ] || [ -z "$(DEST)" ]; then echo "Error: SRC and DEST required. Usage: make decrypt-custom SRC=ssh DEST=~/.ssh"; exit 1; fi
-	@echo "Decrypting $(SRC) secrets to $(DEST)..."
-	@mkdir -p $(DEST)
-	@for f in $(SECRETS_OUTPUT_DIR)/$(SRC)/*.sops.yaml; do \
-		[ -f "$$f" ] || continue; \
-		name=$$(basename "$$f" .sops.yaml); \
-		echo "  Decrypting $$name..."; \
-		SOPS_AGE_KEY_FILE=$(AGE_KEY) sops --decrypt --extract '["stringData"]["key"]' "$$f" > "$(DEST)/$$name"; \
-		chmod 600 "$(DEST)/$$name"; \
-	done
-	@echo "✓ Secrets decrypted"
-
-list-secrets: ## List all encrypted secrets
-	@echo "Encrypted secrets in $(SECRETS_OUTPUT_DIR):"
-	@find $(SECRETS_OUTPUT_DIR) -name "*.sops.yaml" -type f 2>/dev/null | sort | sed 's|^|  |' || echo "  (none found)"
-
-# Internal target - check and auto-install dependencies
-check-deps:
-	@if ! command -v yq-go &> /dev/null && ! command -v yq &> /dev/null; then \
-		echo "⚠️  yq-go not found, installing..."; \
-		nix profile install nixpkgs#yq-go; \
-	fi
-	@if ! command -v age &> /dev/null; then \
-		echo "⚠️  age not found, installing..."; \
-		nix profile install nixpkgs#age; \
-	fi
-
-test-decrypt: ## Test decryption to /tmp
-	@rm -rf /tmp/dotfiles-decrypt-test
-	@mkdir -p /tmp/dotfiles-decrypt-test/ssh
-	@echo "Testing decryption..."
-	@for f in $(SECRETS_OUTPUT_DIR)/ssh/*.sops.yaml; do \
-		[ -f "$$f" ] || continue; \
-		name=$$(basename "$$f" .sops.yaml); \
-		SOPS_AGE_KEY_FILE=$(AGE_KEY) sops --decrypt --extract '["stringData"]["key"]' "$$f" > "/tmp/dotfiles-decrypt-test/ssh/$$name"; \
-	done
-	@echo "✓ Test complete: /tmp/dotfiles-decrypt-test"
-
-clean: ## Clean build artifacts
-	@rm -rf result result-* /tmp/dotfiles-test /tmp/dotfiles-decrypt-test
-
-gen-key: ## Generate or import age key
-	@echo "Choose an option:"
-	@echo "  1) Generate new age key"
-	@echo "  2) Import existing age key"
-	@read -p "Enter choice [1/2]: " choice; \
-	mkdir -p ~/.config/sops/age; \
-	if [ "$$choice" = "1" ]; then \
-		age-keygen -o ~/.config/sops/age/keys.txt; \
-		echo ""; \
-		echo "⚠️  Update AGE_PUBKEY in Makefile with the public key shown above!"; \
-	elif [ "$$choice" = "2" ]; then \
-		echo "Paste your age private key (AGE-SECRET-KEY-...):"; \
-		read -r age_key; \
-		echo "$$age_key" > ~/.config/sops/age/keys.txt; \
-		chmod 600 ~/.config/sops/age/keys.txt; \
-		echo "✓ Age key saved"; \
-	else \
-		echo "Invalid choice"; \
-		exit 1; \
-	fi
-
-check: ## Check flake configuration
-	nix flake check
-
-update: ## Update flake inputs
-	nix flake update
-
-format: ## Format nix files
-	nix fmt
-
-pre-commit-install: ## Install git pre-commit hook (nix fmt + flake check + secret scan)
-	@mkdir -p .git/hooks
-	@cat > .git/hooks/pre-commit <<'EOF'
-	#!/usr/bin/env bash
-	set -euo pipefail
-	echo '[pre-commit] Formatting Nix files...'
-	nix fmt >/dev/null 2>&1 || true
-	echo '[pre-commit] Running flake check...'
-	if ! nix flake check; then
-	  echo '[pre-commit] flake check failed';
-	  exit 1;
-	fi
-	echo '[pre-commit] Scanning for plaintext secrets...'
-	if grep -R --exclude-dir=secrets --exclude='*.enc' -E '(AWS_SECRET_ACCESS_KEY|AGE-SECRET-KEY|BEGIN [A-Z ]*PRIVATE KEY|oauth_token)' . >/dev/null 2>&1; then
-	  echo '[pre-commit] Potential secret detected. Commit aborted.';
-	  exit 1;
-	fi
-	echo '[pre-commit] OK'
-	EOF
-	@chmod +x .git/hooks/pre-commit
-	@echo '✓ Pre-commit hook installed'

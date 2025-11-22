@@ -40,6 +40,24 @@
         bind -n C-j run "($is_vim && tmux send-keys C-j) || tmux select-pane -D"
         bind -n C-k run "($is_vim && tmux send-keys C-k) || tmux select-pane -U"
         bind -n C-l run "($is_vim && tmux send-keys C-l) || tmux select-pane -R"
+
+        # Window navigation (vim-style)
+        bind -n M-h previous-window
+        bind -n M-l next-window
+
+        # Alt+number to jump to window directly
+        bind -n M-1 select-window -t 1
+        bind -n M-2 select-window -t 2
+        bind -n M-3 select-window -t 3
+        bind -n M-4 select-window -t 4
+        bind -n M-5 select-window -t 5
+        bind -n M-6 select-window -t 6
+        bind -n M-7 select-window -t 7
+        bind -n M-8 select-window -t 8
+        bind -n M-9 select-window -t 9
+
+        # Reload tmux config (prefix + r)
+        bind r source-file ~/.config/tmux/tmux.conf \; display-message "Config reloaded!"
       '';
     };
     zsh = {
@@ -60,6 +78,12 @@
         ll = "ls -l";
         e = "nvim";
         lg = "lazygit";
+
+        # SSH password management aliases
+        sshp = "ssh-with-password";
+        sshp-add = "ssh-password-add";
+        sshp-list = "ssh-password-list";
+        sshp-tunnel = "ssh-tunnel";
       };
       oh-my-zsh = { enable = true; theme = "robbyrussell"; };
     };
@@ -84,6 +108,12 @@
   home.file.".gitignore_global".source = ../git/gitignore_global;
   home.file.".config/dotfiles/scripts/load-aliases.sh" = { source = ../scripts/load-aliases.sh; executable = true; };
   home.file.".fzf.zsh".source = ../fzf/fzf.zsh;
+
+  # SSH password management scripts - available in PATH
+  home.file.".local/bin/ssh-with-password" = { source = ../scripts/ssh-with-password.sh; executable = true; force = true; };
+  home.file.".local/bin/ssh-password-add" = { source = ../scripts/ssh-password-add.sh; executable = true; force = true; };
+  home.file.".local/bin/ssh-password-list" = { source = ../scripts/ssh-password-list.sh; executable = true; force = true; };
+  home.file.".local/bin/ssh-tunnel" = { source = ../scripts/ssh-tunnel.sh; executable = true; force = true; };
   home.file."Applications/Qutebrowser Profile.app" = {
     source = pkgs.runCommand "Qutebrowser-Profile-app" { } ''
       mkdir -p $out/Contents/MacOS $out/Contents/Resources

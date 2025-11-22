@@ -1,8 +1,0 @@
-[81371:259:1120/182140.387532:ERROR:service_utils.cc(339)] Skia Graphite backend = "" not found - falling back to Ganesh!
-[81371:259:1120/182140.387816:ERROR:service_utils.cc(339)] Skia Graphite backend = "" not found - falling back to Ganesh!
-18:21:47 INFO: SIGINT/SIGTERM received, shutting down!
-18:21:47 INFO: Do the same again to forcefully quit.
-[81440:259:1120/182150.167679:ERROR:service_utils.cc(339)] Skia Graphite backend = "" not found - falling back to Ganesh!
-[81440:259:1120/182150.167904:ERROR:service_utils.cc(339)] Skia Graphite backend = "" not found - falling back to Ganesh!
-18:21:53 WARNING: set-cmd-text is deprecated - use cmd-set-text instead
-18:21:55 WARNING: set-cmd-text is deprecated - use cmd-set-text instead

@@ -73,6 +73,9 @@
         # Diff & formatting
         delta diff-so-fancy
 
+        # SSH tools
+        sshpass
+
         # Utilities
         fx
       ];
