@@ -101,6 +101,9 @@
 
   # Secrets decryption activation script
   build.activation.secrets = ''
+    # Export paths to required tools for the activation script
+    export PATH="${pkgs.sops}/bin:${pkgs.age}/bin:${pkgs.yq-go}/bin:$PATH"
+
     # Run secrets activation script for Android
     DOTFILES_DIR="$HOME/dotfiles"
     ACTIVATION_SCRIPT="$DOTFILES_DIR/scripts/activate-decrypt-secrets-android.sh"
