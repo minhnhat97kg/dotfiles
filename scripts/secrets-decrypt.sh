@@ -61,12 +61,19 @@ decrypt_file() {
   mkdir -p "$dest_dir"
 
   # Decrypt the file
-  if SOPS_AGE_KEY_FILE="$age_key_file" sops --decrypt --extract '["stringData"]["key"]' "$encrypted_file" > "$dest_file" 2>/dev/null; then
+  local error_output
+  error_output=$(SOPS_AGE_KEY_FILE="$age_key_file" sops --decrypt --extract '["stringData"]["key"]' "$encrypted_file" 2>&1 > "$dest_file")
+  local exit_code=$?
+
+  if [[ $exit_code -eq 0 ]]; then
     chmod "$permissions" "$dest_file"
     log_info "Decrypted: $(basename "$encrypted_file") → $dest_file"
     return 0
   else
     log_error "Failed to decrypt: $encrypted_file"
+    if [[ -n "$error_output" ]]; then
+      log_error "Error details: $error_output"
+    fi
     rm -f "$dest_file"
     return 1
   fi
