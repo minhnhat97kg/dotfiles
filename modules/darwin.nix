@@ -119,7 +119,62 @@
     };
   };
 
+  # Secrets decryption activation script
+  system.activationScripts.postActivation.text = ''
+    # Decrypt secrets after system activation
+    DOTFILES_DIR="${builtins.toString ../.}"
+    DECRYPT_SCRIPT="$DOTFILES_DIR/scripts/secrets-decrypt.sh"
+    AGE_KEY_FILE="/Users/${username}/.config/sops/age/keys.txt"
 
+    if [ -f "$DECRYPT_SCRIPT" ]; then
+      echo ""
+      echo "┌────────────────────────────────────────────────────┐"
+      echo "│  Secrets Management                                │"
+      echo "└────────────────────────────────────────────────────┘"
+      echo ""
+
+      # Check if age key exists
+      if [ ! -f "$AGE_KEY_FILE" ]; then
+        echo "⚠️  Age key not found at: $AGE_KEY_FILE"
+        echo ""
+        echo "Please enter your age private key (it will be saved securely):"
+        echo "Paste the entire key including the 'AGE-SECRET-KEY-...' line"
+        echo "Press Ctrl+D when done:"
+        echo ""
+
+        # Create directory if it doesn't exist
+        sudo -u ${username} mkdir -p "$(dirname "$AGE_KEY_FILE")"
+
+        # Read the key from user input
+        sudo -u ${username} tee "$AGE_KEY_FILE" > /dev/null
+
+        # Set proper permissions
+        sudo -u ${username} chmod 600 "$AGE_KEY_FILE"
+
+        echo ""
+        echo "✓ Age key saved to: $AGE_KEY_FILE"
+        echo ""
+      fi
+
+      # Validate age key format
+      if ! grep -q "AGE-SECRET-KEY-" "$AGE_KEY_FILE" 2>/dev/null; then
+        echo "❌ Invalid age key format in: $AGE_KEY_FILE"
+        echo ""
+        echo "The key file should contain a line starting with 'AGE-SECRET-KEY-'"
+        echo "Please fix the key file and run the command again."
+        echo ""
+        exit 1
+      fi
+
+      # Run decrypt script (it will prompt for confirmation)
+      if sudo -u ${username} "$DECRYPT_SCRIPT"; then
+        echo "✓ Secrets decryption completed"
+      else
+        echo "⚠ Secrets decryption skipped or failed"
+      fi
+      echo ""
+    fi
+  '';
 
   # Host & user configuration
   networking.hostName = "Nathan-Macbook";

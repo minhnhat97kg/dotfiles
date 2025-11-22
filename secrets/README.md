@@ -1,33 +1,40 @@
-# Secrets Management (Config-Driven)
+# Secrets Management
 
-All secrets are managed via a simple YAML configuration file (`secrets.yaml`). Just define what to encrypt/decrypt and let the scripts handle it.
+Configuration-driven secret encryption and decryption using SOPS and age.
+
+## Overview
+
+Secrets are managed through a YAML configuration file that defines:
+- Which folders contain secrets
+- Which files to encrypt/decrypt
+- Where to store encrypted versions
+- File permissions after decryption
 
 ## Quick Start
 
-### Add a New Secret
+### First Time Setup
 
-1. **Edit `secrets.yaml`:**
-   ```yaml
-   secrets:
-     - name: my-secret-key
-       source: ~/.myapp/secret.key
-       encrypted: secrets/myapp/secret.key.enc
-       mode: "600"
-       encrypt: true
-   ```
-
-2. **Encrypt it:**
+1. **Ensure age key exists:**
    ```bash
-   make encrypt-all
+   mkdir -p ~/.config/sops/age
+   # Copy your age key to ~/.config/sops/age/keys.txt
    ```
 
-3. **Commit the encrypted file:**
+2. **Configure secrets:**
+   Edit `secrets/config.yaml` to define your secret folders and files.
+
+3. **Encrypt secrets:**
    ```bash
-   git add secrets/myapp/secret.key.enc
-   git commit -m "Add my secret key"
+   make encrypt
    ```
 
-### Use on New Machine
+4. **Commit encrypted files:**
+   ```bash
+   git add secrets/encrypted/
+   git commit -m "Add encrypted secrets"
+   ```
+
+### On New Machine
 
 1. **Copy age key:**
    ```bash
@@ -35,159 +42,242 @@ All secrets are managed via a simple YAML configuration file (`secrets.yaml`). J
    # Copy keys.txt to ~/.config/sops/age/keys.txt
    ```
 
-2. **Decrypt everything:**
+2. **Run nix-darwin switch:**
    ```bash
-   make decrypt-all
-   # All secrets restored to their original locations!
+   make switch
+   # or
+   darwin-rebuild switch --flake .
+   ```
+
+   You will be prompted to decrypt secrets automatically!
+
+3. **Or decrypt manually:**
+   ```bash
+   make decrypt
    ```
 
 ## Configuration File
 
-**Location:** `secrets.yaml` (in repo root)
+**Location:** `secrets/config.yaml`
 
-**Format:**
+**Structure:**
 ```yaml
-secrets:
-  - name: unique-name           # Descriptive name
-    source: ~/path/to/file      # Where the file lives
-    encrypted: secrets/file.enc # Where to store encrypted version
-    mode: "600"                 # File permissions (chmod)
-    encrypt: true              # true = encrypt, false = just copy
-
+# Age encryption configuration
 age:
-  public_key: age1...          # Age public key for encryption
-  private_key: ~/.config/sops/age/keys.txt  # Age private key path
+  recipient: age1h7y2etdv5r0nclaaavral84gcdd2kvvcu2h8yes3e3k3fcp03fzq306yas
+  key_file: ~/.config/sops/age/keys.txt
+
+# Output directory for encrypted secrets
+output_dir: ./secrets/encrypted
+
+# Define folders and files to encrypt/decrypt
+folders:
+  - name: ssh
+    source: ~/.ssh
+    destination: ~/.ssh
+    files:
+      - id_rsa
+      - id_ed25519
+      - passwords.yaml
+      - tunnels.yaml
+    permissions: "600"
+
+  - name: aws
+    source: ~/.aws
+    destination: ~/.aws
+    files:
+      - credentials
+      - config
+    permissions: "600"
+
+  - name: git
+    source: ./secrets/git
+    destination: ./secrets/git
+    files:
+      - buuuk.gitconfig
+    permissions: "644"
 ```
+
+**Fields:**
+- `name`: Folder identifier (used for organizing encrypted files)
+- `source`: Where to read files from when encrypting
+- `destination`: Where to write files when decrypting
+- `files`: List of files to process
+- `permissions`: chmod permissions (e.g., "600", "644")
 
 ## Commands
 
+### Encryption
 ```bash
-# Decrypt all secrets
-make decrypt-all
+# Encrypt all secrets defined in config
+make encrypt
 
-# Encrypt all secrets
-make encrypt-all
-
-# Test without changing your system
-make test-decrypt
-
-# Apply config and decrypt
-make switch
+# Use custom config file
+make encrypt-custom CONFIG=/path/to/config.yaml
 ```
 
-## Current Secrets
-
-All secrets defined in `secrets.yaml`:
-
-### AWS Configuration
-
-**Files:**
-- **aws-config** - AWS CLI configuration (SSO URLs, regions) - **NOT encrypted** (no secrets)
-- **aws-credentials** - AWS credentials with access keys - **ENCRYPTED**
-
-**SSO Profiles (Recommended):**
-Uses temporary tokens, no static keys stored:
-- `buuuk-dev`, `buuuk-test`, `bi-dev` - Buuuk organization
-- `jpas-uat-admin`, `jpas-sit-admin` - JPAS admin access
-- `jpas-uat-dev`, `jpas-sit-dev` - JPAS developer access
-- `jpas-uat-devops`, `jpas-sit-devops` - JPAS DevOps access
-
-**Static Key Profiles:**
-Encrypted in `aws-credentials`:
-- `fl-dev`, `fl-prod` - First Luxury environments
-- `fl-up-deploy`, `fl-up-deploy-2` - Deployment keys
-- `first-luxury-dev` - Development account
-- `mfa` - MFA configuration
-
-**Usage:**
+### Decryption
 ```bash
-# SSO profiles - login first
-aws sso login --profile buuuk-dev
-aws s3 ls --profile buuuk-dev
+# Decrypt with confirmation prompt
+make decrypt
 
-# Static key profiles - work immediately
-aws s3 ls --profile fl-dev
-aws ec2 describe-instances --profile fl-prod
+# Decrypt without prompt (auto-yes)
+make decrypt-yes
+
+# Use custom config file
+make decrypt-custom CONFIG=/path/to/config.yaml
 ```
 
-**Login URLs:**
-- Buuuk: https://buuuk-dev.awsapps.com/start
-- JPAS: https://d-9667464356.awsapps.com/start
+### Scripts
 
-### SSH Keys & Passwords
-- **ssh-id_rsa** - Main RSA key (encrypted)
-- **ssh-id_ed25519** - Ed25519 key (encrypted)
-- **ssh-cuong_rsa** - Cuong's RSA key (encrypted)
-- **ssh-id_minhnhat97kg** - GitHub key (encrypted)
-- **ssh-bitbucket** - Bitbucket key (encrypted)
-- **ssh-config** - SSH config file (encrypted)
-- **ssh-passwords** - SSH passwords for servers (encrypted) - See [SSH-PASSWORDS.md](../SSH-PASSWORDS.md)
+You can also run the scripts directly:
+
+```bash
+# Encrypt
+./scripts/secrets-sync.sh
+./scripts/secrets-sync.sh --config /path/to/config.yaml
+
+# Decrypt
+./scripts/secrets-decrypt.sh
+./scripts/secrets-decrypt.sh --yes  # skip confirmation
+./scripts/secrets-decrypt.sh --config /path/to/config.yaml
+```
+
+## Automatic Decryption
+
+When you run `darwin-rebuild switch` or `darwin-rebuild build`, the system will automatically:
+
+1. Show a prompt asking if you want to decrypt secrets
+2. If you answer "yes", decrypt all secrets to their destinations
+3. Set proper file permissions
+4. Report success/failure
+
+This happens through a nix-darwin activation script in `modules/darwin.nix`.
 
 ## How It Works
 
-1. **Encryption** (`make encrypt-all`):
-   - Reads `secrets.yaml`
-   - For each secret with `encrypt: true`:
-     - Reads file from `source`
-     - Encrypts with age
-     - Saves to `encrypted` location
-   - For secrets with `encrypt: false`:
-     - Just copies the file
+### Encryption Flow
 
-2. **Decryption** (`make decrypt-all`):
-   - Reads `secrets.yaml`
-   - For each secret:
-     - Reads encrypted file
-     - Decrypts (if needed)
-     - Writes to `source` location
-     - Sets file permissions from `mode`
+1. Read `secrets/config.yaml`
+2. For each folder:
+   - For each file in the folder's file list:
+     - Read from `source/filename`
+     - Wrap in SOPS YAML structure
+     - Encrypt with age
+     - Save to `output_dir/folder_name/filename.sops.yaml`
+
+### Decryption Flow
+
+1. Read `secrets/config.yaml`
+2. For each folder:
+   - For each file in the folder's file list:
+     - Read from `output_dir/folder_name/filename.sops.yaml`
+     - Decrypt using age key
+     - Extract file content
+     - Write to `destination/filename`
+     - Set permissions
+
+### File Structure
+
+```
+secrets/
+├── config.yaml              # Configuration file
+├── encrypted/               # Encrypted secrets (git-tracked)
+│   ├── ssh/
+│   │   ├── id_rsa.sops.yaml
+│   │   ├── id_ed25519.sops.yaml
+│   │   ├── passwords.yaml.sops.yaml
+│   │   └── tunnels.yaml.sops.yaml
+│   ├── aws/
+│   │   ├── credentials.sops.yaml
+│   │   └── config.sops.yaml
+│   └── git/
+│       └── buuuk.gitconfig.sops.yaml
+└── git/                     # Plain git configs (source)
+    └── buuuk.gitconfig
+```
 
 ## Adding New Secrets
 
-To add a new secret (example: GPG key):
-
-1. **Add to `secrets.yaml`:**
+1. **Edit `secrets/config.yaml`:**
    ```yaml
-   - name: gpg-private-key
-     source: ~/.gnupg/private-keys-v1.d/KEYID.key
-     encrypted: secrets/gpg/private.key.enc
-     mode: "600"
-     encrypt: true
+   folders:
+     - name: gpg
+       source: ~/.gnupg
+       destination: ~/.gnupg
+       files:
+         - private-key.asc
+       permissions: "600"
    ```
 
 2. **Encrypt:**
    ```bash
-   make encrypt-all
+   make encrypt
    ```
 
 3. **Commit:**
    ```bash
-   git add secrets.yaml secrets/gpg/private.key.enc
+   git add secrets/config.yaml secrets/encrypted/gpg/
    git commit -m "Add GPG private key"
    ```
 
-That's it! The next `make decrypt-all` will restore it.
-
 ## Security
 
-✅ **Safe to commit:**
-- `secrets.yaml` (configuration only)
-- All `*.enc` files (encrypted)
-- Files with `encrypt: false` that contain no secrets
+### Safe to Commit
+- `secrets/config.yaml` (no secrets, just paths)
+- `secrets/encrypted/**/*.sops.yaml` (encrypted files)
+- Any source files in `secrets/` that don't contain actual secrets
 
-❌ **NEVER commit:**
-- `~/.config/sops/age/keys.txt` (encryption key)
+### NEVER Commit
+- `~/.config/sops/age/keys.txt` (your private age key)
 - Any decrypted secrets
+- Files in destination directories after decryption
 
-## Age Encryption Key
+### Age Key Management
 
 **Location:** `~/.config/sops/age/keys.txt`
 **Public Key:** `age1h7y2etdv5r0nclaaavral84gcdd2kvvcu2h8yes3e3k3fcp03fzq306yas`
 
 ⚠️ **BACKUP THIS KEY!** Store it in:
-- Password manager
+- Password manager (1Password, Bitwarden, etc.)
 - Encrypted USB drive
-- Secure cloud storage
-- Printed paper in safe
+- Secure cloud storage (encrypted)
+- Printed paper in a safe
 
 Without this key, you cannot decrypt your secrets!
+
+## Current Secrets
+
+Based on the current `config.yaml`:
+
+### SSH Keys & Configs
+- `id_rsa` - Main RSA key
+- `id_ed25519` - Ed25519 key
+- `passwords.yaml` - Server passwords (see SSH-PASSWORDS.md)
+- `tunnels.yaml` - SSH tunnel configurations
+
+### AWS Credentials
+- `credentials` - AWS access keys and tokens
+- `config` - AWS CLI configuration (profiles, regions, SSO)
+
+### Git Configurations
+- `buuuk.gitconfig` - Buuuk-specific git configuration
+
+## Troubleshooting
+
+### "Age key file not found"
+Ensure `~/.config/sops/age/keys.txt` exists and contains your private key.
+
+### "Failed to decrypt"
+- Check that your age key matches the recipient in `config.yaml`
+- Verify encrypted files are not corrupted
+- Ensure SOPS is installed: `nix profile install nixpkgs#sops`
+
+### "yq not found"
+Install yq: `make deps` or `nix profile install nixpkgs#yq-go`
+
+### Decryption not running automatically
+Check that `modules/darwin.nix` contains the activation script and rebuild:
+```bash
+darwin-rebuild switch --flake .
+```

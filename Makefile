@@ -1,16 +1,7 @@
 .PHONY: help install build switch encrypt decrypt encrypt-ssh encrypt-aws encrypt-git decrypt-ssh decrypt-aws decrypt-git test clean check update format deps darwin android
 
 # Configuration
-AGE_KEY ?= $(HOME)/.config/sops/age/keys.txt
-AGE_PUBKEY := age1h7y2etdv5r0nclaaavral84gcdd2kvvcu2h8yes3e3k3fcp03fzq306yas
-
-# Secret directories - customize these paths
-SSH_DIR ?= $(HOME)/.ssh
-AWS_DIR ?= $(HOME)/.aws
-GIT_SECRETS_DIR ?= ./secrets/git
-
-# Output directory for encrypted secrets
-SECRETS_OUTPUT_DIR ?= ./secrets/encrypted
+SECRETS_CONFIG ?= ./secrets/config.yaml
 
 # Platform detection
 PLATFORM := $(shell uname -s | sed 's/Darwin/macos/' | sed 's/Linux/android/' )
@@ -21,11 +12,8 @@ help: ## Show available commands
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo ""
-	@echo "Secret Directories:"
-	@echo "  SSH_DIR=$(SSH_DIR)"
-	@echo "  AWS_DIR=$(AWS_DIR)"
-	@echo "  GIT_SECRETS_DIR=$(GIT_SECRETS_DIR)"
-	@echo "  SECRETS_OUTPUT_DIR=$(SECRETS_OUTPUT_DIR)"
+	@echo "Configuration:"
+	@echo "  SECRETS_CONFIG=$(SECRETS_CONFIG)"
 
 deps: ## Install required dependencies (yq-go, age)
 	@echo "Installing dependencies..."
@@ -83,67 +71,21 @@ endif
 switch: install ## Switch configuration
 
 # Encryption targets
-encrypt: encrypt-ssh encrypt-aws encrypt-git ## Encrypt all secret directories
+encrypt: ## Encrypt all secrets based on config file
+	@./scripts/secrets-sync.sh
 
-encrypt-ssh: ## Encrypt SSH keys from SSH_DIR
-	@echo "Encrypting SSH secrets from $(SSH_DIR)..."
-	@./scripts/secrets-sync.sh -o $(SECRETS_OUTPUT_DIR) $(SSH_DIR)
-
-encrypt-aws: ## Encrypt AWS config from AWS_DIR
-	@echo "Encrypting AWS secrets from $(AWS_DIR)..."
-	@./scripts/secrets-sync.sh -o $(SECRETS_OUTPUT_DIR) $(AWS_DIR)
-
-encrypt-git: ## Encrypt git configs from GIT_SECRETS_DIR
-	@echo "Encrypting Git secrets from $(GIT_SECRETS_DIR)..."
-	@./scripts/secrets-sync.sh -o $(SECRETS_OUTPUT_DIR) $(GIT_SECRETS_DIR)
-
-encrypt-custom: ## Encrypt custom directory (usage: make encrypt-custom DIR=/path/to/secrets)
-	@if [ -z "$(DIR)" ]; then echo "Error: DIR not specified. Usage: make encrypt-custom DIR=/path/to/secrets"; exit 1; fi
-	@echo "Encrypting secrets from $(DIR)..."
-	@./scripts/secrets-sync.sh -o $(SECRETS_OUTPUT_DIR) $(DIR)
+encrypt-custom: ## Encrypt with custom config (usage: make encrypt-custom CONFIG=/path/to/config.yaml)
+	@if [ -z "$(CONFIG)" ]; then echo "Error: CONFIG not specified. Usage: make encrypt-custom CONFIG=/path/to/config.yaml"; exit 1; fi
+	@./scripts/secrets-sync.sh --config $(CONFIG)
 
 # Decryption targets
-decrypt: decrypt-ssh decrypt-aws decrypt-git ## Decrypt all secrets to their destinations
+decrypt: ## Decrypt all secrets based on config file
+	@./scripts/secrets-decrypt.sh
 
-decrypt-ssh: ## Decrypt SSH keys to SSH_DIR
-	@echo "Decrypting SSH secrets to $(SSH_DIR)..."
-	@mkdir -p $(SSH_DIR)
-	@for f in $(SECRETS_OUTPUT_DIR)/ssh/*.sops.yaml; do \
-		[ -f "$$f" ] || continue; \
-		name=$$(basename "$$f" .sops.yaml); \
-		if [ "$$name" = "passwords" ] || [ "$$name" = "tunnels" ]; then \
-			echo "  Decrypting $$name..."; \
-			SOPS_AGE_KEY_FILE=$(AGE_KEY) sops --decrypt "$$f" > "$(SSH_DIR)/$$name.yaml"; \
-			chmod 600 "$(SSH_DIR)/$$name.yaml"; \
-		else \
-			echo "  Decrypting $$name..."; \
-			SOPS_AGE_KEY_FILE=$(AGE_KEY) sops --decrypt --extract '["stringData"]["key"]' "$$f" > "$(SSH_DIR)/$$name"; \
-			chmod 600 "$(SSH_DIR)/$$name"; \
-		fi \
-	done
-	@echo "✓ SSH secrets decrypted"
+decrypt-yes: ## Decrypt all secrets without confirmation prompt
+	@./scripts/secrets-decrypt.sh --yes
 
-decrypt-aws: ## Decrypt AWS config to AWS_DIR
-	@echo "Decrypting AWS secrets to $(AWS_DIR)..."
-	@mkdir -p $(AWS_DIR)
-	@for f in $(SECRETS_OUTPUT_DIR)/aws/*.sops.yaml; do \
-		[ -f "$$f" ] || continue; \
-		name=$$(basename "$$f" .sops.yaml); \
-		echo "  Decrypting $$name..."; \
-		SOPS_AGE_KEY_FILE=$(AGE_KEY) sops --decrypt --extract '["stringData"]["key"]' "$$f" > "$(AWS_DIR)/$$name"; \
-		chmod 600 "$(AWS_DIR)/$$name"; \
-	done
-	@echo "✓ AWS secrets decrypted"
-
-decrypt-git: ## Decrypt git configs to GIT_SECRETS_DIR
-	@echo "Decrypting Git secrets to $(GIT_SECRETS_DIR)..."
-	@mkdir -p $(GIT_SECRETS_DIR)
-	@for f in $(SECRETS_OUTPUT_DIR)/git/*.sops.yaml; do \
-		[ -f "$$f" ] || continue; \
-		name=$$(basename "$$f" .sops.yaml); \
-		echo "  Decrypting $$name..."; \
-		SOPS_AGE_KEY_FILE=$(AGE_KEY) sops --decrypt --extract '["stringData"]["key"]' "$$f" > "$(GIT_SECRETS_DIR)/$$name"; \
-		chmod 644 "$(GIT_SECRETS_DIR)/$$name"; \
-	done
-	@echo "✓ Git secrets decrypted"
+decrypt-custom: ## Decrypt with custom config (usage: make decrypt-custom CONFIG=/path/to/config.yaml)
+	@if [ -z "$(CONFIG)" ]; then echo "Error: CONFIG not specified. Usage: make decrypt-custom CONFIG=/path/to/config.yaml"; exit 1; fi
+	@./scripts/secrets-decrypt.sh --config $(CONFIG)
 

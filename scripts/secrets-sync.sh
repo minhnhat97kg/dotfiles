@@ -1,30 +1,49 @@
 #!/usr/bin/env bash
 # scripts/secrets-sync.sh
-# Generic secrets sync - encrypts all files in specified directories to sops format
-# Usage: ./scripts/secrets-sync.sh [source_dir1] [source_dir2] ...
-# If no directories specified, uses SECRETS_SOURCE_DIRS env var (comma-separated)
+# Encrypt secrets based on configuration file
+# Usage: ./scripts/secrets-sync.sh [--config CONFIG_FILE]
 
 set -euo pipefail
 
-AGE_RECIP="${AGE_RECIPIENT:-age1h7y2etdv5r0nclaaavral84gcdd2kvvcu2h8yes3e3k3fcp03fzq306yas}"
+# Default paths
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-OUTPUT_DIR="${SECRETS_OUTPUT_DIR:-$ROOT_DIR/secrets/encrypted}"
+CONFIG_FILE="${CONFIG_FILE:-$ROOT_DIR/secrets/config.yaml}"
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+log_debug() { echo -e "${BLUE}[DEBUG]${NC} $1"; }
 
 need_cmd() {
   command -v "$1" >/dev/null || { log_error "Missing required command: $1"; exit 1; }
 }
 
 indent() { sed 's/^/    /'; }
+
+# Get yq command (handle both yq-go and yq)
+get_yq_cmd() {
+  if command -v yq-go &> /dev/null; then
+    echo "yq-go"
+  elif command -v yq &> /dev/null; then
+    echo "yq"
+  else
+    log_error "yq not found. Please install yq-go or yq"
+    exit 1
+  fi
+}
+
+# Expand tilde in paths
+expand_path() {
+  local path="$1"
+  echo "${path/#\~/$HOME}"
+}
 
 # Build YAML structure for sops
 build_yaml() {
@@ -39,155 +58,79 @@ build_yaml() {
 
 # Encrypt file in place with sops
 encrypt_in_place() {
-  local file="$1"
+  local file="$1" age_recip="$2"
   if grep -q '^sops:' "$file" 2>/dev/null; then
     # Already encrypted, re-encrypt
     sops --decrypt "$file" >/dev/null 2>&1 || true
     sops --in-place "$file"
   else
-    sops --encrypt --age "$AGE_RECIP" --in-place "$file"
+    sops --encrypt --age "$age_recip" --in-place "$file"
   fi
-}
-
-# Derive secret name from file path
-# e.g., ~/.ssh/id_rsa -> ssh-id_rsa
-#       ~/secrets/aws-config -> aws-config
-derive_secret_name() {
-  local file_path="$1"
-  local dir_name file_name
-
-  dir_name="$(basename "$(dirname "$file_path")")"
-  file_name="$(basename "$file_path")"
-
-  # Remove common extensions
-  file_name="${file_name%.enc}"
-  file_name="${file_name%.secret}"
-  file_name="${file_name%.txt}"
-
-  # Special handling for known directories
-  case "$dir_name" in
-    .ssh|ssh)
-      echo "ssh-${file_name}"
-      ;;
-    .aws|aws)
-      echo "aws-${file_name}"
-      ;;
-    git|.git|.config)
-      echo "git-${file_name}"
-      ;;
-    *)
-      # Use directory prefix if not home or generic
-      if [[ "$dir_name" == "$(basename "$HOME")" ]] || [[ "$dir_name" == "secrets" ]]; then
-        echo "$file_name"
-      else
-        echo "${dir_name}-${file_name}"
-      fi
-      ;;
-  esac
 }
 
 # Process a single file
 process_file() {
   local src_file="$1"
-  local output_subdir="${2:-}"
+  local folder_name="$2"
+  local output_dir="$3"
+  local age_recip="$4"
 
-  [[ -f "$src_file" ]] || { log_warn "Skip $src_file (not a file)"; return; }
+  if [[ ! -f "$src_file" ]]; then
+    log_warn "File not found: $src_file"
+    return
+  fi
 
-  # Skip already encrypted sops files
-  [[ "$src_file" == *.sops.yaml ]] && { log_warn "Skip $src_file (already sops format)"; return; }
-
-  # Skip public keys, already encrypted files, and known non-secret files
   local basename_file
   basename_file="$(basename "$src_file")"
-  case "$basename_file" in
-    *.pub|*.enc|known_hosts|authorized_keys|README*|*.md)
-      log_warn "Skip $src_file (not a secret or already encrypted)"
-      return
-      ;;
-  esac
 
-  local secret_name
-  secret_name="$(derive_secret_name "$src_file")"
+  # Skip public keys
+  if [[ "$basename_file" == *.pub ]]; then
+    log_debug "Skipping public key: $basename_file"
+    return
+  fi
 
-  # Determine output path
-  local out_dir="$OUTPUT_DIR"
-  [[ -n "$output_subdir" ]] && out_dir="$OUTPUT_DIR/$output_subdir"
+  local out_dir="$output_dir/$folder_name"
   mkdir -p "$out_dir"
 
   local out_file="$out_dir/${basename_file}.sops.yaml"
+  local secret_name="${folder_name}-${basename_file}"
 
   # Build and encrypt
   build_yaml "$secret_name" "key" "$src_file" > "$out_file"
-  encrypt_in_place "$out_file"
+  encrypt_in_place "$out_file" "$age_recip"
 
-  log_info "Synced: $src_file -> $out_file"
-}
-
-# Process all files in a directory
-process_directory() {
-  local src_dir="$1"
-
-  [[ -d "$src_dir" ]] || { log_warn "Skip $src_dir (not a directory)"; return; }
-
-  # Derive subdirectory name for output
-  local subdir_name
-  subdir_name="$(basename "$src_dir")"
-
-  # Normalize common directory names
-  case "$subdir_name" in
-    .ssh) subdir_name="ssh" ;;
-    .aws) subdir_name="aws" ;;
-    .gnupg) subdir_name="gnupg" ;;
-  esac
-
-  log_info "Processing directory: $src_dir -> $OUTPUT_DIR/$subdir_name"
-
-  # Process all regular files (not directories, not hidden by default)
-  shopt -s nullglob
-  for file in "$src_dir"/*; do
-    [[ -f "$file" ]] && process_file "$file" "$subdir_name"
-  done
-  shopt -u nullglob
+  log_info "Encrypted: $basename_file → $out_file"
 }
 
 usage() {
   cat <<EOF
-Usage: $(basename "$0") [OPTIONS] [DIRECTORY...]
+Usage: $(basename "$0") [OPTIONS]
 
-Encrypt secrets from source directories to sops-nix format.
-
-Arguments:
-  DIRECTORY...    Source directories containing secrets to encrypt
+Encrypt secrets based on configuration file.
 
 Options:
-  -h, --help      Show this help message
-  -o, --output    Output directory (default: \$ROOT/secrets/encrypted)
-  -r, --recipient Age recipient public key
+  -h, --help           Show this help message
+  -c, --config FILE    Path to config file (default: secrets/config.yaml)
+  -v, --verbose        Enable verbose output
 
 Environment Variables:
-  SECRETS_SOURCE_DIRS   Comma-separated list of source directories
-  SECRETS_OUTPUT_DIR    Output directory for encrypted files
-  AGE_RECIPIENT         Age public key for encryption
+  CONFIG_FILE          Path to configuration file
 
 Examples:
-  # Encrypt SSH keys
-  $(basename "$0") ~/.ssh
+  # Encrypt using default config
+  $(basename "$0")
 
-  # Encrypt multiple directories
-  $(basename "$0") ~/.ssh ~/.aws ~/secrets/git
-
-  # Using environment variable
-  SECRETS_SOURCE_DIRS=~/.ssh,~/.aws $(basename "$0")
-
-  # Custom output directory
-  $(basename "$0") -o ./my-secrets ~/.ssh
+  # Use custom config
+  $(basename "$0") --config /path/to/config.yaml
 EOF
 }
 
 main() {
   need_cmd sops
 
-  local source_dirs=()
+  local YQ_CMD
+  YQ_CMD="$(get_yq_cmd)"
+  local verbose=false
 
   # Parse arguments
   while [[ $# -gt 0 ]]; do
@@ -196,13 +139,13 @@ main() {
         usage
         exit 0
         ;;
-      -o|--output)
-        OUTPUT_DIR="$2"
+      -c|--config)
+        CONFIG_FILE="$2"
         shift 2
         ;;
-      -r|--recipient)
-        AGE_RECIP="$2"
-        shift 2
+      -v|--verbose)
+        verbose=true
+        shift
         ;;
       -*)
         log_error "Unknown option: $1"
@@ -210,42 +153,85 @@ main() {
         exit 1
         ;;
       *)
-        # Expand ~ in paths
-        local expanded_path="${1/#\~/$HOME}"
-        source_dirs+=("$expanded_path")
-        shift
+        log_error "Unexpected argument: $1"
+        usage
+        exit 1
         ;;
     esac
   done
 
-  # If no directories provided, check environment variable
-  if [[ ${#source_dirs[@]} -eq 0 ]]; then
-    if [[ -n "${SECRETS_SOURCE_DIRS:-}" ]]; then
-      IFS=',' read -r -a source_dirs <<< "$SECRETS_SOURCE_DIRS"
-      # Expand ~ in each path
-      for i in "${!source_dirs[@]}"; do
-        source_dirs[$i]="${source_dirs[$i]/#\~/$HOME}"
-      done
-    else
-      log_error "No source directories specified"
-      usage
-      exit 1
-    fi
+  # Check config file exists
+  if [[ ! -f "$CONFIG_FILE" ]]; then
+    log_error "Config file not found: $CONFIG_FILE"
+    exit 1
   fi
 
-  mkdir -p "$OUTPUT_DIR"
+  log_info "Using config: $CONFIG_FILE"
 
-  log_info "Output directory: $OUTPUT_DIR"
-  log_info "Age recipient: $AGE_RECIP"
+  # Read configuration
+  local age_recip
+  age_recip=$($YQ_CMD eval '.age.recipient' "$CONFIG_FILE")
+
+  local output_base
+  output_base=$($YQ_CMD eval '.output_dir' "$CONFIG_FILE")
+  output_base="$(expand_path "$output_base")"
+
+  # Make output_base absolute if it's relative
+  if [[ "$output_base" != /* ]]; then
+    output_base="$ROOT_DIR/$output_base"
+  fi
+
+  mkdir -p "$output_base"
+
+  log_info "Age recipient: $age_recip"
+  log_info "Output directory: $output_base"
   echo ""
 
-  # Process each directory
-  for dir in "${source_dirs[@]}"; do
-    process_directory "$dir"
+  # Get number of folders
+  local folder_count
+  folder_count=$($YQ_CMD eval '.folders | length' "$CONFIG_FILE")
+
+  # Process each folder
+  for ((i=0; i<folder_count; i++)); do
+    local folder_name source_dir files_count
+
+    folder_name=$($YQ_CMD eval ".folders[$i].name" "$CONFIG_FILE")
+    source_dir=$($YQ_CMD eval ".folders[$i].source" "$CONFIG_FILE")
+    source_dir="$(expand_path "$source_dir")"
+
+    # Make source_dir absolute if it's relative
+    if [[ "$source_dir" != /* ]]; then
+      source_dir="$ROOT_DIR/$source_dir"
+    fi
+
+    log_info "Processing folder: $folder_name (source: $source_dir)"
+
+    if [[ ! -d "$source_dir" ]]; then
+      log_warn "Source directory not found: $source_dir"
+      continue
+    fi
+
+    # Get files list
+    files_count=$($YQ_CMD eval ".folders[$i].files | length" "$CONFIG_FILE")
+
+    if [[ "$files_count" == "0" ]] || [[ "$files_count" == "null" ]]; then
+      log_warn "No files specified for folder: $folder_name"
+      continue
+    fi
+
+    # Process each file
+    for ((j=0; j<files_count; j++)); do
+      local file_name
+      file_name=$($YQ_CMD eval ".folders[$i].files[$j]" "$CONFIG_FILE")
+
+      local src_file="$source_dir/$file_name"
+      process_file "$src_file" "$folder_name" "$output_base" "$age_recip"
+    done
+
+    echo ""
   done
 
-  echo ""
-  log_info "Done! Encrypted files are in: $OUTPUT_DIR"
+  log_info "Done! Encrypted files are in: $output_base"
   log_info "Remember to commit only the *.sops.yaml files"
 }
 
