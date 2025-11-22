@@ -61,20 +61,22 @@ decrypt_file() {
   mkdir -p "$dest_dir"
 
   # Decrypt the file
-  local error_output
-  error_output=$(SOPS_AGE_KEY_FILE="$age_key_file" sops --decrypt --extract '["stringData"]["key"]' "$encrypted_file" 2>&1 > "$dest_file")
-  local exit_code=$?
+  local temp_file="${dest_file}.tmp"
+  local error_file="${dest_file}.err"
 
-  if [[ $exit_code -eq 0 ]]; then
+  if SOPS_AGE_KEY_FILE="$age_key_file" sops --decrypt --extract '["stringData"]["key"]' "$encrypted_file" > "$temp_file" 2> "$error_file"; then
+    mv "$temp_file" "$dest_file"
+    rm -f "$error_file"
     chmod "$permissions" "$dest_file"
     log_info "Decrypted: $(basename "$encrypted_file") → $dest_file"
     return 0
   else
     log_error "Failed to decrypt: $encrypted_file"
-    if [[ -n "$error_output" ]]; then
-      log_error "Error details: $error_output"
+    if [[ -f "$error_file" ]] && [[ -s "$error_file" ]]; then
+      log_error "Error details:"
+      cat "$error_file" >&2
     fi
-    rm -f "$dest_file"
+    rm -f "$temp_file" "$error_file" "$dest_file"
     return 1
   fi
 }
@@ -248,6 +250,7 @@ main() {
 
     # Get files list
     files_count=$($YQ_CMD eval ".folders[$i].files | length" "$CONFIG_FILE")
+    log_debug "Files count: $files_count"
 
     if [[ "$files_count" == "0" ]] || [[ "$files_count" == "null" ]]; then
       log_warn "No files specified for folder: $folder_name"
@@ -263,6 +266,8 @@ main() {
       local dest_file="$dest_dir/$file_name"
 
       ((total_files++))
+
+      log_info "Decrypting: $file_name"
 
       if decrypt_file "$encrypted_file" "$dest_file" "$age_key_file" "$permissions"; then
         ((success_count++))
