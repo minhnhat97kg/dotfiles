@@ -259,20 +259,22 @@ main() {
 
     # Process each file
     for ((j=0; j<files_count; j++)); do
+      echo "[DEBUG] Processing file index: $j" >&2
       local file_name
       file_name=$($YQ_CMD eval ".folders[$i].files[$j]" "$CONFIG_FILE")
+      echo "[DEBUG] File name: $file_name" >&2
 
       local encrypted_file="$output_base/$folder_name/${file_name}.sops.yaml"
       local dest_file="$dest_dir/$file_name"
 
-      ((total_files++))
+      total_files=$((total_files + 1))
 
       log_info "Decrypting: $file_name"
 
       if decrypt_file "$encrypted_file" "$dest_file" "$age_key_file" "$permissions"; then
-        ((success_count++))
+        success_count=$((success_count + 1))
       else
-        ((failed_count++))
+        failed_count=$((failed_count + 1))
       fi
     done
 
