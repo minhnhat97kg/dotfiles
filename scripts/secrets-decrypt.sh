@@ -64,21 +64,35 @@ decrypt_file() {
   local temp_file="${dest_file}.tmp"
   local error_file="${dest_file}.err"
 
+  # Try Kubernetes Secret format first (with stringData.key)
   if SOPS_AGE_KEY_FILE="$age_key_file" sops --decrypt --extract '["stringData"]["key"]' "$encrypted_file" > "$temp_file" 2> "$error_file"; then
     mv "$temp_file" "$dest_file"
     rm -f "$error_file"
     chmod "$permissions" "$dest_file"
     log_info "Decrypted: $(basename "$encrypted_file") → $dest_file"
     return 0
-  else
-    log_error "Failed to decrypt: $encrypted_file"
-    if [[ -f "$error_file" ]] && [[ -s "$error_file" ]]; then
-      log_error "Error details:"
-      cat "$error_file" >&2
-    fi
-    rm -f "$temp_file" "$error_file" "$dest_file"
-    return 1
   fi
+
+  # If that failed with "component not found", try plain YAML format
+  if grep -q "component.*not found" "$error_file" 2>/dev/null; then
+    rm -f "$error_file"
+    if SOPS_AGE_KEY_FILE="$age_key_file" sops --decrypt "$encrypted_file" > "$temp_file" 2> "$error_file"; then
+      mv "$temp_file" "$dest_file"
+      rm -f "$error_file"
+      chmod "$permissions" "$dest_file"
+      log_info "Decrypted: $(basename "$encrypted_file") → $dest_file"
+      return 0
+    fi
+  fi
+
+  # Both attempts failed
+  log_error "Failed to decrypt: $encrypted_file"
+  if [[ -f "$error_file" ]] && [[ -s "$error_file" ]]; then
+    log_error "Error details:"
+    cat "$error_file" >&2
+  fi
+  rm -f "$temp_file" "$error_file" "$dest_file"
+  return 1
 }
 
 # Prompt user for confirmation
