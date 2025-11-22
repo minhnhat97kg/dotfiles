@@ -178,7 +178,7 @@ main() {
 
   # Prompt for confirmation
   if ! prompt_confirmation "$auto_yes"; then
-    exit 1
+    exit 0
   fi
 
   log_info "Using config: $CONFIG_FILE"
