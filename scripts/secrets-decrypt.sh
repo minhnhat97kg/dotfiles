@@ -169,15 +169,16 @@ main() {
     esac
   done
 
-  # Check config file exists
+  # Check config file exists BEFORE prompting user
   if [[ ! -f "$CONFIG_FILE" ]]; then
     log_error "Config file not found: $CONFIG_FILE"
+    log_error "Expected location: $CONFIG_FILE"
     exit 1
   fi
 
   # Prompt for confirmation
   if ! prompt_confirmation "$auto_yes"; then
-    exit 0
+    exit 1
   fi
 
   log_info "Using config: $CONFIG_FILE"
