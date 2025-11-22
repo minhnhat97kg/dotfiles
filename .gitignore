@@ -45,6 +45,7 @@ modules.old/
 # Secrets - commit only encrypted .sops.yaml files and README
 secrets/*
 !secrets/README.md
+!secrets/config.yaml
 !secrets/encrypted/
 *.tmp
 
