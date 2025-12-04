@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Interactive qutebrowser profile picker
+# Usage: qb-picker
+
+set -euo pipefail
+
+# Colors for better UX
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+PROFILES_YAML="$HOME/.config/qutebrowser/profiles.yaml"
+QB_PROFILE_SCRIPT="${QB_PROFILE_SCRIPT:-qb-profile}"
+
+echo -e "${BLUE}=== Qutebrowser Profile Picker ===${NC}\n"
+
+# Check if profiles.yaml exists
+if [[ ! -f "$PROFILES_YAML" ]]; then
+    echo -e "${YELLOW}Warning: profiles.yaml not found at $PROFILES_YAML${NC}"
+    echo "Using default profile..."
+    exec "$QB_PROFILE_SCRIPT" default "$@"
+fi
+
+# Parse profiles from YAML using grep/awk
+# This extracts profile names, icons, and descriptions
+mapfile -t profile_data < <(
+    grep -E '^\s{2}[a-z]+:$|^\s{4}description:|^\s{4}icon:' "$PROFILES_YAML" | \
+    awk '
+        /^\s{2}[a-z]+:$/ {
+            if (name != "") print name "|" icon "|" desc
+            name = $1;
+            gsub(/:/, "", name);
+            icon = "";
+            desc = ""
+        }
+        /icon:/ { icon = $2; gsub(/"/, "", icon) }
+        /description:/ {
+            desc = substr($0, index($0, $2));
+            gsub(/"/, "", desc)
+        }
+        END { if (name != "") print name "|" icon "|" desc }
+    '
+)
+
+if [[ ${#profile_data[@]} -eq 0 ]]; then
+    echo -e "${YELLOW}No profiles found in $PROFILES_YAML${NC}"
+    echo "Using default profile..."
+    exec "$QB_PROFILE_SCRIPT" default "$@"
+fi
+
+# Display profiles with numbers
+echo "Available profiles:"
+echo ""
+for i in "${!profile_data[@]}"; do
+    IFS='|' read -r name icon desc <<< "${profile_data[$i]}"
+    printf "${GREEN}%2d${NC}) %s  ${BLUE}%-10s${NC} - %s\n" "$((i + 1))" "$icon" "$name" "$desc"
+done
+echo ""
+
+# Get user selection
+while true; do
+    read -rp "Select a profile (1-${#profile_data[@]}) or press Enter for default: " choice
+
+    # Default to first profile if just Enter is pressed
+    if [[ -z "$choice" ]]; then
+        choice=1
+    fi
+
+    # Validate input
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [[ "$choice" -ge 1 ]] && [[ "$choice" -le ${#profile_data[@]} ]]; then
+        break
+    else
+        echo -e "${YELLOW}Invalid selection. Please enter a number between 1 and ${#profile_data[@]}${NC}"
+    fi
+done
+
+# Extract selected profile name
+IFS='|' read -r selected_profile _ _ <<< "${profile_data[$((choice - 1))]}"
+
+echo -e "\n${GREEN}Launching qutebrowser with profile: $selected_profile${NC}\n"
+
+# Launch qutebrowser with selected profile
+exec "$QB_PROFILE_SCRIPT" "$selected_profile" "$@"

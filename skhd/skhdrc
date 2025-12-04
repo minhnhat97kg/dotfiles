@@ -24,10 +24,14 @@ ctrl + alt + shift - space : ~/.scripts/cycle-layout.sh backward
 alt + shift - a : yabai -m space --layout bsp        # Tall layout (mod1 + a)
 alt + shift - s : yabai -m space --layout bsp && yabai -m window --ratio rel:0.5  # Wide layout (mod1 + s)
 alt + shift - d : yabai -m space --layout stack      # Fullscreen layout (mod1 + d)
-alt + shift - f : /bin/bash -c 'wid=$(yabai -m query --windows | jq -r ".[] | select(.title==\"float-term\") | .id"); if [ "$wid" != "" ]; then yabai -m window $wid --focus; else (alacritty --title "float-term" & sleep 0.3 && yabai -m window --toggle float && yabai -m window --resize abs:900:600 && yabai -m window --move abs:520:140); fi'  # Toggle floating Alacritty terminal
+alt + shift - f : ~/.scripts/toggle-kitty-window.sh "float-term" ""  # Prefer reusing running kitty via remote
 
-alt + shift - w : (alacritty --title "window-picker" -e ~/.scripts/window-picker.sh & sleep 0.3 && yabai -m window --toggle float && yabai -m window --resize abs:900:600 && yabai -m window --move abs:520:140)
+alt + shift - w : ~/.scripts/toggle-kitty-window.sh "window-picker" "~/.scripts/window-picker.sh"
 alt + shift - i : ~/.scripts/cycle-layout.sh current
+alt + shift - c : ~/.scripts/toggle-kitty-window.sh "clipboard" "~/.scripts/clipse-wrapper.sh"  # Uses clipse-wrapper from PATH
+
+# Test binding - remove after testing
+alt + shift - v : osascript -e 'display notification "Test keybinding works!" with title "skhd"'
 
 # ====================================================================
 # PANE/WINDOW CONTROLS
@@ -138,7 +142,7 @@ ctrl + alt + shift - g : id=$(yabai -m query --windows --window | jq -r '.id') &
 # ====================================================================
 
 # Show all keybindings with fzf picker (mod1 + /)
-alt + shift - 0x2C : (alacritty --title "skhd-whichkey" -e ~/.scripts/whichkey-fzf.sh & sleep 0.3 && yabai -m window --toggle float && yabai -m window --resize abs:900:600 && yabai -m window --move abs:520:140)
+alt + shift - 0x2C : ~/.scripts/toggle-kitty-window.sh "skhd-whichkey" "bash ~/.scripts/whichkey-fzf.sh"
 
 # Toggle float for focused window (mod1 + t)
 alt + shift - t : yabai -m window --toggle float && yabai -m window --grid 4:4:1:1:2:2
@@ -150,7 +154,7 @@ ctrl + alt + shift - t : yabai -m space --layout $(yabai -m query --spaces --spa
 alt + shift - z : yabai -m space --balance
 
 # Restart yabai (mod2 + z)
-ctrl + alt + shift - z : launchctl kickstart -k "gui/${UID}/homebrew.mxcl.yabai"
+ctrl + alt + shift - z : launchctl kickstart -k "gui/${UID}/org.nixos.yabai"
 
 # Reload skhd config (cmd + r)
 cmd + shift - r : skhd -r
@@ -170,7 +174,7 @@ alt + shift - y : yabai -m space --mirror y-axis
 alt + shift - x : yabai -m space --mirror x-axis
 
 # Toggle window split type (mod1 + e)
-# alt + shift - e : yabai -m window --toggle split
+alt + shift - e : yabai -m window --toggle split
 
 # Focus recent space
 # alt + shift - tab : yabai -m space --focus recent

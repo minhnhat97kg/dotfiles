@@ -4,13 +4,27 @@ This configuration enables running multiple isolated instances of qutebrowser wi
 
 ## Quick Start
 
-After rebuilding your Nix configuration, you can launch qutebrowser profiles using these commands:
+After rebuilding your Nix configuration, you can launch qutebrowser profiles using these methods:
+
+### GUI Launcher (macOS App)
+
+1. Run the setup script to create the launcher app:
+   ```bash
+   bash ~/.config/qutebrowser/create-qb-launcher.sh
+   ```
+
+2. Launch from Spotlight, Dock, or Applications folder
+3. Select a profile from the native macOS dialog
+4. Qutebrowser opens with your chosen profile
+
+### Command Line
 
 ```bash
-# Launch default profile
+# Interactive profile picker
 qb
 
-# Launch specific profiles
+# Launch specific profiles directly
+qb-default
 qb-personal
 qb-work
 qb-dev
@@ -128,10 +142,18 @@ The profile system is integrated with your Nix configuration in `flake.nix`:
 
 - Config file: `home.file.".config/qutebrowser/config.py"`
 - Profile metadata: `home.file.".config/qutebrowser/profiles.yaml"`
-- Launcher script: `home.file.".local/bin/qb-profile"`
+- Launcher scripts:
+  - CLI: `home.file.".local/bin/qb-profile"`
+  - Interactive CLI: `home.file.".local/bin/qb-picker"`
+  - GUI: `home.file.".local/bin/qb-picker-gui"`
+  - App creator: `home.file.".config/qutebrowser/create-qb-launcher.sh"`
 - Shell aliases: Defined in `shell/aliases.yaml`
 
-After modifying any qutebrowser files, rebuild with:
+After modifying any qutebrowser files:
 ```bash
+# Rebuild Nix configuration
 darwin-rebuild switch --flake .#Nhaths-MacBook-Pro
+
+# Recreate the launcher app (if using GUI launcher)
+bash ~/.config/qutebrowser/create-qb-launcher.sh
 ```

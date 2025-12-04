@@ -32,7 +32,7 @@
   homebrew = {
     enable = true;
     brews = [ ];
-    casks = [ ];
+    casks = [ "kitty" ];
   };
 
   environment.systemPackages = with pkgs; [
@@ -89,6 +89,11 @@
       yabai -m rule --add app="^About This Mac$" manage=off
       yabai -m rule --add app="^Finder$" title="(Co(py|nnect)|Move|Info|Pref)" manage=off
       yabai -m rule --add title="^skhd-whichkey$" manage=off sticky=on layer=above
+
+      # Float all kitty windows used by toggle-kitty-window.sh
+      # This prevents lag when opening these floating utility windows
+      yabai -m rule --add app="^kitty$" title="^(clipboard|float-term|window-picker|skhd-whichkey)$" manage=off sticky=on
+
       echo "yabai configuration loaded.."
     '';
   };
@@ -116,6 +121,20 @@
       RunAtLoad = true;
       StandardOutPath = "/tmp/jankyborders.out.log";
       StandardErrorPath = "/tmp/jankyborders.err.log";
+    };
+  };
+
+  # Clipse clipboard manager listener
+  launchd.user.agents.clipse = {
+    serviceConfig = {
+      ProgramArguments = [
+        "${pkgs.clipse}/bin/clipse"
+        "-listen"
+      ];
+      KeepAlive = true;
+      RunAtLoad = true;
+      StandardOutPath = "/tmp/clipse.out.log";
+      StandardErrorPath = "/tmp/clipse.err.log";
     };
   };
 

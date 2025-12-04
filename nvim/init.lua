@@ -193,6 +193,13 @@ vim.keymap.set("n", "<C-l>", "<C-w><C-l>", { desc = "Move focus to the right win
 vim.keymap.set("n", "<C-j>", "<C-w><C-j>", { desc = "Move focus to the lower window" })
 vim.keymap.set("n", "<C-k>", "<C-w><C-k>", { desc = "Move focus to the upper window" })
 
+-- Resize windows with Alt+hjkl (prefix-less)
+vim.keymap.set("n", "<A-h>", ":vertical resize -2<CR>", { desc = "Decrease window width" })
+vim.keymap.set("n", "<A-l>", ":vertical resize +2<CR>", { desc = "Increase window width" })
+vim.keymap.set("n", "<A-j>", ":resize -2<CR>", { desc = "Decrease window height" })
+vim.keymap.set("n", "<A-k>", ":resize +2<CR>", { desc = "Increase window height" })
+vim.keymap.set("n", "<A-=>", "<C-w>=", { desc = "Make windows equal size" })
+
 -- ============================================================================
 -- AUTOCMDS
 -- ============================================================================
@@ -356,6 +363,9 @@ require("lazy").setup({
     "saghen/blink.cmp",
     lazy = false,
     build = "cargo +nightly build --release",
+    dependencies = {
+      "kristijanhusak/vim-dadbod-completion",
+    },
     opts = {
       enabled = function()
         local disabled_filetypes = { "NvimTree", "snacks_input", "snacks_picker_input" }
@@ -385,6 +395,21 @@ require("lazy").setup({
       },
       sources = {
         default = { "lsp", "path", "snippets", "buffer" },
+        providers = {
+          dadbod = {
+            name = "Dadbod",
+            module = "vim_dadbod_completion.blink",
+          },
+        },
+        -- Enable dadbod completion for SQL filetypes
+        cmdline = {
+          sources = function()
+            local type = vim.fn.getcmdtype()
+            if type == "/" or type == "?" then return { "buffer" } end
+            if type == ":" then return { "cmdline" } end
+            return {}
+          end,
+        },
       },
       signature = {
         enabled = true,
@@ -407,6 +432,21 @@ require("lazy").setup({
         ["<C-f>"] = { "scroll_documentation_down", "fallback" },
       },
     },
+    config = function(_, opts)
+      require("blink.cmp").setup(opts)
+
+      -- Setup dadbod completion for SQL files
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = { "sql", "mysql", "plsql" },
+        callback = function()
+          require("blink.cmp").setup_buffer({
+            sources = {
+              default = { "dadbod", "buffer" },
+            },
+          })
+        end,
+      })
+    end,
   },
 
   -- Mason for LSP/tools installation
@@ -655,6 +695,11 @@ require("lazy").setup({
     },
     cmd = { "DBUI", "DBUIToggle", "DBUIAddConnection", "DBUIFindBuffer" },
     init = function()
+      -- Database connections
+      vim.g.dbs = {
+        JPP_dev = "postgresql://jppass_dev:3hJJT2InP886yqXspLCRW8Jd88j17lm2@localhost:5433/jppass_dev"
+      }
+
       -- UI configuration
       vim.g.db_ui_use_nerd_fonts = 1
       vim.g.db_ui_show_database_icon = 1
@@ -831,6 +876,13 @@ require("lazy").setup({
         term_colors = true,
       })
     end,
+  },
+  {
+    "olimorris/codecompanion.nvim",
+    opts = {},
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+    },
   },
 })
 

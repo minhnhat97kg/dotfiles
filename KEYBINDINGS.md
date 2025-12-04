@@ -249,7 +249,7 @@ No actual conflicts exist because:
 
 ## Tips
 
-1. **Tmux pane resize** now works without prefix - just hold `Alt` and press `h/j/k/l`
+1. **Tmux pane resize** now works without prefix - use `Ctrl+Shift+h/j/k/l`
 2. **Window navigation** moved to `Alt+,/.` to make room for resize
 3. **All keybindings** follow vim-style `hjkl` navigation
 4. **Mouse support** is enabled in tmux for clicking and dragging
@@ -265,8 +265,10 @@ To modify these keybindings:
 Edit `modules/shared.nix`:
 ```nix
 extraConfig = ''
-  bind -n M-h resize-pane -L 5
-  # Add your bindings here
+  bind -n C-S-h resize-pane -L 5
+  bind -n C-S-j resize-pane -D 5
+  bind -n C-S-k resize-pane -U 5
+  bind -n C-S-l resize-pane -R 5
 '';
 ```
 

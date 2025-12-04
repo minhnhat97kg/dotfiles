@@ -1,7 +1,6 @@
 { pkgs, lib, sharedPackages, ... }:
 {
-  home.stateVersion = "24.05";
-  nixpkgs.config.allowUnfree = true;
+  home.stateVersion = "24.11";
   home.packages = sharedPackages pkgs;
   programs = {
     neovim = { enable = true; defaultEditor = true; };
@@ -12,6 +11,7 @@
       plugins = with pkgs.tmuxPlugins; [
         better-mouse-mode
         yank
+        resurrect
         {
           plugin = catppuccin;
           extraConfig = ''
@@ -41,11 +41,11 @@
         bind -n C-k run "($is_vim && tmux send-keys C-k) || tmux select-pane -U"
         bind -n C-l run "($is_vim && tmux send-keys C-l) || tmux select-pane -R"
 
-        # Pane resizing with Alt+hjkl (no prefix needed)
-        bind -n M-h resize-pane -L 5
-        bind -n M-j resize-pane -D 5
-        bind -n M-k resize-pane -U 5
-        bind -n M-l resize-pane -R 5
+        # Pane resizing with Ctrl+Shift+hjkl (no prefix needed)
+        bind -n C-S-h resize-pane -L 5
+        bind -n C-S-j resize-pane -D 5
+        bind -n C-S-k resize-pane -U 5
+        bind -n C-S-l resize-pane -R 5
 
         # Window navigation moved to Alt+,/.
         bind -n M-, previous-window
@@ -104,17 +104,22 @@
     enable = true;
     includes = [
       { path = "~/.config/git/gitconfig"; }
+      { condition = "gitdir:~/buuuk/**"; path = "~/.config/git/buuuk.gitconfig"; }
+      { condition = "gitdir:~/Documents/work/company/buuuk/**"; path = "~/.config/git/buuuk.gitconfig"; }
       { condition = "gitdir:~/work/**"; path = "~/.config/git/work.gitconfig"; }
       { condition = "gitdir:~/projects/**"; path = "~/.config/git/minhnhat97kg.gitconfig"; }
     ];
   };
-  home.file.".scripts/" = { source = ../scripts; recursive = true; executable = true; };
+  home.file.".scripts/" = { source = ../scripts; recursive = true; executable = true; force = true; };
   home.file.".config/git/gitconfig".source = ../git/gitconfig;
   home.file.".config/git/minhnhat97kg.gitconfig".source = ../git/minhnhat97kg.gitconfig;
   home.file.".config/git/work.gitconfig" = lib.mkIf (builtins.pathExists ../git/work.gitconfig) {
     source = ../git/work.gitconfig;
   };
-  home.file.".gitignore_global".source = ../git/gitignore_global;
+  home.file.".config/git/buuuk.gitconfig" = lib.mkIf (builtins.pathExists ../git/buuuk.gitconfig) {
+    source = ../git/buuuk.gitconfig;
+  };
+  home.file.".gitignore_global" = { source = ../git/gitignore_global; force = true; };
   home.file.".config/dotfiles/scripts/load-aliases.sh" = { source = ../scripts/load-aliases.sh; executable = true; };
   home.file.".fzf.zsh".source = ../fzf/fzf.zsh;
 
@@ -123,26 +128,8 @@
   home.file.".local/bin/ssh-password-add" = { source = ../scripts/ssh-password-add.sh; executable = true; force = true; };
   home.file.".local/bin/ssh-password-list" = { source = ../scripts/ssh-password-list.sh; executable = true; force = true; };
   home.file.".local/bin/ssh-tunnel" = { source = ../scripts/ssh-tunnel.sh; executable = true; force = true; };
-  home.file."Applications/Qutebrowser Profile.app" = {
-    source = pkgs.runCommand "Qutebrowser-Profile-app" { } ''
-      mkdir -p $out/Contents/MacOS $out/Contents/Resources
-      cat > $out/Contents/Info.plist <<'PLIST'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>CFBundleExecutable</key><string>qutebrowser-profile-wrapper</string>
-  <key>CFBundleIdentifier</key><string>org.nixos.qutebrowser.profile</string>
-  <key>CFBundleName</key><string>Qutebrowser Profile</string>
-  <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleVersion</key><string>1.0</string>
-</dict></plist>
-PLIST
-      cat > $out/Contents/MacOS/qutebrowser-profile-wrapper <<'WRAP'
-#!/usr/bin/env bash
-exec "$HOME/.local/bin/qb-profile" default "$@"
-WRAP
-      chmod +x $out/Contents/MacOS/qutebrowser-profile-wrapper
-    '';
-    recursive = true;
-  };
+
+  # Clipboard manager wrapper - available in PATH
+  home.file.".local/bin/clipse-wrapper" = { source = ../scripts/clipse-wrapper.sh; executable = true; force = true; };
+
 }

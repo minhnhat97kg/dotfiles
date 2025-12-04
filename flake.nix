@@ -1,8 +1,8 @@
 {
-  description = "Cross-platform Nix configuration (macOS & Android)";
+  description = "Cross-platform Nix configuration (macOS, Linux & Android)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     nix-darwin = {
       url = "github:LnL7/nix-darwin";
@@ -24,8 +24,6 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-
   };
 
   nixConfig = {
@@ -47,6 +45,19 @@
       username = "nhath";
       useremail = "minhnhat97kg@gmail.com";
 
+      # Custom packages
+      swagger-to-kulala = pkgs: pkgs.buildGoModule {
+        pname = "swagger-to-kulala";
+        version = "1.0.0";
+        src = ./scripts/swagger-to-kulala;
+        vendorHash = "sha256-g+yaVIx4jxpAQ/+WrGKxhVeliYx7nLQe/zsGpxV4Fn4=";
+        meta = with pkgs.lib; {
+          description = "Convert Swagger/OpenAPI YAML to kulala.nvim HTTP files";
+          homepage = "https://github.com/nhath/dotfiles";
+          license = licenses.mit;
+        };
+      };
+
       # Shared packages across all platforms
       sharedPackages = pkgs: with pkgs; [
         # Core tools
@@ -65,10 +76,11 @@
         terraform
 
         # Databases & clients
-        postgresql mysql80 mycli pgcli pspg
+        postgresql_16 mysql80 pgcli pspg
+        # mycli removed due to pyarrow build issues on macOS
 
         # HTTP / API tools
-        httpie hurl
+        httpie hurl (swagger-to-kulala pkgs)
 
         # Diff & formatting
         delta diff-so-fancy
@@ -76,11 +88,23 @@
         # SSH tools
         sshpass
 
-        # Clipboard management
-        clipboard-jh
+        # Clipboard management (platform-specific, use xclip/wl-clipboard on Linux)
+        # clipboard-jh is macOS-only, handled per-platform
 
         # Utilities
-        fx
+        fx clipse
+      ];
+
+      # macOS-specific packages
+      darwinPackages = pkgs: with pkgs; [
+        clipboard-jh
+        nerd-fonts.jetbrains-mono
+      ];
+
+      # Linux-specific packages (handled in modules/linux.nix)
+      linuxPackages = pkgs: with pkgs; [
+        xclip
+        wl-clipboard
       ];
 
       # Shared home-manager configuration
@@ -98,6 +122,9 @@
         aarch64-darwin.rust = let pkgs = nixpkgs.legacyPackages.aarch64-darwin; in pkgs.mkShell { buildInputs = [ pkgs.rustc pkgs.cargo pkgs.clippy pkgs.rustfmt pkgs.rust-analyzer ]; };
         aarch64-linux.go = let pkgs = nixpkgs.legacyPackages.aarch64-linux; in pkgs.mkShell { buildInputs = [ pkgs.go pkgs.delve pkgs.goimports-reviser pkgs.golangci-lint ]; };
         aarch64-linux.rust = let pkgs = nixpkgs.legacyPackages.aarch64-linux; in pkgs.mkShell { buildInputs = [ pkgs.rustc pkgs.cargo pkgs.clippy pkgs.rustfmt pkgs.rust-analyzer ]; };
+        x86_64-linux.go = let pkgs = nixpkgs.legacyPackages.x86_64-linux; in pkgs.mkShell { buildInputs = [ pkgs.go pkgs.delve pkgs.goimports-reviser pkgs.golangci-lint ]; };
+        x86_64-linux.java = let pkgs = nixpkgs.legacyPackages.x86_64-linux; in pkgs.mkShell { buildInputs = [ pkgs.maven pkgs.gradle ]; };
+        x86_64-linux.rust = let pkgs = nixpkgs.legacyPackages.x86_64-linux; in pkgs.mkShell { buildInputs = [ pkgs.rustc pkgs.cargo pkgs.clippy pkgs.rustfmt pkgs.rust-analyzer ]; };
       };
 
       # ============================================================================
@@ -105,23 +132,27 @@
       # ============================================================================
       darwinConfigurations."Nathan-Macbook" = nix-darwin.lib.darwinSystem {
         system = "aarch64-darwin";
-        specialArgs = inputs // { inherit username useremail sharedHomeConfig; };
+        specialArgs = inputs // { inherit username useremail sharedHomeConfig darwinPackages; };
         modules = [
           ./modules/darwin.nix
           home-manager.darwinModules.home-manager
           {
             home-manager = {
-              useGlobalPkgs = false;
-              useUserPackages = false;
+              useGlobalPkgs = true;
+              useUserPackages = true;
               verbose = true;
-              extraSpecialArgs = inputs // { inherit username sharedHomeConfig; };
+              extraSpecialArgs = inputs // { inherit username sharedHomeConfig darwinPackages; };
               users.${username} = { pkgs, lib, config, ... }:
                 lib.mkMerge [
                   (sharedHomeConfig { inherit pkgs lib; })
                   {
                     home.username = username;
                     home.homeDirectory = "/Users/${username}";
-                    home.file.".config/alacritty/alacritty.toml".source = ./alacritty/alacritty.toml;
+                    home.packages = (darwinPackages pkgs) ++ (with pkgs; [ kitty ]);
+                    home.file.".config/kitty/kitty.conf" = {
+                      source = ./kitty/kitty.conf;
+                      force = true;
+                    };
                     home.file.".config/sketchybar/" = { source = ./sketchybar; recursive = true; executable = true; };
                     home.file.".ideavimrc".source = ./shell/.ideavimrc;
                     home.file.".config/skhd/skhdrc".source = ./skhd/skhdrc;
@@ -135,12 +166,63 @@
                       source = ./qutebrowser/qb-profile;
                       executable = true;
                     };
-                    home.packages = with pkgs; [ alacritty ];
+                    home.file.".local/bin/qb-picker" = {
+                      source = ./qutebrowser/qb-picker;
+                      executable = true;
+                    };
+                    home.file.".local/bin/qb-picker-gui" = {
+                      source = ./qutebrowser/qb-picker-gui;
+                      executable = true;
+                    };
+                    home.file.".config/qutebrowser/create-qb-launcher.sh" = {
+                      source = ./qutebrowser/create-qb-launcher.sh;
+                      executable = true;
+                    };
                   }
                 ];
             };
           }
         ];
+      };
+
+      # ============================================================================
+      # Linux Configuration (NixOS)
+      # ============================================================================
+      nixosConfigurations = {
+        # x86_64 Linux desktop/laptop
+        nixos = nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          specialArgs = inputs // { inherit username useremail sharedHomeConfig linuxPackages; };
+          modules = [
+            ./modules/linux.nix
+            home-manager.nixosModules.home-manager
+            {
+              home-manager = {
+                useGlobalPkgs = true;
+                useUserPackages = true;
+                verbose = true;
+                extraSpecialArgs = inputs // { inherit username sharedHomeConfig linuxPackages; };
+                users.${username} = { pkgs, lib, config, ... }:
+                  lib.mkMerge [
+                    (sharedHomeConfig { inherit pkgs lib; })
+                    {
+                      home.username = username;
+                      home.homeDirectory = "/home/${username}";
+                      home.packages = (linuxPackages pkgs) ++ (with pkgs; [ kitty ]);
+                      home.file.".config/kitty/kitty.conf" = {
+                        source = ./kitty/kitty.conf;
+                        force = true;
+                      };
+                      home.file.".ideavimrc".source = ./shell/.ideavimrc;
+                      home.file.".config/git/ignore".source = ./git/ignore;
+                      home.file.".config/lazygit/" = { source = ./lazygit; recursive = true; };
+                      home.file.".pspgconf".source = ./pspg/pspgconf;
+                    }
+                  ];
+              };
+            }
+          ];
+        };
       };
 
       # ============================================================================
@@ -170,7 +252,5 @@
         aarch64-linux = nixpkgs.legacyPackages.aarch64-linux.alejandra;
         x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.alejandra;
       };
-
-
     };
 }

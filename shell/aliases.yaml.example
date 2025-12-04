@@ -1,0 +1,22 @@
+# Zsh Aliases Configuration
+# Copy this to aliases.yaml and customize
+# cp shell/aliases.yaml.example shell/aliases.yaml
+
+aliases:
+  # General shortcuts
+  ll: "ls -l"
+  la: "ls -la"
+  e: "nvim"
+  c: "clear"
+
+  # Claude Code workflow
+  claude-init: "$HOME/Documents/projects/dotfiles/scripts/claude-init.sh"
+
+  # Git shortcuts
+  gst: "git status"
+  gco: "git checkout"
+  gcm: "git commit -m"
+  gp: "git push"
+  gl: "git pull"
+
+  # Add your custom aliases here

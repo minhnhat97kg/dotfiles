@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# GUI profile picker for qutebrowser (macOS)
+# This script shows a native macOS dialog to select a profile
+
+set -euo pipefail
+
+PROFILES_YAML="$HOME/.config/qutebrowser/profiles.yaml"
+QB_PROFILE_SCRIPT="$HOME/.local/bin/qb-profile"
+LOG_FILE="$HOME/.qutebrowser-picker.log"
+
+# Log for debugging
+echo "$(date): qb-picker-gui started" >> "$LOG_FILE"
+echo "$(date): stdin is TTY: $([ -t 0 ] && echo yes || echo no)" >> "$LOG_FILE"
+echo "$(date): Args: $@" >> "$LOG_FILE"
+
+# Check if running in terminal or GUI
+if [ -t 0 ]; then
+    # Running in terminal, use CLI picker
+    echo "$(date): Using CLI picker" >> "$LOG_FILE"
+    exec "$HOME/.local/bin/qb-picker" "$@"
+fi
+
+echo "$(date): Using GUI picker" >> "$LOG_FILE"
+
+# Parse profiles from YAML using simpler approach
+echo "$(date): Parsing profiles from $PROFILES_YAML" >> "$LOG_FILE"
+
+# Read profiles directly from YAML
+declare -a profile_names=()
+declare -A profile_icons=()
+declare -A profile_descs=()
+
+current_profile=""
+while IFS= read -r line; do
+    if [[ $line =~ ^[[:space:]]{2}([a-z]+):$ ]]; then
+        current_profile="${BASH_REMATCH[1]}"
+        profile_names+=("$current_profile")
+    elif [[ -n "$current_profile" ]] && [[ $line =~ icon:[[:space:]]*\"(.*)\" ]]; then
+        profile_icons[$current_profile]="${BASH_REMATCH[1]}"
+    elif [[ -n "$current_profile" ]] && [[ $line =~ description:[[:space:]]*\"(.*)\" ]]; then
+        profile_descs[$current_profile]="${BASH_REMATCH[1]}"
+    fi
+done < "$PROFILES_YAML"
+
+# Build profile_data array
+profile_data=()
+for name in "${profile_names[@]}"; do
+    icon="${profile_icons[$name]:-🌐}"
+    desc="${profile_descs[$name]:-No description}"
+    profile_data+=("$name|$icon|$desc")
+done
+
+echo "$(date): Found ${#profile_data[@]} profiles" >> "$LOG_FILE"
+
+# If no profiles found, use default
+if [[ ${#profile_data[@]} -eq 0 ]]; then
+    echo "$(date): No profiles found, using default" >> "$LOG_FILE"
+    exec "$QB_PROFILE_SCRIPT" default "$@"
+fi
+
+# Build AppleScript choice list
+choices=""
+for data in "${profile_data[@]}"; do
+    IFS='|' read -r name icon desc <<< "$data"
+    choices="${choices}\"$icon $name - $desc\", "
+done
+choices="${choices%, }" # Remove trailing comma
+
+# Show macOS dialog using AppleScript
+echo "$(date): Showing AppleScript dialog with choices: $choices" >> "$LOG_FILE"
+selected=$(osascript <<EOF
+tell application "System Events"
+    activate
+    set profileChoice to choose from list {$choices} ¬
+        with prompt "Select a qutebrowser profile:" ¬
+        with title "Qutebrowser Profile Picker" ¬
+        default items {item 1 of {$choices}} ¬
+        OK button name "Launch" ¬
+        cancel button name "Cancel"
+
+    if profileChoice is false then
+        return ""
+    else
+        return profileChoice as text
+    end if
+end tell
+EOF
+)
+
+# Exit if cancelled
+echo "$(date): User selected: '$selected'" >> "$LOG_FILE"
+if [[ -z "$selected" ]]; then
+    echo "$(date): Selection cancelled" >> "$LOG_FILE"
+    exit 0
+fi
+
+# Extract profile name from selection (format: "icon name - description")
+profile_name=$(echo "$selected" | sed -E 's/^[^ ]+ ([a-z]+) -.*/\1/')
+echo "$(date): Extracted profile name: $profile_name" >> "$LOG_FILE"
+
+# Launch qutebrowser with selected profile in background
+echo "$(date): Launching qutebrowser with profile: $profile_name" >> "$LOG_FILE"
+nohup "$QB_PROFILE_SCRIPT" "$profile_name" "$@" > /dev/null 2>&1 &
+disown

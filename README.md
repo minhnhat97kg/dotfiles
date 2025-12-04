@@ -1,6 +1,6 @@
 # Cross-Platform Dotfiles
 
-Nix configuration for **macOS** (nix-darwin) and **Android** (nix-on-droid).
+Nix configuration for **macOS** (nix-darwin), **Linux** (NixOS), and **Android** (nix-on-droid).
 
 ## Structure
 
@@ -10,9 +10,10 @@ dotfiles/
 ├── Makefile                  # Build/encrypt/decrypt commands
 ├── modules/
 │   ├── darwin.nix            # macOS system config
+│   ├── linux.nix             # Linux/NixOS system config
 │   ├── android.nix           # Android system config
 │   └── shared.nix            # Shared home-manager config
-├── alacritty/                # Terminal emulator
+├── kitty/                    # Terminal emulator
 ├── git/                      # Git configuration
 ├── lazygit/                  # Lazygit TUI
 ├── nvim/                     # Neovim configuration
@@ -47,6 +48,28 @@ cd ~/projects/dotfiles
 make install
 ```
 
+### Linux (NixOS)
+
+```bash
+# Install NixOS from ISO: https://nixos.org/download.html
+
+# After installation, clone the repo
+git clone <repo> ~/dotfiles
+cd ~/dotfiles
+
+# Customize hardware configuration
+# Copy your hardware-configuration.nix or generate one:
+# sudo nixos-generate-config --show-hardware-config > hardware-configuration.nix
+
+# Create a hardware config by adding this to modules/linux.nix:
+# imports = [ ./hardware-configuration.nix ];
+
+# Apply configuration
+make install
+# or
+sudo nixos-rebuild switch --flake .#nixos
+```
+
 ### Android (Nix-on-Droid)
 
 ```bash
@@ -64,6 +87,7 @@ make help              # Show all commands
 # Configuration
 make install           # Apply configuration (auto-detect platform)
 make darwin            # Apply macOS config
+make linux             # Apply Linux/NixOS config
 make android           # Apply Android config
 make build             # Build without applying
 
@@ -80,6 +104,9 @@ make update            # Update flake inputs
 make format            # Format nix files
 make clean             # Clean build artifacts
 make gen-key           # Generate/import age key
+
+# Claude Code
+claude-init [dir]      # Initialize token-saving workflow in any project
 ```
 
 ## Keybindings
@@ -92,6 +119,44 @@ Quick overview:
 - **Tmux navigate panes**: `Ctrl+h/j/k/l` (vim-aware)
 - **Window manager help**: `Alt+Shift+/` (show all bindings)
 
+## Claude Code Workflow
+
+This dotfiles repo includes a global token-saving workflow for Claude Code that you can use in **any project**.
+
+### Quick Start
+
+```bash
+# Initialize in current directory
+claude-init
+
+# Or initialize in specific directory
+claude-init ~/projects/my-app
+```
+
+This creates:
+- `CLAUDE.md` - Core project context (<5,000 tokens)
+- `docs/progress.md` - Session history tracking
+- `docs/workflow.md` - Workflow guide
+
+### Usage
+
+**Start a session:**
+```
+@CLAUDE.md
+@docs/progress.md
+```
+
+**During session:**
+```
+/compact focus on code changes and decisions
+```
+
+**End session:**
+1. Run `/compact focus on code samples, decisions, and next steps`
+2. Append summary to `docs/progress.md`
+
+See `docs/workflow.md` in any initialized project for detailed instructions.
+
 ## Features
 
 ### Shared (All Platforms)
@@ -100,15 +165,30 @@ Quick overview:
 - **Shell**: Zsh + oh-my-zsh
 - **Languages**: Node.js, Go, Rust, Python, Java (Maven/Gradle)
 - **Tools**: fzf, ripgrep, fd, jq, lazygit, direnv
-- **Databases**: PostgreSQL, MySQL, pgcli, mycli, pspg
+- **Databases**: PostgreSQL 16, MySQL 8.0, pgcli, mycli, pspg
 - **HTTP**: httpie, hurl
+
+### Platform-Specific Packages
+Some packages are platform-specific and automatically selected:
+- **macOS**: `clipboard-jh` for clipboard management
+- **Linux**: `xclip` (X11) and `wl-clipboard` (Wayland) for clipboard management
 
 ### macOS-Specific
 - Yabai (window manager)
 - skhd (hotkey daemon)
 - Sketchybar (status bar)
 - JankyBorders (window borders)
-- Alacritty terminal
+- Kitty terminal
+- Kanata keyboard remapper with home row mods
+
+### Linux-Specific
+- GNOME desktop environment (default, can be switched to KDE/i3)
+- NetworkManager for network management
+- PipeWire for audio
+- Docker support (optional)
+- Kitty terminal
+- Full systemd integration
+- Kanata keyboard remapper with home row mods
 
 ### Android-Specific
 - SSH server with auto-generated keys
@@ -164,7 +244,7 @@ useremail = "your-email@example.com";
 
 ### Add Packages
 
-Edit `sharedPackages` in `flake.nix`:
+**Shared packages (all platforms)** - Edit `sharedPackages` in `flake.nix`:
 ```nix
 sharedPackages = pkgs: with pkgs; [
   git fzf ripgrep
@@ -172,9 +252,20 @@ sharedPackages = pkgs: with pkgs; [
 ];
 ```
 
+**Platform-specific packages**:
+- macOS only: Edit `darwinPackages` in `flake.nix`
+- Linux only: Edit `linuxPackages` in `flake.nix`
+
 ### Platform-Specific
 
 **macOS** - Edit `modules/darwin.nix`:
+```nix
+environment.systemPackages = with pkgs; [
+  your-package
+];
+```
+
+**Linux** - Edit `modules/linux.nix`:
 ```nix
 environment.systemPackages = with pkgs; [
   your-package
@@ -204,13 +295,13 @@ sudo yabai --load-sa
 
 ## Troubleshooting
 
-### darwin-rebuild not found
+### macOS: darwin-rebuild not found
 
 ```bash
 nix run nix-darwin -- switch --flake .
 ```
 
-### skhd not in Accessibility settings
+### macOS: skhd not in Accessibility settings
 
 ```bash
 # Find skhd path
@@ -222,6 +313,32 @@ readlink -f /run/current-system/sw/bin/skhd
 # Grant permission in System Settings > Privacy > Accessibility
 # Then restart
 launchctl kickstart -k gui/$(id -u)/org.nixos.skhd
+```
+
+### Linux: Hardware configuration missing
+
+```bash
+# Generate hardware configuration
+sudo nixos-generate-config --show-hardware-config > modules/hardware-configuration.nix
+
+# Add to modules/linux.nix:
+# imports = [ ./hardware-configuration.nix ];
+
+# Rebuild
+sudo nixos-rebuild switch --flake .
+```
+
+### Linux: Change desktop environment
+
+Edit `modules/linux.nix` and comment/uncomment the desired desktop:
+
+```nix
+# For KDE Plasma
+services.xserver.displayManager.sddm.enable = true;
+services.xserver.desktopManager.plasma5.enable = true;
+
+# For i3 tiling WM
+services.xserver.windowManager.i3.enable = true;
 ```
 
 ### Secrets decryption fails
