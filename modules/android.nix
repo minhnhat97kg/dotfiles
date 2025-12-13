@@ -144,11 +144,12 @@
       echo "Added auto-login key to authorized_keys"
     fi
 
-    if [ ! -f "$HOME/.ssh/sshd_config" ]; then
-      cat <<'EOF' > "$HOME/.ssh/sshd_config"
+    # Always regenerate sshd_config to ensure paths are up-to-date
+    cat > "$HOME/.ssh/sshd_config" <<EOF
 Port 8022
 ListenAddress 0.0.0.0
-HostKey ~/.ssh/ssh_host_ed25519_key
+PidFile $HOME/.ssh/sshd.pid
+HostKey $HOME/.ssh/ssh_host_ed25519_key
 Ciphers chacha20-poly1305@openssh.com,aes128-gcm@openssh.com,aes128-ctr
 MACs hmac-sha2-256-etm@openssh.com,hmac-sha2-256
 KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group14-sha256
@@ -157,7 +158,7 @@ UseDNS no
 GSSAPIAuthentication no
 PermitRootLogin no
 PubkeyAuthentication yes
-AuthorizedKeysFile %h/.ssh/authorized_keys
+AuthorizedKeysFile $HOME/.ssh/authorized_keys
 PasswordAuthentication no
 ChallengeResponseAuthentication no
 AllowTcpForwarding yes
@@ -166,31 +167,54 @@ PrintMotd no
 AcceptEnv LANG LC_*
 Subsystem sftp ${pkgs.openssh}/libexec/sftp-server
 EOF
-    fi
 
     chmod 600 "$HOME/.ssh/sshd_config"
 
-    cat <<'EOS' > "$HOME/.ssh/start-sshd.sh"
+    # Generate start script with current package paths
+    cat > "$HOME/.ssh/start-sshd.sh" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-LOGFILE="$HOME/.ssh/sshd.log"
-rm -f "$LOGFILE"
-${pkgs.openssh}/bin/sshd -f "$HOME/.ssh/sshd_config" -E "$LOGFILE" || {
+
+# Stop any existing sshd process
+pkill -f "sshd -f \$HOME/.ssh/sshd_config" 2>/dev/null || true
+sleep 0.5
+
+LOGFILE="\$HOME/.ssh/sshd.log"
+rm -f "\$LOGFILE"
+
+${pkgs.openssh}/bin/sshd -f "\$HOME/.ssh/sshd_config" -E "\$LOGFILE" || {
   echo "sshd failed to launch." >&2
+  cat "\$LOGFILE" >&2
   exit 1
 }
+
 sleep 0.3
-if pgrep -f "sshd -f $HOME/.ssh/sshd_config" >/dev/null 2>&1; then
-  echo "SSH server started on port 8022"
+if pgrep -f "sshd -f \$HOME/.ssh/sshd_config" >/dev/null 2>&1; then
+  echo "✓ SSH server started on port 8022"
+  echo "  To connect: ssh -p 8022 nix-on-droid@<device-ip>"
+  echo "  To stop: ~/.ssh/stop-sshd.sh"
 else
   echo "Failed to start SSH server!" >&2
+  cat "\$LOGFILE" >&2
   exit 1
 fi
-EOS
-    $DRY_RUN_CMD chmod +x "$HOME/.ssh/start-sshd.sh"
+EOF
+    chmod +x "$HOME/.ssh/start-sshd.sh"
 
-    printf '#!/usr/bin/env bash\npkill -f "sshd -f $HOME/.ssh/sshd_config"\n' > $HOME/.ssh/stop-sshd.sh
-    $DRY_RUN_CMD chmod +x $HOME/.ssh/stop-sshd.sh
+    # Generate stop script
+    cat > "$HOME/.ssh/stop-sshd.sh" <<'EOF'
+#!/usr/bin/env bash
+if pkill -f "sshd -f $HOME/.ssh/sshd_config"; then
+  echo "✓ SSH server stopped"
+else
+  echo "No SSH server running"
+fi
+EOF
+    chmod +x "$HOME/.ssh/stop-sshd.sh"
+
+    # Auto-start SSH server
+    echo "Starting SSH server..."
+    "$HOME/.ssh/start-sshd.sh" || echo "⚠️  SSH server failed to auto-start. Run ~/.ssh/start-sshd.sh manually"
   '';
 
   # Home-manager integration
@@ -202,7 +226,7 @@ EOS
       lib.mkMerge [
         (sharedHomeConfig { inherit pkgs lib; })
         {
-          home.stateVersion = "24.05";
+          home.stateVersion = lib.mkForce "24.05";
           nixpkgs.config.allowUnfree = true;
 
           # Disable home.packages for Android - packages must be in environment.packages

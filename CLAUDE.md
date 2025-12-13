@@ -1,4 +1,6 @@
-# Dotfiles Project Context
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Summary
 Cross-platform Nix configuration for macOS (nix-darwin), Linux (NixOS), and Android (nix-on-droid). Manages dotfiles, system configuration, and secrets encryption using sops/age.
@@ -76,28 +78,61 @@ dotfiles/
 - Secrets: `secrets/encrypted/ssh/`, `secrets/encrypted/aws/`
 - Age key: `~/.config/sops/age/keys.txt`
 
-## Common Operations
+## Architecture Overview
 
-### Installation & Build
+### Build System Flow
+1. **Makefile** - Entry point for common operations, auto-detects platform
+2. **flake.nix** - Central configuration defining:
+   - User settings (username, email)
+   - Package lists (shared, platform-specific)
+   - Platform outputs (darwinConfigurations, nixosConfigurations, nixOnDroidConfigurations)
+3. **modules/** - Platform-specific Nix modules:
+   - `shared.nix` - home-manager config used across all platforms (tmux, zsh, neovim)
+   - `darwin.nix` - macOS system config (yabai, skhd, sketchybar, homebrew)
+   - `linux.nix` - NixOS system config (GNOME, systemd, hardware)
+   - `android.nix` - nix-on-droid config (SSH server, mobile-optimized)
+
+### Secrets Architecture
+- **Encryption**: sops-nix encrypts files using age asymmetric encryption
+- **Key location**: `~/.config/sops/age/keys.txt` (single private key)
+- **Config**: `secrets/config.yaml` defines source/destination mappings
+- **Encrypted storage**: `secrets/encrypted/` directory (committed to git)
+- **Scripts**:
+  - `secrets-sync.sh` - Read config.yaml, encrypt sources to encrypted/
+  - `secrets-decrypt.sh` - Read config.yaml, decrypt to destinations
+  - Format: Kubernetes Secret YAML with base64-encoded data
+
+### Package Management Strategy
+- **sharedPackages** in flake.nix - Cross-platform tools (git, fzf, neovim, go, rust)
+- **darwinPackages** in flake.nix - macOS-only (clipboard-jh, JetBrains Mono font)
+- **linuxPackages** in flake.nix - Linux-only (xclip, wl-clipboard)
+- Platform-specific system packages in respective modules/*.nix files
+
+## Common Commands
+
+### Build & Deploy
 ```bash
-make install      # Auto-detect platform and apply
-make darwin       # Apply macOS config
-make linux        # Apply Linux/NixOS config
-make build        # Build without applying
+make install      # Auto-detect platform and apply configuration
+make darwin       # Apply macOS config (darwin-rebuild switch)
+make linux        # Apply NixOS config (nixos-rebuild switch)
+make android      # Apply Android config (nix-on-droid switch)
+make build        # Build without applying (dry run)
 ```
 
 ### Secrets Management
 ```bash
-make encrypt      # Encrypt all secrets (SSH, AWS, Git)
-make decrypt      # Decrypt all secrets
-make gen-key      # Generate/import age key
+make deps         # Install yq-go and age if missing
+make encrypt      # Encrypt all secrets from sources defined in secrets/config.yaml
+make decrypt      # Decrypt all secrets to destinations
+make decrypt-yes  # Decrypt without confirmation prompt
 ```
 
 ### Maintenance
 ```bash
-make update       # Update flake inputs
-make format       # Format nix files
-make check        # Check flake configuration
+make update       # Update flake inputs (nixpkgs, nix-darwin, etc.)
+make format       # Format all nix files with alejandra
+make check        # Validate flake configuration
+make clean        # Remove build artifacts
 ```
 
 ### API Development with kulala.nvim
@@ -128,78 +163,99 @@ swagger-to-kulala -i api.yaml -o output/ -split # Split by tags
 - Keep CLAUDE.md as the single source of truth for project context
 - This ensures Claude Code and future contributors have accurate information
 
-## Package Management
-- **Shared packages (all platforms)**: Edit `sharedPackages` in `flake.nix`
-- **Platform-specific**: Edit `darwinPackages`, `linuxPackages` in `flake.nix`
-- **System packages**: Edit respective `modules/*.nix` files
+## Platform-Specific Notes
 
-## Known Issues & TODOs
-- Yabai requires SIP partially disabled on Apple Silicon
-- skhd needs manual Accessibility permission grant on macOS
-- Linux hardware config must be generated per-machine
-- Work.gitconfig is optional (personal/work config split)
+### macOS (nix-darwin)
+- Yabai scripting addition requires SIP partially disabled on Apple Silicon
+- skhd requires Accessibility permission (System Settings > Privacy)
+- Kitty terminal installed via Homebrew (cask), config managed by Nix
+- After `make install`, yabai LaunchDaemon is automatically reloaded
 
-## Testing Secrets
+### Linux (NixOS)
+- Hardware configuration must be generated per-machine: `nixos-generate-config`
+- Import hardware-configuration.nix in modules/linux.nix
+- Desktop environment: GNOME by default (can switch to KDE/i3 in modules/linux.nix)
+
+### Android (nix-on-droid)
+- Install from F-Droid, runs in Termux environment
+- SSH server auto-configured with generated keys
+- Optimized package set for mobile/battery constraints
+
+## Important Implementation Details
+
+### Tmux + Neovim Integration
+- Seamless navigation between tmux panes and neovim splits using Ctrl+h/j/k/l
+- Achieved via `is_vim` detection in tmux config (modules/shared.nix:37-41)
+- Tmux pane resize: prefix+h/j/k/l OR Ctrl+Shift+h/j/k/l (no prefix)
+
+### Kitty + skhd Integration
+- Kitty must pass through system keybindings to allow skhd to work
+- Critical: `cmd+j/k` for space switching, `cmd+r` for reload
+- CSI-u protocol disabled to prevent conflicts (kitty/kitty.conf:92)
+
+### Zsh Alias Loading
+- Shell aliases dynamically loaded from YAML via `load-aliases.sh`
+- Called in zsh initContent (modules/shared.nix:76-79)
+- Template: `shell/aliases.yaml.example`
+
+### Work/Personal Git Config Split
+- work.gitconfig is optional (conditionally included in git config)
+- Build doesn't fail if missing - allows public dotfiles with private work config
+
+## Development Workflow
+
+### Adding New Packages
+1. **Shared (all platforms)**: Add to `sharedPackages` list in `flake.nix`
+2. **Platform-specific**: Add to `darwinPackages` or `linuxPackages` in `flake.nix`
+3. **System-level**: Add to environment.systemPackages in `modules/{darwin,linux,android}.nix`
+4. Apply changes: `make install`
+
+### Testing Configuration Changes
 ```bash
-make test-decrypt    # Test decryption without writing files
+make build        # Build without applying to test for errors
+make check        # Validate flake syntax and structure
+nix flake check   # Run all flake checks including NixOS tests
 ```
 
-## Quick Keybindings Reference
+### Secrets Workflow
+```bash
+# First time setup
+make deps                           # Install dependencies
+make gen-key                        # Generate age key
 
-### Tmux Pane Management
-- **Navigate panes**: `Ctrl+h/j/k/l` (vim-aware, seamless with Neovim)
-- **Resize panes**: `Ctrl-b` then `h/j/k/l` (prefix + hjkl)
-- **Alternative resize**: `Ctrl+Shift+h/j/k/l` (no prefix needed, from plugins)
-- **Switch windows**: `Alt+,` / `Alt+.`
-- **Reload config**: `Ctrl-b` then `r`
+# Edit secrets/config.yaml to define new source/destination mappings
+# Add files to source directories (e.g., ~/.ssh/new_key)
+make encrypt                        # Encrypt to secrets/encrypted/
 
-### Neovim Window Management
-- **Navigate windows**: `Ctrl+h/j/k/l` (seamless with tmux panes)
-- **Resize windows**: `Alt+h/j/k/l` (horizontal/vertical resize)
-- **Equalize windows**: `Alt+=`
+# On new machine or after pulling changes
+make decrypt                        # Decrypt secrets to destinations
+# Or decrypt-yes for non-interactive mode
+```
 
-### Yabai Window Manager
-- **Resize windows**: `Alt+Shift+h/l` (horizontal only)
-- **Focus windows**: `Alt+Shift+j/k` (cycle through windows)
-- **Switch spaces**: `Cmd+j/k` (previous/next space)
-- **Show all bindings**: `Alt+Shift+/`
+### Custom Go Tools
+The repo includes `swagger-to-kulala` built via Nix:
+- Source: `scripts/swagger-to-kulala/main.go`
+- Built in flake.nix using buildGoModule
+- vendorHash must be updated when go.mod changes
+- Installed to PATH automatically via flake outputs
 
-### Important: Kitty Terminal Configuration
-Kitty must explicitly pass through certain keybindings to allow system-level hotkeys (skhd) to work:
-- `cmd+j`, `cmd+k` - Passed to skhd for space switching (kitty/kitty.conf:102-103)
-- `cmd+r` - Passed to skhd for config reload (kitty/kitty.conf:106)
-- `enable_csi_u no` - Disabled to prevent keyboard protocol conflicts (kitty/kitty.conf:92)
+## Keybindings
 
-Full reference: `KEYBINDINGS.md`
+**See [KEYBINDINGS.md](KEYBINDINGS.md) for complete reference**
 
-## Claude Code Workflow (NEW)
-Global token-saving workflow available via `claude-init` command:
-- Templates in: `templates/claude-code/`
-- Script: `scripts/claude-init.sh`
-- Installed to PATH via: `modules/shared.nix`
-- Usage: `claude-init [directory]` - initializes CLAUDE.md and docs/ in any project
+Quick essentials:
+- **Tmux navigate**: `Ctrl+h/j/k/l` (vim-aware, seamless with Neovim)
+- **Tmux resize**: `Ctrl-b h/j/k/l` or `Ctrl+Shift+h/j/k/l`
+- **Tmux windows**: `Alt+,` / `Alt+.`
+- **Yabai spaces**: `Cmd+j/k`
+- **Show all**: `Alt+Shift+/` (macOS only)
 
-## Recent Changes
-- **FIXED**: Resolved keybinding conflicts between Kitty, tmux, and skhd
-  - Restored Kitty configuration to pass `cmd+j/k` to skhd for space switching (kitty/kitty.conf:102-103)
-  - Re-enabled `enable_csi_u no` to prevent CSI-u keyboard protocol conflicts (kitty/kitty.conf:92)
-  - Fixed yabai window resize to use `--resize` instead of `--ratio` (works for all window states) (skhd/skhdrc:41-44)
-  - Verified tmux pane resize bindings: `prefix+h/j/k/l` and alternative `Ctrl+Shift+h/j/k/l`
-  - Updated CLAUDE.md with comprehensive keybinding reference for tmux, Neovim, and yabai
-- **NEW**: Added `swagger-to-kulala` Go tool for converting OpenAPI/Swagger specs to kulala.nvim HTTP files
-  - Supports both OpenAPI 3.x and Swagger 2.0
-  - Generates example request bodies from schemas with $ref resolution
-  - Split by tags feature for organized output
-  - Built and distributed via Nix flake
-  - Full documentation in `scripts/swagger-to-kulala/README.md`
-- Moved scripts from `~/.scripts/` into tracked `./scripts/` directory
-  - Added `clipse-wrapper.sh` (clipboard manager wrapper)
-  - Added `toggle-kitty-window.sh` (floating window management)
-- Added global Claude Code workflow initializer (`claude-init` command)
-- Created templates/claude-code/ with CLAUDE.md template and workflow docs
-- Added comprehensive documentation in `docs/` (progress.md, workflow.md)
-- Added Linux platform support (modules/linux.nix)
-- Added qutebrowser launcher scripts (qb-picker, qb-picker-gui)
-- Added kitty terminal configuration (kitty/kitty.conf)
-- Fixed work.gitconfig handling (optional in nix build)
-- Enhanced secrets decryption to support both Kubernetes Secret and plain YAML formats
+## Claude Code Workflow
+
+This repo includes a global `claude-init` command for initializing token-efficient Claude Code workflows in any project:
+```bash
+claude-init [directory]  # Creates CLAUDE.md + docs/ structure
+```
+- Templates: `templates/claude-code/`
+- Implementation: `scripts/claude-init.sh`
+- Installed to PATH via `modules/shared.nix`
