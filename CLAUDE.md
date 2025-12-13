@@ -145,10 +145,30 @@ make test-decrypt    # Test decryption without writing files
 ```
 
 ## Quick Keybindings Reference
-- Tmux resize panes: `Alt+h/j/k/l` (no prefix)
-- Tmux switch windows: `Alt+,` / `Alt+.`
-- Tmux navigate panes: `Ctrl+h/j/k/l` (vim-aware)
-- Window manager help: `Alt+Shift+/` (show all bindings)
+
+### Tmux Pane Management
+- **Navigate panes**: `Ctrl+h/j/k/l` (vim-aware, seamless with Neovim)
+- **Resize panes**: `Ctrl-b` then `h/j/k/l` (prefix + hjkl)
+- **Alternative resize**: `Ctrl+Shift+h/j/k/l` (no prefix needed, from plugins)
+- **Switch windows**: `Alt+,` / `Alt+.`
+- **Reload config**: `Ctrl-b` then `r`
+
+### Neovim Window Management
+- **Navigate windows**: `Ctrl+h/j/k/l` (seamless with tmux panes)
+- **Resize windows**: `Alt+h/j/k/l` (horizontal/vertical resize)
+- **Equalize windows**: `Alt+=`
+
+### Yabai Window Manager
+- **Resize windows**: `Alt+Shift+h/l` (horizontal only)
+- **Focus windows**: `Alt+Shift+j/k` (cycle through windows)
+- **Switch spaces**: `Cmd+j/k` (previous/next space)
+- **Show all bindings**: `Alt+Shift+/`
+
+### Important: Kitty Terminal Configuration
+Kitty must explicitly pass through certain keybindings to allow system-level hotkeys (skhd) to work:
+- `cmd+j`, `cmd+k` - Passed to skhd for space switching (kitty/kitty.conf:102-103)
+- `cmd+r` - Passed to skhd for config reload (kitty/kitty.conf:106)
+- `enable_csi_u no` - Disabled to prevent keyboard protocol conflicts (kitty/kitty.conf:92)
 
 Full reference: `KEYBINDINGS.md`
 
@@ -160,6 +180,12 @@ Global token-saving workflow available via `claude-init` command:
 - Usage: `claude-init [directory]` - initializes CLAUDE.md and docs/ in any project
 
 ## Recent Changes
+- **FIXED**: Resolved keybinding conflicts between Kitty, tmux, and skhd
+  - Restored Kitty configuration to pass `cmd+j/k` to skhd for space switching (kitty/kitty.conf:102-103)
+  - Re-enabled `enable_csi_u no` to prevent CSI-u keyboard protocol conflicts (kitty/kitty.conf:92)
+  - Fixed yabai window resize to use `--resize` instead of `--ratio` (works for all window states) (skhd/skhdrc:41-44)
+  - Verified tmux pane resize bindings: `prefix+h/j/k/l` and alternative `Ctrl+Shift+h/j/k/l`
+  - Updated CLAUDE.md with comprehensive keybinding reference for tmux, Neovim, and yabai
 - **NEW**: Added `swagger-to-kulala` Go tool for converting OpenAPI/Swagger specs to kulala.nvim HTTP files
   - Supports both OpenAPI 3.x and Swagger 2.0
   - Generates example request bodies from schemas with $ref resolution

@@ -170,10 +170,10 @@ vim.api.nvim_create_autocmd("VimEnter", {
       vim.opt.list = false
       vim.opt.colorcolumn = ""
       vim.opt.scrolloff = 2
-      vim.cmd("highlight DiffAdd    cterm=bold gui=bold guibg=#2b303b guifg=#a6e3a1")
-      vim.cmd("highlight DiffChange gui=bold guibg=#2b303b guifg=#89b4fa")
-      vim.cmd("highlight DiffDelete gui=bold guibg=#2b303b guifg=#f38ba8")
-      vim.cmd("highlight DiffText   gui=bold guibg=#45475a guifg=#cdd6f4")
+      vim.cmd("highlight DiffAdd    cterm=bold gui=bold guibg=#1e1e2e guifg=#a6e3a1")
+      vim.cmd("highlight DiffChange gui=bold guibg=#1e1e2e guifg=#89b4fa")
+      vim.cmd("highlight DiffDelete gui=bold guibg=#1e1e2e guifg=#f38ba8")
+      vim.cmd("highlight DiffText   gui=bold guibg=#313244 guifg=#cdd6f4")
       -- Custom signs for diff mode using gutter symbols
       vim.fn.sign_define("DiffAdd", { text = "+", texthl = "DiffAdd" })
       vim.fn.sign_define("DiffChange", { text = "~", texthl = "DiffChange" })
@@ -376,7 +376,11 @@ require("lazy").setup({
         nerd_font_variant = "normal",
       },
       completion = {
+        trigger = {
+          show_on_insert_on_trigger_character = true,
+        },
         menu = {
+          auto_show = true,
           min_width = 25,
           max_height = 15, -- Limit completion menu height for performance
           border = "rounded",
@@ -395,21 +399,21 @@ require("lazy").setup({
       },
       sources = {
         default = { "lsp", "path", "snippets", "buffer" },
+        per_filetype = {
+          sql = { "lsp", "dadbod", "buffer" },
+          mysql = { "lsp", "dadbod", "buffer" },
+          plsql = { "lsp", "dadbod", "buffer" },
+        },
         providers = {
           dadbod = {
             name = "Dadbod",
             module = "vim_dadbod_completion.blink",
+            score_offset = 85,
           },
         },
-        -- Enable dadbod completion for SQL filetypes
-        cmdline = {
-          sources = function()
-            local type = vim.fn.getcmdtype()
-            if type == "/" or type == "?" then return { "buffer" } end
-            if type == ":" then return { "cmdline" } end
-            return {}
-          end,
-        },
+      },
+      cmdline = {
+        enabled = true,
       },
       signature = {
         enabled = true,
@@ -419,11 +423,12 @@ require("lazy").setup({
       },
       fuzzy = { implementation = "lua" },
       keymap = {
+        preset = "default",
         ["<C-space>"] = { "show", "show_documentation", "hide_documentation" },
         ["<C-e>"] = { "hide", "fallback" },
         ["<CR>"] = { "accept", "fallback" },
-        ["<Tab>"] = { "snippet_forward", "fallback" },
-        ["<S-Tab>"] = { "snippet_backward", "fallback" },
+        ["<Tab>"] = { "select_and_accept", "snippet_forward", "fallback" },
+        ["<S-Tab>"] = { "select_prev", "snippet_backward", "fallback" },
         ["<Up>"] = { "select_prev", "fallback" },
         ["<Down>"] = { "select_next", "fallback" },
         ["<C-k>"] = { "select_prev", "fallback" },
@@ -434,23 +439,11 @@ require("lazy").setup({
     },
     config = function(_, opts)
       require("blink.cmp").setup(opts)
-
-      -- Setup dadbod completion for SQL files
-      vim.api.nvim_create_autocmd("FileType", {
-        pattern = { "sql", "mysql", "plsql" },
-        callback = function()
-          require("blink.cmp").setup_buffer({
-            sources = {
-              default = { "dadbod", "buffer" },
-            },
-          })
-        end,
-      })
     end,
   },
 
   -- Mason for LSP/tools installation
-  { "williamboman/mason.nvim", opts = {} },
+  { "williamboman/mason.nvim",  opts = {} },
 
   -- Highlight comments
   {
@@ -606,6 +599,20 @@ require("lazy").setup({
   {
     "github/copilot.vim",
     enabled = not vim.g.is_ssh,
+    config = function()
+      -- Use Ctrl+Enter to accept Copilot suggestions
+      vim.g.copilot_no_tab_map = true
+      vim.keymap.set("i", "<C-CR>", 'copilot#Accept("")', {
+        expr = true,
+        replace_keycodes = false,
+        desc = "Accept Copilot suggestion",
+      })
+      -- Additional Copilot keymaps
+      vim.keymap.set("i", "<C-]>", "<Plug>(copilot-next)", { desc = "Next Copilot suggestion" })
+      -- Note: <C-[> is identical to ESC, so we use <M-[> (Alt+[) instead
+      vim.keymap.set("i", "<M-[>", "<Plug>(copilot-previous)", { desc = "Previous Copilot suggestion" })
+      vim.keymap.set("i", "<C-\\>", "<Plug>(copilot-dismiss)", { desc = "Dismiss Copilot suggestion" })
+    end,
   },
   {
     "CopilotC-Nvim/CopilotChat.nvim",
@@ -678,6 +685,40 @@ require("lazy").setup({
     enabled = not vim.g.is_ssh,
     dependencies = { "nvim-treesitter/nvim-treesitter", "echasnovski/mini.nvim" },
     opts = {},
+  },
+
+  -- Image rendering in Neovim (requires Kitty terminal or ueberzugpp)
+  {
+    "3rd/image.nvim",
+    enabled = not vim.g.is_ssh,
+    dependencies = {
+      {
+        "vhyrro/luarocks.nvim",
+        priority = 1000,
+        config = true,
+      },
+    },
+    opts = {
+      backend = "kitty", -- Use Kitty's graphics protocol
+      integrations = {
+        markdown = {
+          enabled = true,
+          clear_in_insert_mode = false,
+          download_remote_images = true,
+          only_render_image_at_cursor = false,
+          filetypes = { "markdown", "vimwiki" },
+        },
+      },
+      max_width = nil,
+      max_height = nil,
+      max_width_window_percentage = nil,
+      max_height_window_percentage = 50,
+      window_overlap_clear_enabled = false,
+      window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "" },
+      editor_only_render_when_focused = false,
+      tmux_show_only_in_active_window = false,
+      hijack_file_patterns = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp" },
+    },
   },
 
   -- Java LSP (lazy loaded)
@@ -864,27 +905,83 @@ require("lazy").setup({
 
   -- Theme
   {
-    "navarasu/onedark.nvim",
+    "catppuccin/nvim",
+    name = "catppuccin",
     priority = 1000,
-    init = function()
-      vim.cmd.colorscheme("onedark")
-    end,
     config = function()
-      require("onedark").setup({
-        style = "dark",
-        transparent = true,
+      require("catppuccin").setup({
+        flavour = "mocha", -- latte, frappe, macchiato, mocha
+        background = {
+          light = "latte",
+          dark = "mocha",
+        },
+        transparent_background = false,
+        show_end_of_buffer = false,
         term_colors = true,
+        dim_inactive = {
+          enabled = false,
+          shade = "dark",
+          percentage = 0.15,
+        },
+        no_italic = false,
+        no_bold = false,
+        no_underline = false,
+        styles = {
+          comments = { "italic" },
+          conditionals = { "italic" },
+          loops = {},
+          functions = {},
+          keywords = {},
+          strings = {},
+          variables = {},
+          numbers = {},
+          booleans = {},
+          properties = {},
+          types = {},
+          operators = {},
+        },
+        color_overrides = {},
+        custom_highlights = {},
+        integrations = {
+          cmp = true,
+          gitsigns = true,
+          nvimtree = false,
+          treesitter = true,
+          notify = false,
+          mini = {
+            enabled = true,
+            indentscope_color = "",
+          },
+          native_lsp = {
+            enabled = true,
+            virtual_text = {
+              errors = { "italic" },
+              hints = { "italic" },
+              warnings = { "italic" },
+              information = { "italic" },
+            },
+            underlines = {
+              errors = { "underline" },
+              hints = { "underline" },
+              warnings = { "underline" },
+              information = { "underline" },
+            },
+            inlay_hints = {
+              background = true,
+            },
+          },
+          telescope = {
+            enabled = true,
+          },
+          which_key = true,
+        },
       })
+
+      vim.cmd.colorscheme("catppuccin")
     end,
-  },
-  {
-    "olimorris/codecompanion.nvim",
-    opts = {},
-    dependencies = {
-      "nvim-lua/plenary.nvim",
-    },
-  },
+  }
 })
+vim.o.background = "dark"
 
 -- ============================================================================
 -- LSP CONFIGURATION (Neovim 0.11+)

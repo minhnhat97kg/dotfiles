@@ -70,7 +70,7 @@
         cargo rustc rustfmt clippy rust-analyzer
 
         # Dev - Python
-        python3 pipx
+        python3 pipx pyenv
 
         # Cloud & DevOps
         terraform
@@ -92,7 +92,7 @@
         # clipboard-jh is macOS-only, handled per-platform
 
         # Utilities
-        fx clipse
+        fx clipse imagemagick
       ];
 
       # macOS-specific packages

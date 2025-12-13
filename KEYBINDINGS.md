@@ -23,13 +23,17 @@ Complete reference for all keyboard shortcuts across tmux, skhd (window manager)
 | `Ctrl+k` | Move to up pane (vim-aware) |
 | `Ctrl+l` | Move to right pane (vim-aware) |
 
-#### Pane Resizing (No Prefix Required)
+#### Pane Resizing
 | Key | Action |
 |-----|--------|
-| `Alt+h` | Resize pane left (5 columns) |
-| `Alt+j` | Resize pane down (5 lines) |
-| `Alt+k` | Resize pane up (5 lines) |
-| `Alt+l` | Resize pane right (5 columns) |
+| `Prefix+h` | Resize pane left (5 columns) |
+| `Prefix+j` | Resize pane down (5 lines) |
+| `Prefix+k` | Resize pane up (5 lines) |
+| `Prefix+l` | Resize pane right (5 columns) |
+| `Ctrl+Shift+h` | Resize pane left (5 columns, no prefix) |
+| `Ctrl+Shift+j` | Resize pane down (5 lines, no prefix) |
+| `Ctrl+Shift+k` | Resize pane up (5 lines, no prefix) |
+| `Ctrl+Shift+l` | Resize pane right (5 columns, no prefix) |
 
 #### Pane Creation (Prefix Required)
 | Key | Action |
@@ -105,8 +109,8 @@ Complete reference for all keyboard shortcuts across tmux, skhd (window manager)
 
 | Key | Action |
 |-----|--------|
-| `Alt+Shift+h` | Shrink main pane |
-| `Alt+Shift+l` | Expand main pane |
+| `Alt+Shift+h` | Resize window left (shrink) |
+| `Alt+Shift+l` | Resize window right (expand) |
 | `Alt+Shift+,` | Balance all panes |
 | `Alt+Shift+.` | Balance all panes |
 
@@ -198,6 +202,16 @@ Neovim keybindings depend on your specific configuration. Common defaults:
 
 *Note: When inside tmux, these keys are tmux-aware and will navigate between tmux panes first, then vim windows.*
 
+### Window Resizing
+
+| Key | Action |
+|-----|--------|
+| `Alt+h` | Resize window left (decrease width) |
+| `Alt+j` | Resize window down (decrease height) |
+| `Alt+k` | Resize window up (increase height) |
+| `Alt+l` | Resize window right (increase width) |
+| `Alt+=` | Equalize all windows |
+
 ---
 
 ## Quick Reference Summary
@@ -205,7 +219,7 @@ Neovim keybindings depend on your specific configuration. Common defaults:
 ### Most Common Operations
 
 **Tmux:**
-- Resize panes: `Alt+h/j/k/l`
+- Resize panes: `Ctrl+b h/j/k/l` or `Ctrl+Shift+h/j/k/l` (no prefix)
 - Switch windows: `Alt+,` / `Alt+.`
 - Navigate panes: `Ctrl+h/j/k/l`
 - Split panes: `Ctrl+b |` or `Ctrl+b -`
@@ -213,12 +227,13 @@ Neovim keybindings depend on your specific configuration. Common defaults:
 **Window Manager (skhd):**
 - Focus windows: `Alt+Shift+j/k`
 - Move windows: `Ctrl+Alt+Shift+h/l`
-- Resize panes: `Alt+Shift+h/l`
+- Resize windows: `Alt+Shift+h/l`
 - Switch spaces: `Cmd+j/k`
 
 **Neovim:**
 - Navigate: `h/j/k/l`
 - Switch windows: `Ctrl+h/j/k/l`
+- Resize windows: `Alt+h/j/k/l`
 
 ---
 
@@ -226,16 +241,19 @@ Neovim keybindings depend on your specific configuration. Common defaults:
 
 The following key combinations are used in multiple contexts:
 
-| Keys | Tmux | skhd | Context |
-|------|------|------|---------|
-| `Alt+h/j/k/l` | Resize panes | - | Tmux only (no conflict) |
-| `Alt+Shift+h/j/k/l` | - | Window operations | skhd only (no conflict) |
-| `Ctrl+h/j/k/l` | Navigate panes | - | Tmux/Vim integration |
+| Keys | Tmux | Neovim | skhd | Context |
+|------|------|--------|------|---------|
+| `Alt+h/j/k/l` | - | Resize windows | - | Neovim only (no conflict) |
+| `Alt+Shift+h/j/k/l` | - | - | Window operations | skhd only (no conflict) |
+| `Ctrl+h/j/k/l` | Navigate panes | Navigate windows | - | Tmux/Vim integration |
+| `Ctrl+Shift+h/j/k/l` | Resize panes | - | - | Tmux only (no conflict) |
+| `Cmd+j/k` | - | - | Switch spaces | skhd only (requires Kitty passthrough) |
 
 No actual conflicts exist because:
-- Tmux uses `Alt` (without Shift)
-- skhd uses `Alt+Shift` or `Ctrl+Alt+Shift`
-- Different modifier combinations prevent conflicts
+- Tmux uses `Ctrl+Shift` for resize, `Ctrl` for navigation
+- Neovim uses `Alt` for resize, `Ctrl` for navigation
+- skhd uses `Alt+Shift` or `Ctrl+Alt+Shift` for most operations
+- Kitty explicitly passes `Cmd+j/k` to skhd via `map cmd+j no_op` configuration
 
 ---
 
@@ -249,11 +267,13 @@ No actual conflicts exist because:
 
 ## Tips
 
-1. **Tmux pane resize** now works without prefix - use `Ctrl+Shift+h/j/k/l`
-2. **Window navigation** moved to `Alt+,/.` to make room for resize
-3. **All keybindings** follow vim-style `hjkl` navigation
-4. **Mouse support** is enabled in tmux for clicking and dragging
-5. **View all skhd bindings** anytime with `Alt+Shift+/`
+1. **Tmux pane resize** has two options: `Ctrl+b h/j/k/l` (with prefix) or `Ctrl+Shift+h/j/k/l` (no prefix)
+2. **Neovim window resize** uses `Alt+h/j/k/l` (works in terminal with Kitty `macos_option_as_alt both`)
+3. **Window navigation** moved to `Alt+,/.` to make room for resize
+4. **All keybindings** follow vim-style `hjkl` navigation
+5. **Mouse support** is enabled in tmux for clicking and dragging
+6. **View all skhd bindings** anytime with `Alt+Shift+/`
+7. **Kitty must pass through** certain keys to skhd - see `kitty/kitty.conf` lines 92, 102-106
 
 ---
 
@@ -275,11 +295,31 @@ extraConfig = ''
 ### skhd
 Edit `skhd/skhdrc`:
 ```
-alt + shift - h : yabai -m window --ratio rel:-0.05
+# Use --resize instead of --ratio for better compatibility
+alt + shift - h : yabai -m window --resize left:-50:0 || yabai -m window --resize right:-50:0
 # Add your bindings here
+```
+
+### Kitty
+To allow skhd keybindings to work, edit `kitty/kitty.conf`:
+```
+# Pass cmd keys to skhd
+map cmd+j no_op
+map cmd+k no_op
+map cmd+r no_op
+
+# Disable CSI-u protocol to prevent conflicts
+enable_csi_u no
 ```
 
 Then rebuild:
 ```bash
 sudo darwin-rebuild switch --flake .
+```
+
+Or reload configs manually:
+```bash
+skhd -r                           # Reload skhd
+tmux source-file ~/.config/tmux/tmux.conf  # Reload tmux
+# Kitty: Press Cmd+Shift+F5 or restart
 ```

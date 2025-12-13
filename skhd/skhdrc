@@ -37,13 +37,13 @@ alt + shift - v : osascript -e 'display notification "Test keybinding works!" wi
 # PANE/WINDOW CONTROLS
 # ====================================================================
 
-# Shrink the main pane (mod1 + h)
-alt + shift - h : yabai -m window --ratio rel:-0.05
+# Resize window left (mod1 + h)
+alt + shift - h : yabai -m window --resize left:-50:0 || yabai -m window --resize right:-50:0
 
-# Expand the main pane (mod1 + l)
-alt + shift - l : yabai -m window --ratio rel:0.05
+# Resize window right (mod1 + l)
+alt + shift - l : yabai -m window --resize right:50:0 || yabai -m window --resize left:50:0
 
-# Increase main pane count (mod1 + ,)
+# Balance windows (mod1 + ,)
 alt + shift - 0x2B : yabai -m space --balance
 
 # Decrease main pane count (mod1 + .)
@@ -158,6 +158,9 @@ ctrl + alt + shift - z : launchctl kickstart -k "gui/${UID}/org.nixos.yabai"
 
 # Reload skhd config (cmd + r)
 cmd + shift - r : skhd -r
+
+# Toggle between light/dark theme (mod1 + b)
+alt + shift - b : ~/.local/bin/toggle-theme
 
 # ====================================================================
 # ADDITIONAL USEFUL BINDINGS
