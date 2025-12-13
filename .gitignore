@@ -56,8 +56,6 @@ secrets/*
 # Personal aliases (customize per machine)
 shell/aliases.yaml
 
-# Work git config (customize per machine with work email)
-git/work.gitconfig
 
 # Config-specific ignores
 fish/fish_variables

@@ -1,0 +1,23 @@
+# Work Git Configuration Template
+# Copy this file to work.gitconfig and customize with your work details
+#
+# Usage:
+#   cp git/work.gitconfig.template git/work.gitconfig
+#   # Then edit git/work.gitconfig with your actual work email/name
+
+[user]
+    # Replace with your work email
+    email = nhat@buuuk.com
+
+    # Replace with your work name
+    name = Nhat Huynh
+
+# Uncomment and configure if you need a specific SSH key for work repos
+[core]
+    sshCommand = "ssh -i ~/.ssh/id_ed25519"
+
+# Uncomment if you want to sign commits with GPG
+# [commit]
+#     gpgSign = true
+# [user]
+#     signingKey = YOUR_GPG_KEY_ID
