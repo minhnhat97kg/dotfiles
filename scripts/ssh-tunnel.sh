@@ -104,7 +104,8 @@ connect_tunnel() {
     else
         # Fall back to regular SSH (uses SSH config with keys)
         echo "Using SSH config authentication (key-based)..."
-        ssh $tunnel_args -N "$host"
+        # Add keepalive settings to prevent connection drops
+        ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes $tunnel_args -N "$host"
     fi
 }
 

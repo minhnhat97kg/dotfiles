@@ -97,6 +97,12 @@
     direnv
     lazygit
     curl
+
+    # VNC Server
+    tigervnc
+    xorg.xauth
+    xvfb-run
+    fluxbox
   ];
 
   terminal.font = "${pkgs.nerd-fonts.jetbrains-mono}/share/fonts/truetype/NerdFonts/JetBrainsMono/JetBrainsMonoNerdFont-Regular.ttf";
@@ -215,6 +221,116 @@ EOF
     # Auto-start SSH server
     echo "Starting SSH server..."
     "$HOME/.ssh/start-sshd.sh" || echo "⚠️  SSH server failed to auto-start. Run ~/.ssh/start-sshd.sh manually"
+  '';
+
+  # VNC server setup
+  build.activation.vnc = ''
+    mkdir -p "$HOME/.vnc"
+    chmod 700 "$HOME/.vnc"
+
+    # Generate VNC password file if it doesn't exist
+    if [ ! -f "$HOME/.vnc/passwd" ]; then
+      echo "vnc123" | ${pkgs.tigervnc}/bin/vncpasswd -f > "$HOME/.vnc/passwd"
+      chmod 600 "$HOME/.vnc/passwd"
+      echo "⚠️  Default VNC password set to 'vnc123'. Change it with: vncpasswd"
+    fi
+
+    # VNC startup script (xstartup)
+    cat > "$HOME/.vnc/xstartup" <<EOF
+#!/usr/bin/env bash
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+
+# Start a minimal window manager
+${pkgs.fluxbox}/bin/fluxbox &
+
+# Optional: start a terminal emulator if available
+# ${pkgs.xterm}/bin/xterm &
+
+# Keep the X session alive
+while true; do sleep 1000; done
+EOF
+    chmod +x "$HOME/.vnc/xstartup"
+
+    # Generate start script with current package paths
+    cat > "$HOME/.vnc/start-vnc.sh" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+VNC_PORT=5901
+DISPLAY_NUM=1
+GEOMETRY="1920x1080"
+DEPTH=24
+
+# Stop any existing VNC server on this display
+${pkgs.tigervnc}/bin/vncserver -kill :\$DISPLAY_NUM 2>/dev/null || true
+sleep 0.5
+
+# Clean up any stale lock files
+rm -f /tmp/.X\$DISPLAY_NUM-lock
+rm -f /tmp/.X11-unix/X\$DISPLAY_NUM
+
+# Start VNC server
+${pkgs.tigervnc}/bin/vncserver :\$DISPLAY_NUM \\
+  -geometry \$GEOMETRY \\
+  -depth \$DEPTH \\
+  -localhost no \\
+  -rfbport \$VNC_PORT \\
+  || {
+    echo "Failed to start VNC server!" >&2
+    exit 1
+  }
+
+sleep 0.5
+
+if pgrep -f "Xvnc.*:\$DISPLAY_NUM" >/dev/null 2>&1; then
+  echo "✓ VNC server started on display :\$DISPLAY_NUM (port \$VNC_PORT)"
+  echo "  To connect: vnc://<device-ip>:\$VNC_PORT"
+  echo "  Default password: vnc123 (change with: vncpasswd)"
+  echo "  To stop: ~/.vnc/stop-vnc.sh"
+else
+  echo "Failed to start VNC server!" >&2
+  exit 1
+fi
+EOF
+    chmod +x "$HOME/.vnc/start-vnc.sh"
+
+    # Generate stop script
+    cat > "$HOME/.vnc/stop-vnc.sh" <<'EOF'
+#!/usr/bin/env bash
+DISPLAY_NUM=1
+if ${pkgs.tigervnc}/bin/vncserver -kill :$DISPLAY_NUM 2>/dev/null; then
+  echo "✓ VNC server stopped (display :$DISPLAY_NUM)"
+else
+  echo "No VNC server running on display :$DISPLAY_NUM"
+fi
+rm -f /tmp/.X$DISPLAY_NUM-lock 2>/dev/null || true
+rm -f /tmp/.X11-unix/X$DISPLAY_NUM 2>/dev/null || true
+EOF
+    chmod +x "$HOME/.vnc/stop-vnc.sh"
+
+    # Generate status script
+    cat > "$HOME/.vnc/status-vnc.sh" <<'EOF'
+#!/usr/bin/env bash
+if pgrep -fa "Xvnc.*:1" >/dev/null 2>&1; then
+  echo "✓ VNC server is running"
+  pgrep -fa "Xvnc.*:1"
+  echo ""
+  echo "Connection info:"
+  echo "  Display: :1"
+  echo "  Port: 5901"
+  if command -v ip >/dev/null 2>&1; then
+    IP=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v 127.0.0.1 | head -n1)
+    [ -n "$IP" ] && echo "  VNC URL: vnc://$IP:5901"
+  fi
+else
+  echo "VNC server is not running"
+  echo "Start with: ~/.vnc/start-vnc.sh"
+fi
+EOF
+    chmod +x "$HOME/.vnc/status-vnc.sh"
+
+    echo "VNC server configured. Start with: ~/.vnc/start-vnc.sh"
   '';
 
   # Home-manager integration

@@ -64,7 +64,9 @@ if [ "$PORT" != "22" ]; then
 fi
 
 # Force password authentication and disable key-based auth
+# Add keepalive settings to prevent connection drops
 SSH_CMD="$SSH_CMD -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=no"
+SSH_CMD="$SSH_CMD -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes"
 
 # Add extra arguments (tunnels, etc.)
 if [ -n "$SSH_EXTRA_ARGS" ]; then
