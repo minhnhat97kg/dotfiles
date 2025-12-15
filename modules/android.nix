@@ -101,6 +101,9 @@
     # VNC Server
     tigervnc
     xorg.xauth
+    xorg.xinit
+    xorg.xhost
+    xterm
     xvfb-run
     fluxbox
   ];
@@ -244,8 +247,8 @@ unset DBUS_SESSION_BUS_ADDRESS
 # Start a minimal window manager
 ${pkgs.fluxbox}/bin/fluxbox &
 
-# Optional: start a terminal emulator if available
-# ${pkgs.xterm}/bin/xterm &
+# Start a terminal emulator
+${pkgs.xterm}/bin/xterm &
 
 # Keep the X session alive
 while true; do sleep 1000; done
