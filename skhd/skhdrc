@@ -30,9 +30,6 @@ alt + shift - w : ~/.scripts/toggle-kitty-window.sh "window-picker" "~/.scripts/
 alt + shift - i : ~/.scripts/cycle-layout.sh current
 alt + shift - c : ~/.scripts/toggle-kitty-window.sh "clipboard" "~/.scripts/clipse-wrapper.sh"  # Uses clipse-wrapper from PATH
 
-# Test binding - remove after testing
-alt + shift - v : osascript -e 'display notification "Test keybinding works!" with title "skhd"'
-
 # ====================================================================
 # PANE/WINDOW CONTROLS
 # ====================================================================

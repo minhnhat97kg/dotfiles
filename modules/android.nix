@@ -98,14 +98,46 @@
     lazygit
     curl
 
-    # VNC Server
+    # VNC Server & X11
     tigervnc
     xorg.xauth
     xorg.xinit
     xorg.xhost
+    xorg.xorgserver
+    xorg.setxkbmap
     xterm
     xvfb-run
-    fluxbox
+
+    # Desktop Environment - XFCE4
+    xfce.xfce4-panel
+    xfce.xfce4-session
+    xfce.xfce4-settings
+    xfce.xfconf
+    xfce.xfdesktop
+    xfce.xfwm4
+    xfce.thunar
+    xfce.thunar-volman
+    xfce.tumbler  # Thumbnail generator
+
+    # XFCE4 Plugins
+    xfce.xfce4-terminal
+    xfce.xfce4-pulseaudio-plugin
+    xfce.xfce4-screenshooter
+    xfce.xfce4-taskmanager
+    xfce.xfce4-clipman-plugin
+
+    # Graphics & Fonts
+    mesa
+    dbus
+
+    # Utilities for desktop
+    firefox
+    pcmanfm  # Lightweight file manager alternative
+    gvfs     # Virtual filesystem support
+
+    # Audio
+    pulseaudio
+    pavucontrol
   ];
 
   terminal.font = "${pkgs.nerd-fonts.jetbrains-mono}/share/fonts/truetype/NerdFonts/JetBrainsMono/JetBrainsMonoNerdFont-Regular.ttf";
@@ -241,17 +273,33 @@ EOF
     # VNC startup script (xstartup)
     cat > "$HOME/.vnc/xstartup" <<EOF
 #!/usr/bin/env bash
+set -e
+
+# Clean up any previous session
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
 
-# Start a minimal window manager
-${pkgs.fluxbox}/bin/fluxbox &
+# Start D-Bus session bus (required for XFCE)
+if [ -z "\$DBUS_SESSION_BUS_ADDRESS" ]; then
+  eval \$(${pkgs.dbus}/bin/dbus-launch --sh-syntax)
+fi
+export DBUS_SESSION_BUS_ADDRESS
 
-# Start a terminal emulator
-${pkgs.xterm}/bin/xterm &
+# Start PulseAudio for audio support
+${pkgs.pulseaudio}/bin/pulseaudio --start --exit-idle-time=-1 2>/dev/null || true
 
-# Keep the X session alive
-while true; do sleep 1000; done
+# Set up keyboard layout
+${pkgs.xorg.setxkbmap}/bin/setxkbmap -layout us 2>/dev/null || true
+
+# Launch XFCE4 Desktop Environment
+${pkgs.xfce.xfce4-session}/bin/startxfce4 &
+
+# Fallback: If XFCE fails, start a basic terminal
+sleep 3
+if ! pgrep -x xfce4-session >/dev/null; then
+  echo "XFCE4 failed to start, launching fallback environment..."
+  ${pkgs.xterm}/bin/xterm &
+fi
 EOF
     chmod +x "$HOME/.vnc/xstartup"
 
@@ -373,12 +421,25 @@ EOF
             # Set default pager
             export PAGER=less
             export LESS="-R -F -X -S"
+
+            # Desktop environment helper
+            export PATH="$HOME/.local/bin:$PATH"
           '';
 
-          programs.zsh.shellAliases.copilot = "github-copilot-cli";
+          programs.zsh.shellAliases = {
+            copilot = "github-copilot-cli";
+            desktop = "android-desktop";
+          };
 
           # Manual tmux config since programs.tmux is disabled on Android
           home.file.".config/tmux/tmux.conf".source = ../tmux/tmux.conf;
+
+          # Android desktop management script - available in PATH
+          home.file.".local/bin/android-desktop" = {
+            source = ../scripts/android-desktop.sh;
+            executable = true;
+            force = true;
+          };
         }
       ];
   };

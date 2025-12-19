@@ -28,6 +28,7 @@ dotfiles/
 ├── docs/                  # Documentation
 │   ├── progress.md        # Project progress tracking
 │   ├── workflow.md        # Development workflow
+│   ├── android-desktop.md # Android desktop environment guide
 │   └── tableplus-to-nvim-db.md
 ├── scripts/               # Shell scripts (copied to ~/.scripts/)
 │   ├── secrets-sync.sh    # Encrypt secrets to sops format
@@ -39,6 +40,7 @@ dotfiles/
 │   ├── clipse-wrapper.sh  # Clipboard manager wrapper
 │   ├── ssh-*.sh           # SSH tunnel and password helpers
 │   ├── window-picker.sh   # Window selection UI
+│   ├── android-desktop.sh # Android XFCE4 desktop environment manager
 │   └── swagger-to-kulala/ # Go tool: Convert OpenAPI/Swagger to kulala.nvim HTTP files
 │       ├── main.go
 │       ├── go.mod
@@ -135,6 +137,24 @@ make check        # Validate flake configuration
 make clean        # Remove build artifacts
 ```
 
+### Android Desktop Environment
+```bash
+# On Android device (nix-on-droid)
+desktop start         # Start VNC server with XFCE4 desktop
+desktop stop          # Stop VNC server
+desktop status        # Show VNC/SSH server status
+desktop info          # Show connection details
+desktop password      # Change VNC password
+desktop ssh-start     # Start SSH server
+desktop ssh-stop      # Stop SSH server
+
+# Connect via VNC client
+# Default: vnc://<device-ip>:5901
+# Password: vnc123 (change immediately!)
+```
+
+See [docs/android-desktop.md](docs/android-desktop.md) for complete guide.
+
 ### API Development with kulala.nvim
 ```bash
 # Convert OpenAPI/Swagger YAML to HTTP request files
@@ -178,8 +198,11 @@ swagger-to-kulala -i api.yaml -o output/ -split # Split by tags
 
 ### Android (nix-on-droid)
 - Install from F-Droid, runs in Termux environment
-- SSH server auto-configured with generated keys
+- SSH server auto-configured with generated keys (port 8022)
+- VNC server with full XFCE4 desktop environment (port 5901)
+- Desktop management via `android-desktop` command (alias: `desktop`)
 - Optimized package set for mobile/battery constraints
+- See [docs/android-desktop.md](docs/android-desktop.md) for desktop environment details
 
 ## Important Implementation Details
 
