@@ -246,6 +246,31 @@
           ];
         };
 
+      # ============================================================================
+      # Termux Configuration (vanilla Nix in Termux, no nix-on-droid)
+      # ============================================================================
+      homeConfigurations.termux =
+        let
+          system = "aarch64-linux";
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
+        in
+        home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [
+            (import ./modules/termux.nix {
+              inherit pkgs sharedPackages sharedHomeConfig;
+              lib = nixpkgs.lib;
+            })
+            {
+              home.username = username;
+              home.homeDirectory = "/data/data/com.termux/files/home";
+            }
+          ];
+        };
+
       # Formatter
       formatter = {
         aarch64-darwin = nixpkgs.legacyPackages.aarch64-darwin.alejandra;

@@ -1,4 +1,4 @@
-.PHONY: help install build switch encrypt decrypt encrypt-ssh encrypt-aws encrypt-git decrypt-ssh decrypt-aws decrypt-git test clean check update format deps darwin android android-lite
+.PHONY: help install build switch encrypt decrypt encrypt-ssh encrypt-aws encrypt-git decrypt-ssh decrypt-aws decrypt-git test clean check update format deps darwin android android-lite termux
 
 # Configuration
 SECRETS_CONFIG ?= ./secrets/config.yaml
@@ -63,6 +63,9 @@ android: ## Install on Android (nix-on-droid)
 
 android-lite: ## Install on Android (lite/battery-optimized)
 	nix-on-droid switch --flake .#lite
+
+termux: ## Install on Termux (vanilla Nix, no nix-on-droid)
+	home-manager switch --flake .#termux
 
 build: ## Build configuration without installing
 ifeq ($(PLATFORM),macos)

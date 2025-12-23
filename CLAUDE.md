@@ -3,11 +3,11 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Summary
-Cross-platform Nix configuration for macOS (nix-darwin), Linux (NixOS), and Android (nix-on-droid). Manages dotfiles, system configuration, and secrets encryption using sops/age.
+Cross-platform Nix configuration for macOS (nix-darwin), Linux (NixOS), and Android (nix-on-droid + vanilla Termux Nix). Manages dotfiles, system configuration, and secrets encryption using sops/age.
 
 ## Tech Stack
 - **Build System**: Nix flakes, Makefile
-- **Platforms**: nix-darwin (macOS), NixOS (Linux), nix-on-droid (Android)
+- **Platforms**: nix-darwin (macOS), NixOS (Linux), nix-on-droid (Android), home-manager (Termux)
 - **Secrets**: sops + age encryption
 - **Editor**: Neovim with LSP (Lua, TypeScript, Go, Rust, Java)
 - **Shell**: Zsh + oh-my-zsh
@@ -23,17 +23,21 @@ dotfiles/
 ├── modules/
 │   ├── darwin.nix         # macOS system config
 │   ├── linux.nix          # Linux/NixOS system config
-│   ├── android.nix        # Android system config
+│   ├── android.nix        # Android nix-on-droid config (full)
+│   ├── android-lite.nix   # Android nix-on-droid config (battery-optimized)
+│   ├── termux.nix         # Android vanilla Termux+Nix config
 │   └── shared.nix         # Shared home-manager config
 ├── docs/                  # Documentation
 │   ├── progress.md        # Project progress tracking
 │   ├── workflow.md        # Development workflow
+│   ├── termux-nix-setup.md # Termux vanilla Nix setup guide
 │   └── tableplus-to-nvim-db.md
 ├── scripts/               # Shell scripts (copied to ~/.scripts/)
 │   ├── secrets-sync.sh    # Encrypt secrets to sops format
 │   ├── secrets-decrypt.sh # Decrypt secrets from sops
 │   ├── load-aliases.sh    # Load shell aliases
 │   ├── claude-init.sh     # Initialize Claude Code in projects
+│   ├── bootstrap-termux-nix.sh # Bootstrap vanilla Nix in Termux
 │   ├── cycle-layout.sh    # Cycle yabai layouts
 │   ├── toggle-kitty-window.sh  # Toggle floating kitty windows
 │   ├── clipse-wrapper.sh  # Clipboard manager wrapper
@@ -72,11 +76,16 @@ dotfiles/
 
 ## Key Paths
 - Main config: `flake.nix` (username, email, package lists)
-- Platform configs: `modules/{darwin,linux,android}.nix`
+- Platform configs:
+  - macOS: `modules/darwin.nix`
+  - Linux: `modules/linux.nix`
+  - Android nix-on-droid: `modules/android.nix`, `modules/android-lite.nix`
+  - Android Termux Nix: `modules/termux.nix`
 - Shared home config: `modules/shared.nix`
 - Neovim: `nvim/init.lua`, `nvim/lsp/`, `nvim/ftplugin/`
 - Secrets: `secrets/encrypted/ssh/`, `secrets/encrypted/aws/`
 - Age key: `~/.config/sops/age/keys.txt`
+- Bootstrap scripts: `scripts/bootstrap-termux-nix.sh`
 
 ## Architecture Overview
 
@@ -115,7 +124,9 @@ dotfiles/
 make install      # Auto-detect platform and apply configuration
 make darwin       # Apply macOS config (darwin-rebuild switch)
 make linux        # Apply NixOS config (nixos-rebuild switch)
-make android      # Apply Android config (nix-on-droid switch)
+make android      # Apply Android nix-on-droid config (full)
+make android-lite # Apply Android nix-on-droid config (battery-optimized)
+make termux       # Apply Termux vanilla Nix config (home-manager)
 make build        # Build without applying (dry run)
 ```
 
@@ -163,6 +174,43 @@ swagger-to-kulala -i api.yaml -o output/ -split # Split by tags
 - Keep CLAUDE.md as the single source of truth for project context
 - This ensures Claude Code and future contributors have accurate information
 
+## Recent Changes
+
+### 2025-12-23: Termux Vanilla Nix Support
+**What changed:**
+- Added support for running vanilla Nix in regular Termux (without nix-on-droid app)
+- New configuration module: `modules/termux.nix` using home-manager directly
+- Bootstrap script: `scripts/bootstrap-termux-nix.sh` for automated Nix installation
+- Comprehensive documentation: `docs/termux-nix-setup.md`
+- New Makefile target: `make termux`
+- Updated `flake.nix` with `homeConfigurations.termux` output
+
+**Why:**
+- Provides a lighter alternative to nix-on-droid for users who want simplicity
+- Avoids proot overhead for better performance
+- Allows using Termux packages alongside Nix packages
+- Better compatibility with native Termux environment
+- Standard home-manager workflow familiar to Nix users
+
+**Key differences from nix-on-droid:**
+- Uses home-manager instead of nix-on-droid module system
+- Packages in `home.packages` instead of `environment.packages`
+- No system-level configuration (user-only)
+- Faster boot time and better performance
+- Can coexist with Termux package manager
+
+**How to use:**
+```bash
+# In regular Termux (not nix-on-droid):
+bash scripts/bootstrap-termux-nix.sh
+make termux
+```
+
+**Documentation:**
+- Setup guide: `docs/termux-nix-setup.md`
+- Configuration: `modules/termux.nix`
+- Platform comparison table in setup guide
+
 ## Platform-Specific Notes
 
 ### macOS (nix-darwin)
@@ -177,9 +225,20 @@ swagger-to-kulala -i api.yaml -o output/ -split # Split by tags
 - Desktop environment: GNOME by default (can switch to KDE/i3 in modules/linux.nix)
 
 ### Android (nix-on-droid)
-- Install from F-Droid, runs in Termux environment
+- Install nix-on-droid app from F-Droid
+- Runs in proot environment with system-level configuration
+- Two configs: full (`android.nix`) and lite (`android-lite.nix`)
 - SSH server auto-configured with generated keys
-- Optimized package set for mobile/battery constraints
+- Limitations: Some syscalls don't work (setuid/setgid), Xvfb requires Termux workaround
+- See X11/VNC Setup section below for GUI apps
+
+### Android (Termux + vanilla Nix)
+- Install Nix directly in regular Termux (not nix-on-droid app)
+- Bootstrap: `bash scripts/bootstrap-termux-nix.sh`
+- Uses home-manager instead of nix-on-droid framework
+- Simpler, faster, better Termux package compatibility
+- Can use `pkg` and Nix side-by-side
+- See `docs/termux-nix-setup.md` for complete guide
 
 ## Important Implementation Details
 
@@ -207,8 +266,13 @@ swagger-to-kulala -i api.yaml -o output/ -split # Split by tags
 ### Adding New Packages
 1. **Shared (all platforms)**: Add to `sharedPackages` list in `flake.nix`
 2. **Platform-specific**: Add to `darwinPackages` or `linuxPackages` in `flake.nix`
-3. **System-level**: Add to environment.systemPackages in `modules/{darwin,linux,android}.nix`
-4. Apply changes: `make install`
+3. **System-level (nix-darwin/NixOS/nix-on-droid)**: Add to environment.systemPackages in `modules/{darwin,linux,android}.nix`
+4. **User-level (Termux)**: Add to `home.packages` in `modules/termux.nix`
+5. Apply changes:
+   - macOS: `make darwin`
+   - Linux: `make linux`
+   - Android (nix-on-droid): `make android` or `make android-lite`
+   - Android (Termux Nix): `make termux`
 
 ### Testing Configuration Changes
 ```bash
@@ -259,3 +323,137 @@ claude-init [directory]  # Creates CLAUDE.md + docs/ structure
 - Templates: `templates/claude-code/`
 - Implementation: `scripts/claude-init.sh`
 - Installed to PATH via `modules/shared.nix`
+
+## X11/VNC Setup (Android/nix-on-droid)
+
+### Overview
+The Android configuration supports GUI applications via two methods:
+1. **Termux-X11** (recommended): Native Android X11 implementation
+2. **VNC Server** (hybrid): Termux VNC + nix x11vnc
+
+Both methods work around [nix-on-droid issue #75](https://github.com/nix-community/nix-on-droid/issues/75) (missing `setgid()`/`setuid()` syscalls in proot) by running the X server in Termux, not in nix-on-droid.
+
+### Architecture
+
+**Termux-X11 Method (Primary):**
+- X server runs in Termux (outside nix-on-droid proot)
+- Nix GUI apps connect via `DISPLAY=127.0.0.1:1` over loopback
+- Requires: Termux + termux-x11-nightly package + Termux-X11 app
+- **Status**: ✅ Fully functional
+
+**VNC Method (Alternative):**
+- ⚠️ **Important**: Xvfb cannot run inside nix-on-droid proot due to missing setgid/setuid syscalls
+- **Working approach**: Run Xvfb in Termux, use x11vnc from nix to share it
+- Command (in Termux): `Xvfb :1 -screen 0 1920x1080x24 &`
+- Command (in nix): `x11vnc -display 127.0.0.1:1 -passwd PASSWORD -rfbport 5901`
+- **Status**: ⚠️ Scripts provided but require manual Termux Xvfb setup
+
+### Quick Start
+
+**Termux-X11:**
+```bash
+# 1. In Termux terminal:
+pkg install termux-x11-nightly
+termux-x11 :1 -listen tcp -ac &
+
+# 2. In nix-on-droid:
+~/start-x11            # Launches fluxbox + xterm
+# OR
+~/start-x11 firefox    # Launch specific app
+```
+
+**VNC (Hybrid Termux + Nix):**
+```bash
+# 1. In Termux terminal:
+pkg install x11-repo xorg-xvfb
+Xvfb :1 -screen 0 1920x1080x24 -ac &
+
+# 2. In nix-on-droid:
+export DISPLAY=127.0.0.1:1
+x11vnc -display :1 -rfbauth ~/.vnc/passwd -rfbport 5901 -forever -shared &
+
+# 3. Start window manager and apps:
+fluxbox &
+xterm &
+
+# Connect via VNC client: vnc://<device-ip>:5901
+# Default password: vnc123 (change with: x11vnc -storepasswd)
+
+# Note: ~/.vnc/start-vnc.sh attempts to run Xvfb in nix but will fail due to proot limitations
+```
+
+### File Locations
+- Termux-X11 scripts: `~/.termux-x11/`
+  - `connect.sh` - GUI launcher
+  - `ssh-run.sh` - SSH helper for remote GUI launch
+  - `README.md` - Setup guide
+- VNC scripts: `~/.vnc/`
+  - `start-vnc.sh`, `stop-vnc.sh`, `status-vnc.sh`
+  - `xstartup` - Session startup script
+  - Logs: `xvfb.log`, `x11vnc.log`, `fluxbox.log`
+- Symlinks:
+  - `~/start-x11` → `~/.termux-x11/connect.sh`
+  - `~/termux-x11` → `~/.termux-x11/ssh-run.sh`
+
+### Installed GUI Packages
+- **Window Manager**: fluxbox
+- **Terminal**: xterm
+- **X11 Libraries**: libX11, libXext, libXrender, xauth, xinit, xhost
+- **VNC Server**: x11vnc
+
+### SSH + X11 Integration
+SSH server is configured with X11 forwarding enabled:
+```bash
+~/.ssh/start-sshd.sh   # Starts SSH on port 8022
+ssh -p 8022 -X nix-on-droid@<ip>  # Connect with X11 forwarding
+```
+
+Then use `~/termux-x11 <app>` to launch GUI apps that display on the Android screen.
+
+### Troubleshooting
+
+**Termux-X11 connection fails:**
+- Ensure Termux-X11 app is running (shows black screen is normal)
+- Verify `termux-x11 :1 -listen tcp -ac` is running in Termux
+- Check DISPLAY is set: `echo $DISPLAY` should show `127.0.0.1:1`
+
+**VNC won't start:**
+- **Known issue**: Xvfb cannot run inside nix-on-droid proot (issue #75)
+  - Error: `Failed to activate virtual core keyboard: 2`
+  - Cause: Missing `setgid()`/`setuid()` syscalls in proot environment
+  - **Solution**: Run Xvfb in Termux, not nix-on-droid (see VNC Hybrid method above)
+- Check logs: `cat ~/.vnc/xvfb.log` and `cat ~/.vnc/x11vnc.log`
+- Remove stale locks: `rm -f /tmp/.X1-lock /tmp/.X11-unix/X1`
+- Verify no conflicting processes: `pgrep -fa Xvfb`
+
+**GUI apps don't display:**
+- Test X connection: `xdpyinfo` (should show display info)
+- For Termux-X11: Ensure Android app is in foreground
+- For VNC: Verify VNC client is connected to correct port
+
+### Implementation Details (modules/android.nix)
+
+**Lines 101-121**: Package installation
+- X11 libraries and tools
+- Fluxbox window manager
+- xterm terminal
+- x11vnc server
+
+**Lines 243-356**: Termux-X11 build activation
+- Creates helper scripts in `~/.termux-x11/`
+- Sets up symlinks for easy access
+- Generates README with setup instructions
+
+**Lines 358-558**: VNC build activation
+- Generates VNC password file
+- Creates Xvfb + x11vnc startup script
+- Sets up desktop session files for TigerVNC compatibility
+- Creates start/stop/status helper scripts
+
+**Lines 185-188**: SSH X11 forwarding config
+```nix
+X11Forwarding yes
+X11DisplayOffset 10
+X11UseLocalhost yes
+XAuthLocation ${pkgs.xorg.xauth}/bin/xauth
+```
