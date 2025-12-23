@@ -59,10 +59,10 @@ else
 
     # Use the official single-user Nix installer
     log "Downloading Nix installer..."
-    curl -L https://nixos.org/nix/install -o /tmp/nix-install.sh
+    curl -L https://nixos.org/nix/install -o "$TMPDIR/nix-install.sh"
 
     log "Running Nix installer (single-user mode)..."
-    sh /tmp/nix-install.sh --no-daemon
+    sh "$TMPDIR/nix-install.sh" --no-daemon
 
     # Source Nix profile
     . $HOME/.nix-profile/etc/profile.d/nix.sh
