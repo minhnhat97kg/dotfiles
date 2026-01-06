@@ -56,6 +56,12 @@ secrets/*
 # Personal aliases (customize per machine)
 shell/aliases.yaml
 
+# Work git config (contains personal work email/info)
+git/work.gitconfig
+
+# Generated files
+scripts/whichkey_bindings.txt
+
 
 # Config-specific ignores
 fish/fish_variables

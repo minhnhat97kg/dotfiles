@@ -29,6 +29,9 @@ dotfiles/
 │   ├── progress.md        # Project progress tracking
 │   ├── workflow.md        # Development workflow
 │   ├── android-desktop.md # Android desktop environment guide
+│   ├── battery-optimization.md # Battery optimization guide for Android
+│   ├── ssh-passwords.md   # SSH password management
+│   ├── kulala-response-variables-guide.md
 │   └── tableplus-to-nvim-db.md
 ├── scripts/               # Shell scripts (copied to ~/.scripts/)
 │   ├── secrets-sync.sh    # Encrypt secrets to sops format
@@ -37,19 +40,18 @@ dotfiles/
 │   ├── claude-init.sh     # Initialize Claude Code in projects
 │   ├── cycle-layout.sh    # Cycle yabai layouts
 │   ├── toggle-kitty-window.sh  # Toggle floating kitty windows
+│   ├── toggle-theme.sh    # Toggle light/dark theme
 │   ├── clipse-wrapper.sh  # Clipboard manager wrapper
+│   ├── whichkey-fzf.sh    # Keybinding picker with FZF
 │   ├── ssh-*.sh           # SSH tunnel and password helpers
 │   ├── window-picker.sh   # Window selection UI
 │   ├── android-desktop.sh # Android XFCE4 desktop environment manager
+│   ├── activate-decrypt-secrets*.sh  # Activation scripts for secrets
 │   └── swagger-to-kulala/ # Go tool: Convert OpenAPI/Swagger to kulala.nvim HTTP files
 │       ├── main.go
 │       ├── go.mod
 │       ├── go.sum
 │       └── README.md
-├── templates/
-│   └── claude-code/       # Claude Code project templates
-│       ├── CLAUDE.md.template
-│       └── docs/          # Template documentation
 ├── nvim/                  # Neovim configuration
 │   ├── init.lua
 │   ├── lsp/               # LSP configurations
@@ -279,6 +281,5 @@ This repo includes a global `claude-init` command for initializing token-efficie
 ```bash
 claude-init [directory]  # Creates CLAUDE.md + docs/ structure
 ```
-- Templates: `templates/claude-code/`
 - Implementation: `scripts/claude-init.sh`
 - Installed to PATH via `modules/shared.nix`
