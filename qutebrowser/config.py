@@ -74,9 +74,9 @@ c.content.blocking.method = 'both'
 # =============================================================================
 c.fonts.default_family = ['JetBrainsMono Nerd Font', 'SF Mono', 'monospace']
 c.fonts.default_size = '12pt'
-c.fonts.web.family.standard = 'SF Pro Display'
-c.fonts.web.family.sans_serif = 'SF Pro Display'
-c.fonts.web.family.serif = 'New York'
+c.fonts.web.family.standard = 'JetBrainsMono Nerd Font'
+c.fonts.web.family.sans_serif = 'JetBrainsMono Nerd Font'
+c.fonts.web.family.serif = 'JetBrainsMono Nerd Font'
 c.fonts.web.family.fixed = 'JetBrainsMono Nerd Font'
 
 c.fonts.completion.category = 'bold 12pt default_family'
