@@ -28,7 +28,7 @@ dotfiles/
 ├── docs/                  # Documentation
 │   ├── progress.md        # Project progress tracking
 │   ├── workflow.md        # Development workflow
-│   ├── android-desktop.md # Android desktop environment guide
+│   ├── android-desktop.md # Android desktop (deprecated - removed)
 │   ├── battery-optimization.md # Battery optimization guide for Android
 │   ├── ssh-passwords.md   # SSH password management
 │   ├── kulala-response-variables-guide.md
@@ -45,7 +45,6 @@ dotfiles/
 │   ├── whichkey-fzf.sh    # Keybinding picker with FZF
 │   ├── ssh-*.sh           # SSH tunnel and password helpers
 │   ├── window-picker.sh   # Window selection UI
-│   ├── android-desktop.sh # Android XFCE4 desktop environment manager
 │   ├── activate-decrypt-secrets*.sh  # Activation scripts for secrets
 │   └── swagger-to-kulala/ # Go tool: Convert OpenAPI/Swagger to kulala.nvim HTTP files
 │       ├── main.go
@@ -139,23 +138,6 @@ make check        # Validate flake configuration
 make clean        # Remove build artifacts
 ```
 
-### Android Desktop Environment
-```bash
-# On Android device (nix-on-droid)
-desktop start         # Start VNC server with XFCE4 desktop
-desktop stop          # Stop VNC server
-desktop status        # Show VNC/SSH server status
-desktop info          # Show connection details
-desktop password      # Change VNC password
-desktop ssh-start     # Start SSH server
-desktop ssh-stop      # Stop SSH server
-
-# Connect via VNC client
-# Default: vnc://<device-ip>:5901
-# Password: vnc123 (change immediately!)
-```
-
-See [docs/android-desktop.md](docs/android-desktop.md) for complete guide.
 
 ### API Development with kulala.nvim
 ```bash
@@ -201,10 +183,8 @@ swagger-to-kulala -i api.yaml -o output/ -split # Split by tags
 ### Android (nix-on-droid)
 - Install from F-Droid, runs in Termux environment
 - SSH server auto-configured with generated keys (port 8022)
-- VNC server with full XFCE4 desktop environment (port 5901)
-- Desktop management via `android-desktop` command (alias: `desktop`)
+- Minimal terminal-only setup optimized for battery life
 - Optimized package set for mobile/battery constraints
-- See [docs/android-desktop.md](docs/android-desktop.md) for desktop environment details
 
 ## Important Implementation Details
 
@@ -283,3 +263,4 @@ claude-init [directory]  # Creates CLAUDE.md + docs/ structure
 ```
 - Implementation: `scripts/claude-init.sh`
 - Installed to PATH via `modules/shared.nix`
+- save the plan to use in the future
