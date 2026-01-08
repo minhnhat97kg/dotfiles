@@ -1,4 +1,4 @@
-.PHONY: help install build switch encrypt decrypt encrypt-ssh encrypt-aws encrypt-git decrypt-ssh decrypt-aws decrypt-git test clean check update format deps darwin android android-lite
+.PHONY: help install build switch encrypt decrypt encrypt-ssh encrypt-aws encrypt-git decrypt-ssh decrypt-aws decrypt-git test clean check update format deps darwin android
 
 # Configuration
 SECRETS_CONFIG ?= ./secrets/config.yaml
@@ -60,9 +60,6 @@ darwin: ## Install on macOS (nix-darwin)
 
 android: ## Install on Android (nix-on-droid)
 	nix-on-droid switch --flake .
-
-android-lite: ## Install on Android (lite/battery-optimized)
-	nix-on-droid switch --flake .#lite
 
 build: ## Build configuration without installing
 ifeq ($(PLATFORM),macos)

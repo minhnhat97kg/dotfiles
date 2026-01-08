@@ -29,7 +29,6 @@ dotfiles/
 │   ├── progress.md        # Project progress tracking
 │   ├── workflow.md        # Development workflow
 │   ├── android-desktop.md # Android desktop (deprecated - removed)
-│   ├── battery-optimization.md # Battery optimization guide for Android
 │   ├── ssh-passwords.md   # SSH password management
 │   ├── kulala-response-variables-guide.md
 │   └── tableplus-to-nvim-db.md
