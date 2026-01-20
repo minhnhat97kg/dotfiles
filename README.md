@@ -23,8 +23,7 @@ dotfiles/
 ├── pspg/                     # PostgreSQL pager
 ├── qutebrowser/              # Browser config
 ├── shell/                    # Shell dotfiles
-├── yabai/                    # Yabai window manager
-├── skhd/                     # macOS hotkey daemon
+
 ├── scripts/
 │   ├── secrets-sync.sh       # Encrypt secrets to sops format
 │   └── load-aliases.sh       # Load shell aliases
@@ -111,7 +110,7 @@ make help              # Show all available commands
 - **Shell**: Zsh + oh-my-zsh
 - **Development**: Go, Rust, Python, Node.js, Java
 - **Secrets**: Encrypted with sops/age
-- **macOS**: Yabai + skhd window management
+
 - **Android**: XFCE4 desktop environment via VNC
 
 **See CLAUDE.md for complete feature list**
@@ -139,7 +138,7 @@ sharedPackages = pkgs: with pkgs; [
 
 Common issues:
 - macOS: `darwin-rebuild` not found → `nix run nix-darwin -- switch --flake .`
-- macOS: skhd permissions → Grant Accessibility in System Settings
+
 - Linux: Hardware config missing → `nixos-generate-config`
 - Secrets fail → Check `~/.config/sops/age/keys.txt` exists
 

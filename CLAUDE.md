@@ -12,7 +12,7 @@ Cross-platform Nix configuration for macOS (nix-darwin), Linux (NixOS), and Andr
 - **Editor**: Neovim with LSP (Lua, TypeScript, Go, Rust, Java)
 - **Shell**: Zsh + oh-my-zsh
 - **Terminal**: Tmux + Kitty
-- **macOS Window Management**: Yabai, skhd, JankyBorders, Kanata
+- **macOS**: Kanata (keyboard customization)
 
 ## Repository Structure
 ```
@@ -37,13 +37,10 @@ dotfiles/
 │   ├── secrets-decrypt.sh # Decrypt secrets from sops
 │   ├── load-aliases.sh    # Load shell aliases
 │   ├── claude-init.sh     # Initialize Claude Code in projects
-│   ├── cycle-layout.sh    # Cycle yabai layouts
-│   ├── toggle-kitty-window.sh  # Toggle floating kitty windows
 │   ├── toggle-theme.sh    # Toggle light/dark theme
 │   ├── clipse-wrapper.sh  # Clipboard manager wrapper
 │   ├── whichkey-fzf.sh    # Keybinding picker with FZF
 │   ├── ssh-*.sh           # SSH tunnel and password helpers
-│   ├── window-picker.sh   # Window selection UI
 │   ├── activate-decrypt-secrets*.sh  # Activation scripts for secrets
 │   └── swagger-to-kulala/ # Go tool: Convert OpenAPI/Swagger to kulala.nvim HTTP files
 │       ├── main.go
@@ -63,9 +60,6 @@ dotfiles/
 ├── shell/                 # Shell configuration
 │   ├── aliases.yaml.example
 │   └── zshrc
-├── yabai/                 # Yabai window manager
-├── skhd/                  # skhd hotkey daemon
-├── yabai/                 # Yabai window manager
 ├── secrets/encrypted/     # sops-encrypted secrets
 │   ├── ssh/               # SSH keys and tunnels
 │   └── aws/               # AWS credentials
@@ -90,7 +84,7 @@ dotfiles/
    - Platform outputs (darwinConfigurations, nixosConfigurations, nixOnDroidConfigurations)
 3. **modules/** - Platform-specific Nix modules:
    - `shared.nix` - home-manager config used across all platforms (tmux, zsh, neovim)
-   - `darwin.nix` - macOS system config (yabai, skhd, homebrew)
+   - `darwin.nix` - macOS system config (homebrew, launchd services)
    - `linux.nix` - NixOS system config (GNOME, systemd, hardware)
    - `android.nix` - nix-on-droid config (SSH server, mobile-optimized)
 
@@ -169,10 +163,9 @@ swagger-to-kulala -i api.yaml -o output/ -split # Split by tags
 ## Platform-Specific Notes
 
 ### macOS (nix-darwin)
-- Yabai scripting addition requires SIP partially disabled on Apple Silicon
-- skhd requires Accessibility permission (System Settings > Privacy)
 - Kitty terminal installed via Homebrew (cask), config managed by Nix
-- After `make install`, yabai LaunchDaemon is automatically reloaded
+- LaunchDaemons configured for clipse clipboard manager
+- After `make install`, system configuration is automatically applied
 
 ### Linux (NixOS)
 - Hardware configuration must be generated per-machine: `nixos-generate-config`
@@ -192,10 +185,6 @@ swagger-to-kulala -i api.yaml -o output/ -split # Split by tags
 - Achieved via `is_vim` detection in tmux config (modules/shared.nix:37-41)
 - Tmux pane resize: prefix+h/j/k/l OR Ctrl+Shift+h/j/k/l (no prefix)
 
-### Kitty + skhd Integration
-- Kitty must pass through system keybindings to allow skhd to work
-- Critical: `cmd+j/k` for space switching, `cmd+r` for reload
-- CSI-u protocol disabled to prevent conflicts (kitty/kitty.conf:92)
 
 ### Zsh Alias Loading
 - Shell aliases dynamically loaded from YAML via `load-aliases.sh`
@@ -251,8 +240,6 @@ Quick essentials:
 - **Tmux navigate**: `Ctrl+h/j/k/l` (vim-aware, seamless with Neovim)
 - **Tmux resize**: `Ctrl-b h/j/k/l` or `Ctrl+Shift+h/j/k/l`
 - **Tmux windows**: `Alt+,` / `Alt+.`
-- **Yabai spaces**: `Cmd+j/k`
-- **Show all**: `Alt+Shift+/` (macOS only)
 
 ## Claude Code Workflow
 

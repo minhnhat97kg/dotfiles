@@ -139,43 +139,7 @@ tunnels:
     remote_port: 5432
 ```
 
-## Window Manager
 
-### `whichkey-fzf.sh`
-Display keybindings in fzf picker.
-
-**Usage:**
-```bash
-./scripts/whichkey-fzf.sh
-# Or press: Alt+Shift+/
-```
-
-**What it does:**
-- Reads `scripts/whichkey_bindings.txt`
-- Shows keybindings in interactive fzf picker
-- Allows searching and filtering
-
-### `cycle-layout.sh`
-Cycle through yabai window layouts.
-
-**Usage:**
-```bash
-./scripts/cycle-layout.sh forward
-./scripts/cycle-layout.sh backward
-./scripts/cycle-layout.sh current     # Show current layout
-```
-
-**Layouts:**
-- bsp → vertical → horizontal → master-stack → stack → float
-
-### `window-picker.sh`
-Interactive window picker using fzf.
-
-**Usage:**
-```bash
-./scripts/window-picker.sh
-# Or press: Alt+Shift+w
-```
 
 ## Shell Integration
 
@@ -212,14 +176,10 @@ scripts/
 │   ├── ssh-password-list.sh               # List entries
 │   └── ssh-tunnel.sh                      # Create SSH tunnel
 │
-├── Window Manager (macOS)
-│   ├── whichkey-fzf.sh                    # Keybinding picker
-│   ├── cycle-layout.sh                    # Cycle layouts
-│   └── window-picker.sh                   # Window picker
-│
+
 └── Shell Integration
     ├── load-aliases.sh                    # Dynamic alias loading
-    └── whichkey_bindings.txt              # Keybinding definitions
+
 ```
 
 ## Adding New Scripts

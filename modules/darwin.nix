@@ -41,23 +41,6 @@
     qutebrowser
   ];
 
-  # JankyBorders service
-  launchd.user.agents.jankyborders = {
-    serviceConfig = {
-      ProgramArguments = [
-        "${pkgs.jankyborders}/bin/borders"
-        "active_color=0xff89b4fa"
-        "inactive_color=0xff6c7086"
-        "width=5.0"
-        "style=round"
-      ];
-      KeepAlive = true;
-      RunAtLoad = true;
-      StandardOutPath = "/tmp/jankyborders.out.log";
-      StandardErrorPath = "/tmp/jankyborders.err.log";
-    };
-  };
-
   # Clipse clipboard manager listener
   launchd.user.agents.clipse = {
     serviceConfig = {

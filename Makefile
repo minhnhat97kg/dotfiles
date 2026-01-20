@@ -36,13 +36,7 @@ install: ## Install configuration (auto-detect platform)
 ifeq ($(PLATFORM),macos)
 	sudo darwin-rebuild switch --flake .
 	@echo ""
-	@echo "Checking yabai scripting addition LaunchDaemon..."
-	@if [ -f /Library/LaunchDaemons/org.nixos.yabai-sa.plist ]; then \
-		sudo launchctl bootout system/org.nixos.yabai-sa 2>/dev/null || true; \
-		sudo launchctl bootstrap system /Library/LaunchDaemons/org.nixos.yabai-sa.plist; \
-		sudo launchctl enable system/org.nixos.yabai-sa; \
-		echo "✓ yabai scripting addition LaunchDaemon loaded"; \
-	fi
+
 else
 	nix-on-droid switch --flake .
 endif
@@ -50,13 +44,7 @@ endif
 darwin: ## Install on macOS (nix-darwin)
 	sudo darwin-rebuild switch --flake .
 	@echo ""
-	@echo "Checking yabai scripting addition LaunchDaemon..."
-	@if [ -f /Library/LaunchDaemons/org.nixos.yabai-sa.plist ]; then \
-		sudo launchctl bootout system/org.nixos.yabai-sa 2>/dev/null || true; \
-		sudo launchctl bootstrap system /Library/LaunchDaemons/org.nixos.yabai-sa.plist; \
-		sudo launchctl enable system/org.nixos.yabai-sa; \
-		echo "✓ yabai scripting addition LaunchDaemon loaded"; \
-	fi
+
 
 android: ## Install on Android (nix-on-droid)
 	nix-on-droid switch --flake .
