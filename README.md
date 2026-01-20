@@ -23,7 +23,7 @@ dotfiles/
 ├── pspg/                     # PostgreSQL pager
 ├── qutebrowser/              # Browser config
 ├── shell/                    # Shell dotfiles
-├── sketchybar/               # macOS status bar
+├── yabai/                    # Yabai window manager
 ├── skhd/                     # macOS hotkey daemon
 ├── scripts/
 │   ├── secrets-sync.sh       # Encrypt secrets to sops format
@@ -111,7 +111,7 @@ make help              # Show all available commands
 - **Shell**: Zsh + oh-my-zsh
 - **Development**: Go, Rust, Python, Node.js, Java
 - **Secrets**: Encrypted with sops/age
-- **macOS**: Yabai, skhd, Sketchybar window management
+- **macOS**: Yabai + skhd window management
 - **Android**: XFCE4 desktop environment via VNC
 
 **See CLAUDE.md for complete feature list**

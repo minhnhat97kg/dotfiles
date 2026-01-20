@@ -74,6 +74,7 @@
         export PATH="$HOME/.npm-global/bin:$PATH"
         export PATH="$HOME/.local/bin:$PATH"
         ALIASES_SCRIPT="$HOME/.config/dotfiles/scripts/load-aliases.sh"
+        export AWS_REGION=ap-southeast-1 
         if [ -f "$ALIASES_SCRIPT" ]; then
           eval "$($ALIASES_SCRIPT)"
         fi

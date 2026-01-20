@@ -153,10 +153,8 @@
                       source = ./kitty/kitty.conf;
                       force = true;
                     };
-                    home.file.".config/sketchybar/" = { source = ./sketchybar; recursive = true; executable = true; };
                     home.file.".ideavimrc".source = ./shell/.ideavimrc;
-                    home.file.".config/skhd/skhdrc".source = ./skhd/skhdrc;
-                    home.file.".config/git/ignore".source = ./git/ignore;
+                    home.file.".config/git/ignore" = { source = ./git/ignore; force = true; };
                     home.file.".config/lazygit/" = { source = ./lazygit; recursive = true; };
                     home.file.".pspgconf".source = ./pspg/pspgconf;
                     home.file.".config/qutebrowser/config.py".source = ./qutebrowser/config.py;
@@ -214,7 +212,7 @@
                         force = true;
                       };
                       home.file.".ideavimrc".source = ./shell/.ideavimrc;
-                      home.file.".config/git/ignore".source = ./git/ignore;
+                      home.file.".config/git/ignore" = { source = ./git/ignore; force = true; };
                       home.file.".config/lazygit/" = { source = ./lazygit; recursive = true; };
                       home.file.".pspgconf".source = ./pspg/pspgconf;
                     }

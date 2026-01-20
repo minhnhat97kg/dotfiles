@@ -12,7 +12,7 @@ Cross-platform Nix configuration for macOS (nix-darwin), Linux (NixOS), and Andr
 - **Editor**: Neovim with LSP (Lua, TypeScript, Go, Rust, Java)
 - **Shell**: Zsh + oh-my-zsh
 - **Terminal**: Tmux + Kitty
-- **macOS Window Management**: Yabai, skhd, Sketchybar, JankyBorders, Kanata
+- **macOS Window Management**: Yabai, skhd, JankyBorders, Kanata
 
 ## Repository Structure
 ```
@@ -65,7 +65,7 @@ dotfiles/
 │   └── zshrc
 ├── yabai/                 # Yabai window manager
 ├── skhd/                  # skhd hotkey daemon
-├── sketchybar/            # Sketchybar status bar
+├── yabai/                 # Yabai window manager
 ├── secrets/encrypted/     # sops-encrypted secrets
 │   ├── ssh/               # SSH keys and tunnels
 │   └── aws/               # AWS credentials
@@ -90,7 +90,7 @@ dotfiles/
    - Platform outputs (darwinConfigurations, nixosConfigurations, nixOnDroidConfigurations)
 3. **modules/** - Platform-specific Nix modules:
    - `shared.nix` - home-manager config used across all platforms (tmux, zsh, neovim)
-   - `darwin.nix` - macOS system config (yabai, skhd, sketchybar, homebrew)
+   - `darwin.nix` - macOS system config (yabai, skhd, homebrew)
    - `linux.nix` - NixOS system config (GNOME, systemd, hardware)
    - `android.nix` - nix-on-droid config (SSH server, mobile-optimized)
 

@@ -161,44 +161,90 @@ if vim.g.is_ssh then
 end
 
 -- ============================================================================
--- KEYMAPS
--- Vimdiff enhancements
-vim.api.nvim_create_autocmd("VimEnter", {
-  callback = function()
-    if vim.opt.diff:get() then
-      vim.opt.wrap = false
-      vim.opt.list = false
-      vim.opt.colorcolumn = ""
-      vim.opt.scrolloff = 2
-      vim.cmd("highlight DiffAdd    cterm=bold gui=bold guibg=#1e1e2e guifg=#a6e3a1")
-      vim.cmd("highlight DiffChange gui=bold guibg=#1e1e2e guifg=#89b4fa")
-      vim.cmd("highlight DiffDelete gui=bold guibg=#1e1e2e guifg=#f38ba8")
-      vim.cmd("highlight DiffText   gui=bold guibg=#313244 guifg=#cdd6f4")
-      -- Custom signs for diff mode using gutter symbols
-      vim.fn.sign_define("DiffAdd", { text = "+", texthl = "DiffAdd" })
-      vim.fn.sign_define("DiffChange", { text = "~", texthl = "DiffChange" })
-      vim.fn.sign_define("DiffDelete", { text = "-", texthl = "DiffDelete" })
-      -- Faster diff options
-      vim.opt.diffopt:append({ "vertical", "iwhite", "indent-heuristic", "algorithm:histogram" })
-    end
-  end,
-})
+-- KEYMAPS - CONSOLIDATED
 -- ============================================================================
+
+-- General keymaps
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
 vim.keymap.set("n", "<leader>q", vim.diagnostic.setloclist, { desc = "Open diagnostic [Q]uickfix list" })
 vim.keymap.set("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 vim.keymap.set("n", ";", ":", { desc = "Enter the command" })
+
+-- Window navigation
 vim.keymap.set("n", "<C-h>", "<C-w><C-h>", { desc = "Move focus to the left window" })
 vim.keymap.set("n", "<C-l>", "<C-w><C-l>", { desc = "Move focus to the right window" })
 vim.keymap.set("n", "<C-j>", "<C-w><C-j>", { desc = "Move focus to the lower window" })
 vim.keymap.set("n", "<C-k>", "<C-w><C-k>", { desc = "Move focus to the upper window" })
 
--- Resize windows with Alt+hjkl (prefix-less)
+-- Resize windows
 vim.keymap.set("n", "<A-h>", ":vertical resize -2<CR>", { desc = "Decrease window width" })
 vim.keymap.set("n", "<A-l>", ":vertical resize +2<CR>", { desc = "Increase window width" })
 vim.keymap.set("n", "<A-j>", ":resize -2<CR>", { desc = "Decrease window height" })
 vim.keymap.set("n", "<A-k>", ":resize +2<CR>", { desc = "Increase window height" })
 vim.keymap.set("n", "<A-=>", "<C-w>=", { desc = "Make windows equal size" })
+
+-- Telescope keymaps (will be available after Telescope loads)
+vim.keymap.set("n", "<leader>sh", function() require("telescope.builtin").help_tags() end, { desc = "[S]earch [H]elp" })
+vim.keymap.set("n", "<leader>sk", function() require("telescope.builtin").keymaps() end, { desc = "[S]earch [K]eymaps" })
+vim.keymap.set("n", "<leader>sf", function() require("telescope.builtin").find_files() end, { desc = "[S]earch [F]iles" })
+vim.keymap.set("n", "<leader>ss", function() require("telescope.builtin").builtin() end, { desc = "[S]earch [S]elect Telescope" })
+vim.keymap.set("n", "<leader>sw", function() require("telescope.builtin").grep_string() end, { desc = "[S]earch current [W]ord" })
+vim.keymap.set("n", "<leader>sg", function() require("telescope.builtin").live_grep() end, { desc = "[S]earch by [G]rep" })
+vim.keymap.set("n", "<leader>sd", function() require("telescope.builtin").diagnostics() end, { desc = "[S]earch [D]iagnostics" })
+vim.keymap.set("n", "<leader>sr", function() require("telescope.builtin").resume() end, { desc = "[S]earch [R]esume" })
+vim.keymap.set("n", "<leader>s.", function() require("telescope.builtin").oldfiles() end, { desc = '[S]earch Recent Files ("." for repeat)' })
+vim.keymap.set("n", "<leader><leader>", function() require("telescope.builtin").buffers() end, { desc = "[ ] Find existing buffers" })
+vim.keymap.set("n", "<leader>fb", function() require("telescope").extensions.file_browser.file_browser() end, { desc = "[F]ile [B]rowser" })
+vim.keymap.set("n", "<leader>/", function()
+  require("telescope.builtin").current_buffer_fuzzy_find(require("telescope.themes").get_dropdown({
+    winblend = 10,
+    previewer = false,
+  }))
+end, { desc = "[/] Fuzzily search in current buffer" })
+vim.keymap.set("n", "<leader>s/", function()
+  require("telescope.builtin").live_grep({
+    grep_open_files = true,
+    prompt_title = "Live Grep in Open Files",
+  })
+end, { desc = "[S]earch [/] in Open Files" })
+vim.keymap.set("n", "<leader>sn", function()
+  require("telescope.builtin").find_files({ cwd = vim.fn.stdpath("config") })
+end, { desc = "[S]earch [N]eovim files" })
+
+-- Snacks keymaps
+vim.keymap.set("n", "<leader>tg", function() require("snacks").lazygit.open() end, { desc = "[T]oggle [G]it" })
+vim.keymap.set("n", "<leader>tt", function() require("snacks").terminal.toggle() end, { desc = "[T]oggle [T]erminal" })
+vim.keymap.set("n", "<leader>bdc", function() require("snacks").bufdelete.delete() end, { desc = "[B]uffer [D]elete [C]urrent" })
+vim.keymap.set("n", "<leader>bda", function() require("snacks").bufdelete.all() end, { desc = "[B]uffer [D]elete [A]ll" })
+vim.keymap.set("n", "<leader>bdo", function() require("snacks").bufdelete.other() end, { desc = "[B]uffer [D]elete [O]ther" })
+
+-- Hop movement keymaps
+vim.keymap.set("", "f", function()
+  require("hop").hint_char1({ direction = require("hop.hint").HintDirection.AFTER_CURSOR, current_line_only = false })
+end, { remap = true, desc = "Hop forward to char" })
+vim.keymap.set("", "F", function()
+  require("hop").hint_char1({ direction = require("hop.hint").HintDirection.BEFORE_CURSOR, current_line_only = false })
+end, { remap = true, desc = "Hop backward to char" })
+
+-- Copilot keymaps (only loaded when not in SSH)
+if not vim.g.is_ssh then
+  vim.keymap.set("i", "<C-a>", 'copilot#Accept("")', { expr = true, replace_keycodes = false, desc = "Accept Copilot suggestion" })
+  vim.keymap.set("i", "<C-]>", "<Plug>(copilot-next)", { desc = "Next Copilot suggestion" })
+  vim.keymap.set("i", "<M-[>", "<Plug>(copilot-previous)", { desc = "Previous Copilot suggestion" })
+  vim.keymap.set("i", "<C-\\>", "<Plug>(copilot-dismiss)", { desc = "Dismiss Copilot suggestion" })
+end
+
+-- NOTE: Kulala keymaps defined in plugin's lazy.nvim 'keys' table for lazy loading
+
+-- Database keymaps (vim-dadbod-ui)
+vim.keymap.set("n", "<leader>Du", "<cmd>DBUIToggle<cr>", { desc = "[D]atabase [U]I toggle" })
+vim.keymap.set("n", "<leader>Da", "<cmd>DBUIAddConnection<cr>", { desc = "[D]atabase [A]dd connection" })
+vim.keymap.set("n", "<leader>Df", "<cmd>DBUIFindBuffer<cr>", { desc = "[D]atabase [F]ind buffer" })
+vim.keymap.set("n", "<leader>Dr", "<cmd>DBUIRenameBuffer<cr>", { desc = "[D]atabase [R]ename buffer" })
+vim.keymap.set("n", "<leader>Dl", "<cmd>DBUILastQueryInfo<cr>", { desc = "[D]atabase [L]ast query info" })
+
+-- NOTE: SQL-specific keymaps (<leader>De, <leader>Db, <leader>Ds, <leader>Dt) are set in FileType autocmd
+-- NOTE: LSP keymaps (gd, gr, K, etc.) are set in LspAttach autocmd at bottom of file
 
 -- ============================================================================
 -- AUTOCMDS
@@ -322,39 +368,7 @@ require("lazy").setup({
       pcall(require("telescope").load_extension, "fzf")
       pcall(require("telescope").load_extension, "ui-select")
       pcall(require("telescope").load_extension, "file_browser")
-
-      local builtin = require("telescope.builtin")
-      vim.keymap.set("n", "<leader>sh", builtin.help_tags, { desc = "[S]earch [H]elp" })
-      vim.keymap.set("n", "<leader>sk", builtin.keymaps, { desc = "[S]earch [K]eymaps" })
-      vim.keymap.set("n", "<leader>sf", builtin.find_files, { desc = "[S]earch [F]iles" })
-      vim.keymap.set("n", "<leader>ss", builtin.builtin, { desc = "[S]earch [S]elect Telescope" })
-      vim.keymap.set("n", "<leader>sw", builtin.grep_string, { desc = "[S]earch current [W]ord" })
-      vim.keymap.set("n", "<leader>sg", builtin.live_grep, { desc = "[S]earch by [G]rep" })
-      vim.keymap.set("n", "<leader>sd", builtin.diagnostics, { desc = "[S]earch [D]iagnostics" })
-      vim.keymap.set("n", "<leader>sr", builtin.resume, { desc = "[S]earch [R]esume" })
-      vim.keymap.set("n", "<leader>s.", builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
-      vim.keymap.set("n", "<leader><leader>", builtin.buffers, { desc = "[ ] Find existing buffers" })
-      vim.keymap.set("n", "<leader>fb", function()
-        require("telescope").extensions.file_browser.file_browser()
-      end, { desc = "[F]ile [B]rowser" })
-
-      vim.keymap.set("n", "<leader>/", function()
-        builtin.current_buffer_fuzzy_find(require("telescope.themes").get_dropdown({
-          winblend = 10,
-          previewer = false,
-        }))
-      end, { desc = "[/] Fuzzily search in current buffer" })
-
-      vim.keymap.set("n", "<leader>s/", function()
-        builtin.live_grep({
-          grep_open_files = true,
-          prompt_title = "Live Grep in Open Files",
-        })
-      end, { desc = "[S]earch [/] in Open Files" })
-
-      vim.keymap.set("n", "<leader>sn", function()
-        builtin.find_files({ cwd = vim.fn.stdpath("config") })
-      end, { desc = "[S]earch [N]eovim files" })
+      -- Keymaps moved to consolidated KEYMAPS section above
     end,
   },
 
@@ -550,14 +564,7 @@ require("lazy").setup({
       bufdelete = { enabled = true },
       terminal = { enabled = true },
     },
-    config = function()
-      local snacks = require("snacks")
-      vim.keymap.set("n", "<leader>tg", snacks.lazygit.open, { desc = "[T]oggle [G]it" })
-      vim.keymap.set("n", "<leader>tt", snacks.terminal.toggle, { desc = "[T]oggle [T]erminal" })
-      vim.keymap.set("n", "<leader>bdc", snacks.bufdelete.delete, { desc = "[B]uffer [D]elete [C]urrent" })
-      vim.keymap.set("n", "<leader>bda", snacks.bufdelete.all, { desc = "[B]uffer [D]elete [A]ll" })
-      vim.keymap.set("n", "<leader>bdo", snacks.bufdelete.other, { desc = "[B]uffer [D]elete [O]ther" })
-    end,
+    -- Keymaps moved to consolidated KEYMAPS section above
   },
 
   -- Movement
@@ -565,14 +572,7 @@ require("lazy").setup({
     "phaazon/hop.nvim",
     config = function()
       require("hop").setup({ keys = "etovxqpdygfblzhckisuran" })
-      local hop = require("hop")
-      local directions = require("hop.hint").HintDirection
-      vim.keymap.set("", "f", function()
-        hop.hint_char1({ direction = directions.AFTER_CURSOR, current_line_only = false })
-      end, { remap = true })
-      vim.keymap.set("", "F", function()
-        hop.hint_char1({ direction = directions.BEFORE_CURSOR, current_line_only = false })
-      end, { remap = true })
+      -- Keymaps moved to consolidated KEYMAPS section above
     end,
   },
 
@@ -600,18 +600,8 @@ require("lazy").setup({
     "github/copilot.vim",
     enabled = not vim.g.is_ssh,
     config = function()
-      -- Use Ctrl+Enter to accept Copilot suggestions
       vim.g.copilot_no_tab_map = true
-      vim.keymap.set("i", "<C-CR>", 'copilot#Accept("")', {
-        expr = true,
-        replace_keycodes = false,
-        desc = "Accept Copilot suggestion",
-      })
-      -- Additional Copilot keymaps
-      vim.keymap.set("i", "<C-]>", "<Plug>(copilot-next)", { desc = "Next Copilot suggestion" })
-      -- Note: <C-[> is identical to ESC, so we use <M-[> (Alt+[) instead
-      vim.keymap.set("i", "<M-[>", "<Plug>(copilot-previous)", { desc = "Previous Copilot suggestion" })
-      vim.keymap.set("i", "<C-\\>", "<Plug>(copilot-dismiss)", { desc = "Dismiss Copilot suggestion" })
+      -- Keymaps moved to consolidated KEYMAPS section above
     end,
   },
   {
@@ -768,19 +758,14 @@ require("lazy").setup({
       vim.g.db_ui_execute_on_save = 0
     end,
     config = function()
-      -- Keymaps for database operations
-      vim.keymap.set("n", "<leader>Du", "<cmd>DBUIToggle<cr>", { desc = "[D]atabase [U]I toggle" })
-      vim.keymap.set("n", "<leader>Da", "<cmd>DBUIAddConnection<cr>", { desc = "[D]atabase [A]dd connection" })
-      vim.keymap.set("n", "<leader>Df", "<cmd>DBUIFindBuffer<cr>", { desc = "[D]atabase [F]ind buffer" })
-      vim.keymap.set("n", "<leader>Dr", "<cmd>DBUIRenameBuffer<cr>", { desc = "[D]atabase [R]ename buffer" })
-      vim.keymap.set("n", "<leader>Dl", "<cmd>DBUILastQueryInfo<cr>", { desc = "[D]atabase [L]ast query info" })
-
-      -- SQL file specific keymaps
+      -- Basic keymaps moved to consolidated KEYMAPS section above
+      -- SQL file specific keymaps (kept here due to FileType autocmd context)
       vim.api.nvim_create_autocmd("FileType", {
         pattern = { "sql", "mysql", "plsql" },
         callback = function()
           -- Execute query and send to pspg
           local function execute_to_pspg(is_visual)
+            vim.notify("execute_to_pspg called, is_visual=" .. tostring(is_visual), vim.log.levels.INFO)
             local query
             if is_visual then
               -- Get visual selection
@@ -819,12 +804,15 @@ require("lazy").setup({
               query = table.concat(lines, "\n")
             end
 
+            vim.notify("Query extracted:\n" .. query, vim.log.levels.INFO)
+
             -- Get database URL from DBUI
             local db_url = vim.b.db or vim.g.db
             if not db_url then
-              vim.notify("No database connection found", vim.log.levels.ERROR)
+              vim.notify("No database connection found. Open DBUI first with <leader>Du", vim.log.levels.ERROR)
               return
             end
+            vim.notify("Database URL found: " .. (type(db_url) == "string" and db_url:sub(1, 30) .. "..." or "table"), vim.log.levels.INFO)
 
             -- Execute query using vim-dadbod and capture output
             local tmpfile = vim.fn.tempname() .. ".txt"
@@ -834,24 +822,37 @@ require("lazy").setup({
             vim.fn.writefile(vim.split(query, "\n"), queryfile)
 
             -- Execute via DB command with file input
+            vim.notify("Executing: DB < " .. queryfile, vim.log.levels.INFO)
             vim.cmd("DB < " .. queryfile)
 
-            -- Wait for execution then get result
+            -- Wait for execution then get result (increased delay for slower queries)
             vim.defer_fn(function()
-              vim.fn.delete(queryfile)
+              vim.notify("Checking for dbout buffer...", vim.log.levels.INFO)
+              -- NOTE: Don't delete queryfile here - DB command may still be reading it
+              -- It will be cleaned up by the OS temp file cleanup
 
               -- Find the most recent dbout buffer and get its content
               local dbout_buf = nil
+              -- Debug: List all buffers
+              vim.notify("Listing all loaded buffers:", vim.log.levels.INFO)
               for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-                if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].filetype == "dbout" then
-                  dbout_buf = buf
+                if vim.api.nvim_buf_is_loaded(buf) then
+                  local ft = vim.bo[buf].filetype
+                  local name = vim.api.nvim_buf_get_name(buf)
+                  vim.notify(string.format("  buf %d: ft='%s' name='%s'", buf, ft, name), vim.log.levels.INFO)
+                  if ft == "dbout" then
+                    dbout_buf = buf
+                  end
                 end
               end
 
               if dbout_buf then
+                vim.notify("Found dbout buffer: " .. dbout_buf, vim.log.levels.INFO)
                 local lines = vim.api.nvim_buf_get_lines(dbout_buf, 0, -1, false)
+                vim.notify("Result has " .. #lines .. " lines", vim.log.levels.INFO)
                 if #lines > 0 and lines[1] ~= "" then
                   vim.fn.writefile(lines, tmpfile)
+                  vim.notify("Opening pspg with: " .. tmpfile, vim.log.levels.INFO)
 
                   -- Close the result buffer/window
                   for _, win in ipairs(vim.api.nvim_list_wins()) do
@@ -875,10 +876,10 @@ require("lazy").setup({
                   vim.fn.delete(tmpfile)
                 end
               else
-                vim.notify("No result buffer found", vim.log.levels.ERROR)
+                vim.notify("No dbout buffer found. The query may have failed or DB command works differently.", vim.log.levels.ERROR)
                 vim.fn.delete(tmpfile)
               end
-            end, 500)
+            end, 1500)  -- Increased from 500ms to 1500ms for slower queries
           end
 
           -- Execute query to pspg
