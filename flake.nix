@@ -1,5 +1,5 @@
 {
-  description = "Cross-platform Nix configuration (macOS, Linux & Android)";
+  description = "Cross-platform Nix configuration (macOS & Android)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -35,7 +35,6 @@
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
     ];
-    # Suppress dirty tree warning once flake config is trusted
     warn-dirty = false;
   };
 
@@ -88,9 +87,6 @@
         # SSH tools
         sshpass
 
-        # Clipboard management (platform-specific, use xclip/wl-clipboard on Linux)
-        # clipboard-jh is macOS-only, handled per-platform
-
         # Utilities
         fx clipse imagemagick
       ];
@@ -101,16 +97,9 @@
         nerd-fonts.jetbrains-mono
       ];
 
-      # Linux-specific packages (handled in modules/linux.nix)
-      linuxPackages = pkgs: with pkgs; [
-        xclip
-        wl-clipboard
-      ];
+      # Shared home-manager configuration (modules/home/default.nix)
+      # sharedHomeConfig kept for reference but no longer used — hosts import directly
 
-      # Shared home-manager configuration
-      sharedHomeConfig = args: import ./modules/shared.nix (args // { inherit sharedPackages; });
-
-      pkgsDarwin = nixpkgs.legacyPackages.aarch64-darwin;
     in
     {
       # ============================================================================
@@ -122,105 +111,28 @@
         aarch64-darwin.rust = let pkgs = nixpkgs.legacyPackages.aarch64-darwin; in pkgs.mkShell { buildInputs = [ pkgs.rustc pkgs.cargo pkgs.clippy pkgs.rustfmt pkgs.rust-analyzer ]; };
         aarch64-linux.go = let pkgs = nixpkgs.legacyPackages.aarch64-linux; in pkgs.mkShell { buildInputs = [ pkgs.go pkgs.delve pkgs.goimports-reviser pkgs.golangci-lint ]; };
         aarch64-linux.rust = let pkgs = nixpkgs.legacyPackages.aarch64-linux; in pkgs.mkShell { buildInputs = [ pkgs.rustc pkgs.cargo pkgs.clippy pkgs.rustfmt pkgs.rust-analyzer ]; };
-        x86_64-linux.go = let pkgs = nixpkgs.legacyPackages.x86_64-linux; in pkgs.mkShell { buildInputs = [ pkgs.go pkgs.delve pkgs.goimports-reviser pkgs.golangci-lint ]; };
-        x86_64-linux.java = let pkgs = nixpkgs.legacyPackages.x86_64-linux; in pkgs.mkShell { buildInputs = [ pkgs.maven pkgs.gradle ]; };
-        x86_64-linux.rust = let pkgs = nixpkgs.legacyPackages.x86_64-linux; in pkgs.mkShell { buildInputs = [ pkgs.rustc pkgs.cargo pkgs.clippy pkgs.rustfmt pkgs.rust-analyzer ]; };
       };
 
       # ============================================================================
-      # macOS Configuration (nix-darwin)
+      # macOS Configurations (nix-darwin)
+      # To add a new Mac: copy this stanza, update hostname + host file path
       # ============================================================================
       darwinConfigurations."Nathan-Macbook" = nix-darwin.lib.darwinSystem {
         system = "aarch64-darwin";
-        specialArgs = inputs // { inherit username useremail sharedHomeConfig darwinPackages; };
+        specialArgs = inputs // { inherit username useremail darwinPackages sharedPackages; };
         modules = [
-          ./modules/darwin.nix
+          ./modules/platforms/darwin.nix
+          ./hosts/darwin/Nathan-Macbook.nix
           home-manager.darwinModules.home-manager
           {
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
               verbose = true;
-              extraSpecialArgs = inputs // { inherit username sharedHomeConfig darwinPackages; };
-              users.${username} = { pkgs, lib, config, ... }:
-                lib.mkMerge [
-                  (sharedHomeConfig { inherit pkgs lib; })
-                  {
-                    home.username = username;
-                    home.homeDirectory = "/Users/${username}";
-                    home.packages = (darwinPackages pkgs) ++ (with pkgs; [ kitty ]);
-                    home.file.".config/kitty/kitty.conf" = {
-                      source = ./kitty/kitty.conf;
-                      force = true;
-                    };
-                    home.file.".ideavimrc".source = ./shell/.ideavimrc;
-                    home.file.".config/git/ignore" = { source = ./git/ignore; force = true; };
-                    home.file.".config/lazygit/" = { source = ./lazygit; recursive = true; };
-                    home.file.".pspgconf".source = ./pspg/pspgconf;
-                    home.file.".config/qutebrowser/config.py".source = ./qutebrowser/config.py;
-                    home.file.".config/qutebrowser/profiles.yaml".source = ./qutebrowser/profiles.yaml;
-                    # Userscript deployment removed; using command prefill for tab close
-                    home.file.".local/bin/qb-profile" = {
-                      source = ./qutebrowser/qb-profile;
-                      executable = true;
-                    };
-                    home.file.".local/bin/qb-picker" = {
-                      source = ./qutebrowser/qb-picker;
-                      executable = true;
-                    };
-                    home.file.".local/bin/qb-picker-gui" = {
-                      source = ./qutebrowser/qb-picker-gui;
-                      executable = true;
-                    };
-                    home.file.".config/qutebrowser/create-qb-launcher.sh" = {
-                      source = ./qutebrowser/create-qb-launcher.sh;
-                      executable = true;
-                    };
-                  }
-                ];
+              extraSpecialArgs = inputs // { inherit username darwinPackages sharedPackages; };
             };
           }
         ];
-      };
-
-      # ============================================================================
-      # Linux Configuration (NixOS)
-      # ============================================================================
-      nixosConfigurations = {
-        # x86_64 Linux desktop/laptop
-        nixos = nixpkgs.lib.nixosSystem {
-          system = "x86_64-linux";
-          specialArgs = inputs // { inherit username useremail sharedHomeConfig linuxPackages; };
-          modules = [
-            ./modules/linux.nix
-            home-manager.nixosModules.home-manager
-            {
-              home-manager = {
-                useGlobalPkgs = true;
-                useUserPackages = true;
-                verbose = true;
-                extraSpecialArgs = inputs // { inherit username sharedHomeConfig linuxPackages; };
-                users.${username} = { pkgs, lib, config, ... }:
-                  lib.mkMerge [
-                    (sharedHomeConfig { inherit pkgs lib; })
-                    {
-                      home.username = username;
-                      home.homeDirectory = "/home/${username}";
-                      home.packages = (linuxPackages pkgs) ++ (with pkgs; [ kitty ]);
-                      home.file.".config/kitty/kitty.conf" = {
-                        source = ./kitty/kitty.conf;
-                        force = true;
-                      };
-                      home.file.".ideavimrc".source = ./shell/.ideavimrc;
-                      home.file.".config/git/ignore" = { source = ./git/ignore; force = true; };
-                      home.file.".config/lazygit/" = { source = ./lazygit; recursive = true; };
-                      home.file.".pspgconf".source = ./pspg/pspgconf;
-                    }
-                  ];
-              };
-            }
-          ];
-        };
       };
 
       # ============================================================================
@@ -228,17 +140,17 @@
       # ============================================================================
       nixOnDroidConfigurations.default =
         let
-          system = "aarch64-linux";
           pkgs = import nixpkgs {
-            inherit system;
+            system = "aarch64-linux";
             config.allowUnfree = true;
           };
         in
         nix-on-droid.lib.nixOnDroidConfiguration {
           inherit pkgs;
           modules = [
-            (import ./modules/android.nix {
-              inherit pkgs sharedPackages sharedHomeConfig;
+            ./modules/platforms/android.nix
+            (import ./hosts/android/default.nix {
+              inherit pkgs sharedPackages;
               lib = nixpkgs.lib;
             })
           ];
@@ -248,7 +160,6 @@
       formatter = {
         aarch64-darwin = nixpkgs.legacyPackages.aarch64-darwin.alejandra;
         aarch64-linux = nixpkgs.legacyPackages.aarch64-linux.alejandra;
-        x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.alejandra;
       };
     };
 }

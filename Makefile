@@ -1,16 +1,15 @@
-.PHONY: help install build switch encrypt decrypt encrypt-ssh encrypt-aws encrypt-git decrypt-ssh decrypt-aws decrypt-git test clean check update format deps darwin android
+.PHONY: help install build switch encrypt encrypt-custom decrypt decrypt-yes decrypt-custom deps update format check clean gen-key darwin android check-age-key
 
 # Configuration
 SECRETS_CONFIG ?= ./secrets/config.yaml
 
 # Platform detection
-PLATFORM := $(shell uname -s | sed 's/Darwin/macos/' | sed 's/Linux/android/' )
+PLATFORM := $(shell uname -s | sed 's/Darwin/macos/' | sed 's/Linux/android/')
 
 help: ## Show available commands
 	@echo "Dotfiles Management (Platform: $(PLATFORM))"
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
-	@echo ""
 	@echo ""
 	@echo "Configuration:"
 	@echo "  SECRETS_CONFIG=$(SECRETS_CONFIG)"
@@ -31,22 +30,30 @@ deps: ## Install required dependencies (yq-go, age)
 	fi
 	@echo "✓ All dependencies installed"
 
+gen-key: ## Generate age key for secrets encryption
+	@mkdir -p ~/.config/sops/age
+	@age-keygen -o ~/.config/sops/age/keys.txt
+	@echo "✓ Age key generated at ~/.config/sops/age/keys.txt"
+	@echo "  Public key:"
+	@age-keygen -y ~/.config/sops/age/keys.txt
+
+check-age-key: ## Check age key exists, prompt to set up if missing
+	@./scripts/check-age-key.sh
+
 # Main targets
-install: ## Install configuration (auto-detect platform)
+install: check-age-key ## Install configuration (auto-detect platform)
 ifeq ($(PLATFORM),macos)
 	sudo darwin-rebuild switch --flake .
 	@echo ""
-
 else
 	nix-on-droid switch --flake .
 endif
 
-darwin: ## Install on macOS (nix-darwin)
+darwin: check-age-key ## Install on macOS (nix-darwin)
 	sudo darwin-rebuild switch --flake .
 	@echo ""
 
-
-android: ## Install on Android (nix-on-droid)
+android: check-age-key ## Install on Android (nix-on-droid)
 	nix-on-droid switch --flake .
 
 build: ## Build configuration without installing
@@ -56,7 +63,19 @@ else
 	nix-on-droid build --flake .
 endif
 
-switch: install ## Switch configuration
+switch: install ## Switch configuration (alias for install)
+
+update: ## Update flake inputs
+	nix flake update
+
+format: ## Format all nix files with alejandra
+	nix fmt
+
+check: ## Validate flake configuration
+	nix flake check
+
+clean: ## Remove build artifacts
+	rm -f result result-*
 
 # Encryption targets
 encrypt: ## Encrypt all secrets based on config file
@@ -77,3 +96,5 @@ decrypt-custom: ## Decrypt with custom config (usage: make decrypt-custom CONFIG
 	@if [ -z "$(CONFIG)" ]; then echo "Error: CONFIG not specified. Usage: make decrypt-custom CONFIG=/path/to/config.yaml"; exit 1; fi
 	@./scripts/secrets-decrypt.sh --config $(CONFIG)
 
+secret-edit: ## Interactively enter/update a secret and encrypt it
+	@./scripts/secrets-edit.sh

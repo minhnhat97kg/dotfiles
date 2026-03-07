@@ -1,4 +1,4 @@
-{ inputs, pkgs, lib, username, useremail, sharedHomeConfig, ... }:
+{ inputs, pkgs, lib, username, useremail, ... }:
 {
   system.stateVersion = 5;
   nixpkgs.config.allowUnfree = true;
@@ -58,7 +58,7 @@
   # Secrets decryption activation script
   system.activationScripts.extraActivation.text = ''
     # Run secrets activation script
-    DOTFILES_DIR="${builtins.toString ../.}"
+    DOTFILES_DIR="${builtins.toString ../../.}"
     ACTIVATION_SCRIPT="$DOTFILES_DIR/scripts/activate-decrypt-secrets.sh"
 
     if [ -f "$ACTIVATION_SCRIPT" ]; then
@@ -68,9 +68,6 @@
     fi
   '';
 
-  # Host & user configuration
-  networking.hostName = "Nathan-Macbook";
-  networking.computerName = "Nathan-Macbook";
   system.primaryUser = username;
 
   users.users."${username}" = {

@@ -2,3 +2,5 @@
 .DS_Store
 .claude/
 .envrc
+plans/
+docs/

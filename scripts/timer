@@ -1,0 +1,292 @@
+#!/bin/bash
+
+# Resolve script directory to locate .env
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    export $(grep -v '^#' "$SCRIPT_DIR/.env" | xargs)
+fi
+
+# Fallback for CLOCKIFY_KEY
+if [ -z "$CLOCKIFY_KEY" ] && [ -n "$CLOCKIFY" ]; then
+    export CLOCKIFY_KEY="$CLOCKIFY"
+fi
+
+# Timezone Configuration
+# If not set in .env or environment, it will use Asia/Ho_Chi_Minh (VNT) as default
+if [ -z "$TIMEZONE" ]; then
+    TIMEZONE="Asia/Ho_Chi_Minh"
+fi
+
+# Check dependencies
+for cmd in curl jq git column; do
+    if ! command -v $cmd &> /dev/null; then
+        echo "Error: $cmd is required but not installed."
+        exit 1
+    fi
+done
+
+# Check environment variables
+if [ -z "$CLOCKIFY_KEY" ]; then
+    echo "Error: CLOCKIFY_KEY (or CLOCKIFY) is not set in the environment or .env file."
+    exit 1
+fi
+
+if [ -z "$PROJECT_NAME" ]; then
+    echo "Error: PROJECT_NAME is not set in the environment."
+    echo "Please export PROJECT_NAME='Your Project Name' or add it to .env , if not using default project."
+fi
+
+API_URL="https://api.clockify.me/api/v1"
+
+get_headers() {
+    # Removed spaces to prevent shell splitting issues
+    echo -H "X-Api-Key:$CLOCKIFY_KEY" -H "Content-Type:application/json"
+}
+
+get_current_utc_time() {
+    date -u +"%Y-%m-%dT%H:%M:%SZ"
+}
+
+# Date Helpers (GNU date compatible)
+to_utc_iso() {
+    # $1: Local date string (e.g. "2023-10-27 00:00:00")
+    # GNU date: -d parses the string
+    TZ="$TIMEZONE" date -d "$1" -u +"%Y-%m-%dT%H:%M:%SZ"
+}
+
+to_local_time_display() {
+    # $1: ISO UTC string
+    # $2: Format (optional, default %H:%M)
+    local fmt=${2:-"+%H:%M"}
+    # GNU date handles ISO 8601 parsing natively
+    TZ="$TIMEZONE" date -d "$1" "$fmt"
+}
+
+# Get User Info (ID and Active Workspace)
+get_user_info() {
+    if [ -n "$USER_ID" ]; then return; fi 
+
+    local response
+    response=$(curl -s -S -w "\n%{http_code}" -X GET "$API_URL/user" $(get_headers))
+    local curl_exit=$?
+    
+    local http_body=$(echo "$response" | head -n -1)
+    local http_code=$(echo "$response" | tail -n 1)
+
+    if [ "$curl_exit" -ne 0 ]; then
+        echo "Error: curl failed with exit code $curl_exit."
+        exit 1
+    fi
+
+    if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
+        echo "Error: API request failed with status $http_code."
+        echo "Response: $http_body"
+        echo "Using Key: ${CLOCKIFY_KEY:0:5}******${CLOCKIFY_KEY: -5}"
+        exit 1
+    fi
+    
+    if [ -z "$(echo "$http_body" | jq -r '.id // empty')" ]; then
+        echo "Error: Failed to parse user info from response."
+        echo "Response: $http_body"
+        exit 1
+    fi
+    
+    USER_ID=$(echo "$http_body" | jq -r '.id')
+    USER_NAME=$(echo "$http_body" | jq -r '.name')
+    USER_EMAIL=$(echo "$http_body" | jq -r '.email')
+    WORKSPACE_ID=$(echo "$http_body" | jq -r '.activeWorkspace')
+    
+    if [ "$WORKSPACE_ID" == "null" ] || [ -z "$WORKSPACE_ID" ]; then
+        WORKSPACE_ID=$(echo "$http_body" | jq -r '.defaultWorkspace')
+    fi
+}
+
+# Get Project ID by Name
+get_project_id() {
+    local name="$1"
+    # Fetch all projects (page-size 5000 should cover most) and filter locally
+    local response=$(curl -s -X GET "$API_URL/workspaces/$WORKSPACE_ID/projects?page-size=5000" $(get_headers))
+    
+    # Filter exact match
+    PROJECT_ID=$(echo "$response" | jq -r ".[] | select(.name == \"$name\") | .id" | head -n 1)
+    
+    if [ -z "$PROJECT_ID" ]; then
+        echo "Error: Project '$name' not found in workspace."
+        echo "Available projects:"
+        echo "$response" | jq -r '.[].name' | head -n 10
+        echo "... (and more)"
+        exit 1
+    fi
+}
+
+start_timer() {
+
+    local description_args="$*"
+    get_user_info
+    local payload=""
+    local branch_name=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+    local description="$description_args"
+    [ -n "$branch_name" ] && description="[$branch_name] - $description_args"
+    
+    local start_time=$(get_current_utc_time)
+    if [ -z "$PROJECT_NAME" ]; then
+      payload=$(jq -n --arg start "$start_time" --arg desc "$description" \
+                  '{start: $start, description: $desc}')
+    else 
+      get_project_id "$PROJECT_NAME"
+      payload=$(jq -n --arg start "$start_time" --arg desc "$description" --arg pid "$PROJECT_ID" \
+                  '{start: $start, description: $desc, projectId: $pid}')
+    fi
+
+    local response=$(curl -s -X POST "$API_URL/workspaces/$WORKSPACE_ID/time-entries" $(get_headers) -d "$payload")
+                     
+    if [ "$(echo "$response" | jq -r '.id // empty')" ]; then
+        echo "Started timer:"
+        echo "  Project: $PROJECT_NAME"
+        echo "  Description: $description"
+        echo "  Start Time: $(to_local_time_display "$start_time" "+%Y-%m-%d %H:%M:%S")"
+    else
+        echo "Error starting timer: $response"
+        exit 1
+    fi
+}
+
+stop_timer() {
+    get_user_info
+    local end_time=$(get_current_utc_time)
+    local payload=$(jq -n --arg end "$end_time" '{end: $end}')
+
+    local response=$(curl -s -X PATCH "$API_URL/workspaces/$WORKSPACE_ID/user/$USER_ID/time-entries" $(get_headers) -d "$payload")
+                     
+    if [ "$(echo "$response" | jq -r '.id // empty')" ]; then
+        echo "Stopped timer:"
+        echo "  Description: $(echo "$response" | jq -r '.description')"
+        echo "  End Time: $(to_local_time_display "$end_time" "+%H:%M:%S")"
+        echo "  Duration: $(echo "$response" | jq -r '.timeInterval.duration')"
+    else
+        echo "Error stopping timer (or no timer running)."
+        exit 1
+    fi
+}
+
+format_seconds() {
+    local T=$1
+    local H=$((T/3600))
+    local M=$(( (T%3600)/60 ))
+    local S=$((T%60))
+    printf "%02dh %02dm %02ds" $H $M $S
+}
+
+get_entries() {
+    local start_iso="$1"
+    local end_iso="$2"
+    curl -s -X GET "$API_URL/workspaces/$WORKSPACE_ID/user/$USER_ID/time-entries?start=$start_iso&end=$end_iso" $(get_headers)
+}
+
+calculate_duration_seconds() {
+    local start="$1"
+    local end="$2"
+    # GNU date: use -d and +%s
+    local s_epoch=$(date -d "$start" +%s)
+    if [ -z "$end" ] || [ "$end" == "null" ]; then
+        local e_epoch=$(date -u +%s)
+    else
+        local e_epoch=$(date -d "$end" +%s)
+    fi
+    echo $((e_epoch - s_epoch))
+}
+
+list_entries() {
+    local target_date="$1"
+    [ -z "$target_date" ] && target_date=$(TZ="$TIMEZONE" date +%Y-%m-%d)
+    
+    get_user_info
+    local start_iso=$(to_utc_iso "$target_date 00:00:00")
+    local end_iso=$(to_utc_iso "$target_date 23:59:59")
+    
+    local entries=$(get_entries "$start_iso" "$end_iso")
+    
+    if [ -z "$entries" ] || [ "$entries" == "[]" ]; then
+        echo "No entries found for $target_date (TZ: $TIMEZONE)"
+        return
+    fi
+    
+    echo "Time Log for $target_date ($TIMEZONE):"
+    echo "--------------------------------------------------------------------------------"
+    printf "% -10s | % -12s | %s\n" "Start" "Duration" "Description"
+    echo "--------------------------------------------------------------------------------"
+    
+    echo "$entries" | jq -c '.[]' | while read -r entry; do
+        local desc=$(echo "$entry" | jq -r '.description // "(no description)" ')
+        local start=$(echo "$entry" | jq -r '.timeInterval.start')
+        local end=$(echo "$entry" | jq -r '.timeInterval.end')
+        
+        local start_local=$(to_local_time_display "$start")
+        local duration_sec=$(calculate_duration_seconds "$start" "$end")
+        local duration_fmt=$(format_seconds $duration_sec)
+        
+        printf "% -10s | % -12s | %s\n" "$start_local" "$duration_fmt" "$desc"
+    done | column -t -s '|'
+}
+
+show_summary() {
+    get_user_info
+    echo "User: $USER_NAME ($USER_EMAIL) | Timezone: $TIMEZONE"
+    echo ""
+    
+    # Today
+    local today_date=$(TZ="$TIMEZONE" date +%Y-%m-%d)
+    local t_start=$(to_utc_iso "$today_date 00:00:00")
+    local t_end=$(to_utc_iso "$today_date 23:59:59")
+    
+    local today_entries=$(get_entries "$t_start" "$t_end")
+    local today_total=0
+    if [ "$today_entries" != "[]" ]; then
+        while read -r s e; do
+            [ -z "$s" ] && continue
+            today_total=$((today_total + $(calculate_duration_seconds "$s" "$e")))
+        done <<< "$(echo "$today_entries" | jq -r '.[] | "\(.timeInterval.start) \(.timeInterval.end)" ')"
+    fi
+    
+    # Week (since Monday)
+    local dow=$(TZ="$TIMEZONE" date +%u)
+    local diff=$((dow - 1))
+    # GNU date calculation
+    local monday_date=$(TZ="$TIMEZONE" date -d "-$diff days" +%Y-%m-%d)
+    
+    local w_start=$(to_utc_iso "$monday_date 00:00:00")
+    local w_end=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    local week_entries=$(get_entries "$w_start" "$w_end")
+    local week_total=0
+    if [ "$week_entries" != "[]" ]; then
+        while read -r s e; do
+            [ -z "$s" ] && continue
+            week_total=$((week_total + $(calculate_duration_seconds "$s" "$e")))
+        done <<< "$(echo "$week_entries" | jq -r '.[] | "\(.timeInterval.start) \(.timeInterval.end)" ')"
+    fi
+    
+    echo "Summary:"
+    echo "  Today ($today_date): $(format_seconds $today_total)"
+    echo "  This Week (since $monday_date): $(format_seconds $week_total)"
+}
+
+
+# Main Dispatch
+case "$1" in
+    "end") stop_timer ;; 
+    "list") list_entries "$2" ;; 
+    "summary") show_summary ;; 
+    *) 
+        if [ -n "$1" ]; then
+            start_timer "$*"
+        else
+            echo "Usage:"
+            echo "  ./timer <desc>          # Start timer"
+            echo "  ./timer end             # Stop timer"
+            echo "  ./timer list [date]     # List entries (default: today)"
+            echo "  ./timer summary         # Show user info & totals"
+            exit 1
+        fi
+        ;; 
+esac
