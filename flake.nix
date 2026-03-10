@@ -57,39 +57,35 @@
         };
       };
 
-      # Shared packages across all platforms
-      sharedPackages = pkgs: with pkgs; [
-        # Core tools
+      # Core packages — installed on ALL platforms including Termux
+      corePackages = pkgs: with pkgs; [
         git gh fzf ripgrep fd jq jless coreutils
+        delta diff-so-fancy
+        sshpass
+        fx
+      ];
 
-        # Dev - General
-        nodejs go delve goimports-reviser maven gradle
-
-        # Dev - Rust
+      # Dev packages — installed on Linux (Ubuntu/WSL) and macOS, NOT Termux
+      devPackages = pkgs: with pkgs; [
+        # Languages
+        nodejs go delve goimports-reviser
         cargo rustc rustfmt clippy rust-analyzer
+        python3 pipx
 
-        # Dev - Python
-        python3 pipx pyenv
-
-        # Cloud & DevOps
+        # Cloud & DB
         terraform
-
-        # Databases & clients
         postgresql_16 mysql80 pgcli pspg
         # mycli removed due to pyarrow build issues on macOS
 
-        # HTTP / API tools
+        # HTTP
         httpie hurl (swagger-to-kulala pkgs)
 
-        # Diff & formatting
-        delta diff-so-fancy
-
-        # SSH tools
-        sshpass
-
         # Utilities
-        fx clipse imagemagick
+        imagemagick clipse
       ];
+
+      # Shared packages — combined alias for backwards compat (macOS + Android use this)
+      sharedPackages = pkgs: (corePackages pkgs) ++ (devPackages pkgs);
 
       # macOS-specific packages
       darwinPackages = pkgs: with pkgs; [
