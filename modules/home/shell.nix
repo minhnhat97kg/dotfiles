@@ -19,8 +19,8 @@
       export XDG_CONFIG_HOME="$HOME/.config"
       export PATH="$HOME/.scripts:$PATH"
 
-     # opencode
-      export PATH=/Users/nhath/.opencode/bin:$PATH
+      # opencode (optional — only if installed)
+      [ -d "$HOME/.opencode/bin" ] && export PATH="$HOME/.opencode/bin:$PATH"
       alias claude-api="CLAUDE_CONFIG_DIR=~/.claude-api claude"
     '';
     shellAliases = {
