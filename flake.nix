@@ -87,6 +87,18 @@
       # Shared packages — combined alias for backwards compat (macOS + Android use this)
       sharedPackages = pkgs: (corePackages pkgs) ++ (devPackages pkgs);
 
+      # Helper to build a standalone home-manager config for Linux
+      mkLinuxHome = { hostname, username ? "nhath", system ? "x86_64-linux" }:
+        let pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
+        in home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          extraSpecialArgs = { inherit corePackages devPackages sharedPackages; };
+          modules = [
+            ./modules/platforms/linux.nix
+            ./hosts/linux/${hostname}.nix
+          ];
+        };
+
       # macOS-specific packages
       darwinPackages = pkgs: with pkgs; [
         clipboard-jh
@@ -156,6 +168,16 @@
       formatter = {
         aarch64-darwin = nixpkgs.legacyPackages.aarch64-darwin.alejandra;
         aarch64-linux = nixpkgs.legacyPackages.aarch64-linux.alejandra;
+      };
+
+      # ============================================================================
+      # Linux Home-Manager Configurations (standalone)
+      # To add a new host: add mkLinuxHome entry + create hosts/linux/<hostname>.nix
+      # ============================================================================
+      homeConfigurations = {
+        "ubuntu"  = mkLinuxHome { hostname = "ubuntu"; };
+        "wsl"     = mkLinuxHome { hostname = "wsl"; };
+        "termux"  = mkLinuxHome { hostname = "termux"; system = "aarch64-linux"; };
       };
     };
 }
