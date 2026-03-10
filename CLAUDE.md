@@ -3,11 +3,11 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Summary
-Cross-platform Nix configuration for macOS (nix-darwin) and Android (nix-on-droid). Manages dotfiles, system configuration, and secrets encryption using sops/age.
+Cross-platform Nix configuration for macOS (nix-darwin), Android (nix-on-droid), and Linux/WSL/Termux (home-manager standalone). Manages dotfiles, system configuration, and secrets encryption using sops/age.
 
 ## Tech Stack
 - **Build System**: Nix flakes, Makefile
-- **Platforms**: nix-darwin (macOS), nix-on-droid (Android)
+- **Platforms**: nix-darwin (macOS), nix-on-droid (Android), home-manager standalone (Linux/WSL/Termux)
 - **Secrets**: sops + age encryption
 - **Editor**: Neovim with LSP (Lua, TypeScript, Go, Rust, Java)
 - **Shell**: Zsh + oh-my-zsh
@@ -17,18 +17,24 @@ Cross-platform Nix configuration for macOS (nix-darwin) and Android (nix-on-droi
 ## Repository Structure
 ```
 dotfiles/
-├── flake.nix              # Thin top-level: inputs + mkDarwinHost/mkAndroidHost helpers + outputs
-├── Makefile               # Commands: install/build/encrypt/decrypt
+├── flake.nix              # Thin top-level: inputs + mkDarwinHost/mkAndroidHost/mkLinuxHome helpers + outputs
+├── Makefile               # Commands: install/build/encrypt/decrypt (auto-detects platform)
+├── bootstrap.sh           # OTG single-command bootstrap for Linux/WSL/Termux
 ├── CLAUDE.md              # Project context for Claude Code
 ├── hosts/                 # One file per machine
 │   ├── darwin/
 │   │   └── Nathan-Macbook.nix  # Host-specific darwin settings (hostname, packages, files)
-│   └── android/
-│       └── default.nix         # nix-on-droid host settings (home-manager overrides)
+│   ├── android/
+│   │   └── default.nix         # nix-on-droid host settings (home-manager overrides)
+│   └── linux/
+│       ├── ubuntu.nix          # Ubuntu bare-metal host (x86_64, full dev packages)
+│       ├── wsl.nix             # WSL host (x86_64, WSL-specific shell overrides)
+│       └── termux.nix          # Termux host (aarch64, corePackages only)
 ├── modules/
 │   ├── platforms/
 │   │   ├── darwin.nix     # macOS system config (nix, homebrew, launchd, clipse)
-│   │   └── android.nix    # Android system config (packages, SSH server, activation)
+│   │   ├── android.nix    # Android system config (packages, SSH server, activation)
+│   │   └── linux.nix      # Linux/WSL/Termux home-manager base module
 │   └── home/              # Shared home-manager config (split by concern)
 │       ├── default.nix    # Entry point: imports all home modules + sets stateVersion
 │       ├── shell.nix      # Zsh + oh-my-zsh + env vars + aliases
@@ -37,6 +43,7 @@ dotfiles/
 │       ├── git.nix        # Git includes + gitconfig file deployments
 │       └── files.nix      # Static file deployments (nvim dir, scripts, fzf, lazygit, direnv)
 ├── docs/                  # Documentation
+│   ├── plans/             # Implementation plans
 │   ├── progress.md        # Project progress tracking
 │   ├── workflow.md        # Development workflow
 │   ├── android-desktop.md # Android desktop (deprecated - removed)
@@ -79,9 +86,9 @@ dotfiles/
 
 ## Key Paths
 - Main config: `flake.nix` (username, email, package lists, host builders)
-- Platform configs: `modules/platforms/{darwin,android}.nix`
+- Platform configs: `modules/platforms/{darwin,android,linux}.nix`
 - Home-manager config: `modules/home/` (split by concern)
-- Host overrides: `hosts/darwin/Nathan-Macbook.nix`, `hosts/android/default.nix`
+- Host overrides: `hosts/darwin/Nathan-Macbook.nix`, `hosts/android/default.nix`, `hosts/linux/{ubuntu,wsl,termux}.nix`
 - Neovim: `nvim/init.lua`, `nvim/lsp/`, `nvim/ftplugin/`
 - Secrets: `secrets/encrypted/ssh/`, `secrets/encrypted/aws/`
 - Age key: `~/.config/sops/age/keys.txt`
@@ -92,17 +99,21 @@ dotfiles/
 1. **Makefile** - Entry point for common operations, auto-detects platform
 2. **flake.nix** - Central configuration defining:
    - User settings (username, email)
-   - Package lists (shared, platform-specific)
-   - Platform outputs (darwinConfigurations, nixOnDroidConfigurations)
-   - `mkDarwinHost` / `mkAndroidHost` helpers for adding new machines
+   - Package lists (corePackages, devPackages, sharedPackages)
+   - Platform outputs (darwinConfigurations, nixOnDroidConfigurations, homeConfigurations)
+   - `mkDarwinHost` / `mkAndroidHost` / `mkLinuxHome` helpers for adding new machines
 3. **modules/platforms/** - System-level Nix modules (nix/homebrew/SSH/activation):
    - `darwin.nix` - macOS system config (homebrew, launchd, clipse, activationScripts)
    - `android.nix` - nix-on-droid system config (SSH server, environment.packages, activation)
+   - `linux.nix` - Linux/WSL/Termux home-manager base (imports home modules, enables home-manager)
 4. **modules/home/** - User-level home-manager config shared across platforms:
    - `default.nix` → imports shell/editor/terminal/git/files modules
 5. **hosts/** - Machine-specific overrides (hostname, per-host packages, extra files):
    - `hosts/darwin/Nathan-Macbook.nix` - networking.hostName + macOS-specific home files
    - `hosts/android/default.nix` - Android home-manager overrides (mkForce packages, zsh)
+   - `hosts/linux/ubuntu.nix` - Ubuntu bare-metal (x86_64, full dev packages)
+   - `hosts/linux/wsl.nix` - WSL (WSL-specific PATH/browser/DISPLAY env vars)
+   - `hosts/linux/termux.nix` - Termux (aarch64, corePackages only, Termux home path)
 
 ### Secrets Architecture
 - **Encryption**: sops-nix encrypts files using age asymmetric encryption
@@ -116,7 +127,9 @@ dotfiles/
   - Format: Kubernetes Secret YAML with base64-encoded data
 
 ### Package Management Strategy
-- **sharedPackages** in flake.nix - Cross-platform tools (git, fzf, neovim, go, rust)
+- **corePackages** in flake.nix - Minimal tools for ALL platforms including Termux (git, fzf, ripgrep, etc.)
+- **devPackages** in flake.nix - Dev/cloud/DB tools for Linux + macOS (not Termux)
+- **sharedPackages** in flake.nix - Combined alias (corePackages + devPackages) for macOS + Ubuntu/WSL
 - **darwinPackages** in flake.nix - macOS-only (clipboard-jh, JetBrains Mono font)
 - Platform-specific system packages in respective `modules/platforms/*.nix` files
 
@@ -127,7 +140,11 @@ dotfiles/
 make install      # Auto-detect platform and apply configuration
 make darwin       # Apply macOS config (darwin-rebuild switch)
 make android      # Apply Android config (nix-on-droid switch)
+make linux        # Apply Ubuntu config (home-manager switch)
+make wsl          # Apply WSL config (home-manager switch)
+make termux       # Apply Termux config (home-manager switch)
 make build        # Build without applying (dry run)
+./bootstrap.sh    # OTG: install Nix + home-manager + apply config (Linux/WSL/Termux)
 ```
 
 ### Secrets Management
@@ -189,6 +206,13 @@ swagger-to-kulala -i api.yaml -o output/ -split # Split by tags
 - Minimal terminal-only setup optimized for battery life
 - Optimized package set for mobile/battery constraints
 
+### Linux / WSL / Termux (home-manager standalone)
+- No system-level Nix required — runs as standalone home-manager
+- Bootstrap with `./bootstrap.sh` (installs Nix + home-manager, clones dotfiles, applies config)
+- **Ubuntu**: full dev packages, `/home/nhath`, x86_64-linux
+- **WSL**: same as Ubuntu + WSL PATH/browser/DISPLAY env overrides
+- **Termux**: aarch64-linux, `corePackages` only (no heavy DB/cloud tools), Termux home path
+
 ## Important Implementation Details
 
 ### Tmux + Neovim Integration
@@ -209,19 +233,25 @@ swagger-to-kulala -i api.yaml -o output/ -split # Split by tags
 ## Development Workflow
 
 ### Adding New Packages
-1. **Shared (all platforms)**: Add to `sharedPackages` list in `flake.nix`
-2. **macOS-specific**: Add to `darwinPackages` in `flake.nix`
-3. **System-level**: Add to `environment.systemPackages` in `modules/platforms/{darwin,android}.nix`
-4. Apply changes: `make install`
+1. **Core (all platforms incl. Termux)**: Add to `corePackages` in `flake.nix`
+2. **Dev (Linux + macOS, not Termux)**: Add to `devPackages` in `flake.nix`
+3. **macOS-specific**: Add to `darwinPackages` in `flake.nix`
+4. **System-level**: Add to `environment.systemPackages` in `modules/platforms/{darwin,android}.nix`
+5. Apply changes: `make install`
 
 ### Adding a New Mac
 1. Create `hosts/darwin/NewMacbook.nix` with host-specific overrides
 2. Add `darwinConfigurations."NewMacbook" = mkDarwinHost { hostname = "NewMacbook"; };` in `flake.nix`
 
+### Adding a New Linux Host
+1. Create `hosts/linux/<hostname>.nix` with `home.username`, `home.homeDirectory`, `home.stateVersion`
+2. Add `"<hostname>" = mkLinuxHome { hostname = "<hostname>"; };` to `homeConfigurations` in `flake.nix`
+3. Add `make <hostname>` target to Makefile if needed
+
 ### Adding a New Platform
-1. Create `modules/platforms/linux.nix` with system config
-2. Create `hosts/nixos/hostname.nix` with host overrides
-3. Add `nixosConfigurations."hostname" = mkLinuxHost { hostname = "hostname"; };` in `flake.nix`
+1. Create `modules/platforms/<platform>.nix` with system config
+2. Create `hosts/<platform>/hostname.nix` with host overrides
+3. Add appropriate output to `flake.nix` using the relevant helper
 
 ### Testing Configuration Changes
 ```bash

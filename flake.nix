@@ -1,5 +1,5 @@
 {
-  description = "Cross-platform Nix configuration (macOS & Android)";
+  description = "Cross-platform Nix configuration (macOS, Linux, WSL, Termux, Android)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
