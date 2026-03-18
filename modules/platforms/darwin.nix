@@ -78,5 +78,9 @@
     home = "/Users/${username}";
     description = username;
     shell = pkgs.zsh;
+    openssh.authorizedKeys.keys = [
+      # TODO: add your public key(s) here
+      # e.g. "ssh-ed25519 AAAA... user@device"
+    ];
   };
 }
