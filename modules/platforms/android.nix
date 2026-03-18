@@ -286,4 +286,28 @@ STATUS_EOF
     echo "  Client key for Mac: $HOME/.ssh/android_client_key"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   '';
+
+  # Auto-start SSH server on every shell open.
+  # PID file guard prevents duplicate processes when opening multiple tabs.
+  environment.loginShellInit = ''
+    _sshd_autostart() {
+      local PIDFILE="$HOME/.ssh/sshd.pid"
+      local SSHD_BIN="${pkgs.openssh}/bin/sshd"
+      local CONFIG="$HOME/.ssh/sshd_config"
+
+      # Already running?
+      if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null; then
+        return 0
+      fi
+
+      # sshd_config not yet generated (first run before activation)
+      if [ ! -f "$CONFIG" ]; then
+        return 0
+      fi
+
+      rm -f "$PIDFILE"
+      "$SSHD_BIN" -f "$CONFIG" -E "$HOME/.ssh/sshd.log" 2>/dev/null || true
+    }
+    _sshd_autostart
+  '';
 }
