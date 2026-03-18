@@ -58,7 +58,7 @@
   services.openssh = {
     enable = true;
     extraConfig = ''
-      Port 22
+      Port 2222
       PasswordAuthentication no
       KbdInteractiveAuthentication no
       PermitRootLogin no
