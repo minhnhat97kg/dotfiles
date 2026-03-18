@@ -78,6 +78,49 @@ cd ~/dotfiles
 nix-on-droid switch --flake .
 ```
 
+#### SSH Server (connect from Mac)
+
+SSH server starts automatically on every shell open. After running `nix-on-droid switch`:
+
+```bash
+# Check status
+~/.ssh/status-sshd.sh
+
+# Manual control
+~/.ssh/start-sshd.sh    # start (shows connection info)
+~/.ssh/stop-sshd.sh     # stop
+```
+
+**First-time setup — copy the client key to your Mac:**
+
+```bash
+# On Android: display the private key
+cat ~/.ssh/android_client_key
+
+# On Mac: paste it into a file and set permissions
+mkdir -p ~/.ssh
+# paste the key content into ~/.ssh/android_client_key
+chmod 600 ~/.ssh/android_client_key
+```
+
+**Connect from Mac:**
+
+| Method | Command |
+|--------|---------|
+| **Wi-Fi** | `ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@<device-ip>` |
+| **USB** | `adb forward tcp:8022 tcp:8022` → `ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@localhost` |
+| **Tailscale** | Install [Tailscale](https://tailscale.com/download/android) on Android → `ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@<tailscale-ip>` |
+
+> **Tip:** Add to `~/.ssh/config` on Mac for easy access:
+> ```
+> Host droid
+>   HostName <device-ip>       # or Tailscale IP
+>   Port 8022
+>   User nix-on-droid
+>   IdentityFile ~/.ssh/android_client_key
+> ```
+> Then just: `ssh droid`
+
 ## Common Commands
 
 ```bash
@@ -111,7 +154,7 @@ make help              # Show all available commands
 - **Development**: Go, Rust, Python, Node.js, Java
 - **Secrets**: Encrypted with sops/age
 
-- **Android**: XFCE4 desktop environment via VNC
+- **Android**: SSH server (Wi-Fi, USB, Tailscale), auto-start on shell open
 
 **See CLAUDE.md for complete feature list**
 

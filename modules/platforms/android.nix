@@ -287,9 +287,9 @@ STATUS_EOF
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   '';
 
-  # Auto-start SSH server on every shell open.
+  # Auto-start SSH server on every shell open via profile.d script.
   # PID file guard prevents duplicate processes when opening multiple tabs.
-  environment.loginShellInit = ''
+  environment.etc."profile.d/sshd-autostart.sh".text = ''
     _sshd_autostart() {
       local PIDFILE="$HOME/.ssh/sshd.pid"
       local SSHD_BIN="${pkgs.openssh}/bin/sshd"
