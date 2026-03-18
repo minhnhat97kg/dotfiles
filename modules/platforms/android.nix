@@ -101,102 +101,189 @@
   terminal.font = "${pkgs.nerd-fonts.jetbrains-mono}/share/fonts/truetype/NerdFonts/JetBrainsMono/JetBrainsMonoNerdFont-Regular.ttf";
 
   # SSH server setup
+  # Runs on every `nix-on-droid switch`. Idempotent: keys are only generated
+  # if missing; sshd_config and scripts are always regenerated to keep
+  # Nix store paths current after package upgrades.
   build.activation.sshd = ''
     mkdir -p "$HOME/.ssh"
     chmod 700 "$HOME/.ssh"
 
-    if [ ! -f $HOME/.ssh/ssh_host_ed25519_key ]; then
-      ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$HOME/.ssh/ssh_host_ed25519_key" -N ""
+    # ── Host keys (server identity) ──────────────────────────────────────
+    if [ ! -f "$HOME/.ssh/ssh_host_ed25519_key" ]; then
+      ${pkgs.openssh}/bin/ssh-keygen -t ed25519 \
+        -f "$HOME/.ssh/ssh_host_ed25519_key" -N ""
+      echo "Generated SSH host key (ED25519)"
     fi
 
-    if [ ! -f $HOME/.ssh/ssh_host_ecdsa_key ]; then
-      ${pkgs.openssh}/bin/ssh-keygen -t ecdsa -b 521 -f "$HOME/.ssh/ssh_host_ecdsa_key" -N ""
-    fi
-
+    # ── Client keypair (auto-login from Mac) ─────────────────────────────
+    # This keypair is generated once. The public key goes into authorized_keys
+    # on this device. The private key is what you copy to your Mac.
     if [ ! -f "$HOME/.ssh/android_client_key" ]; then
-      ${pkgs.openssh}/bin/ssh-keygen -t ed25519 -f "$HOME/.ssh/android_client_key" -N "" -C "auto-generated-android-client"
-      echo "Generated auto-login client key: $HOME/.ssh/android_client_key"
+      ${pkgs.openssh}/bin/ssh-keygen -t ed25519 \
+        -f "$HOME/.ssh/android_client_key" -N "" \
+        -C "nix-on-droid-auto-client"
+      echo "Generated client keypair: $HOME/.ssh/android_client_key"
     fi
 
+    # ── authorized_keys ──────────────────────────────────────────────────
     touch "$HOME/.ssh/authorized_keys"
     chmod 600 "$HOME/.ssh/authorized_keys"
-
     CLIENT_PUBKEY=$(cat "$HOME/.ssh/android_client_key.pub")
     if ! grep -qF "$CLIENT_PUBKEY" "$HOME/.ssh/authorized_keys"; then
       echo "$CLIENT_PUBKEY" >> "$HOME/.ssh/authorized_keys"
-      echo "Added auto-login key to authorized_keys"
+      echo "Added client public key to authorized_keys"
     fi
 
-    # Always regenerate sshd_config to ensure paths are up-to-date
-    cat > "$HOME/.ssh/sshd_config" <<EOF
+    # ── sshd_config ──────────────────────────────────────────────────────
+    # Always regenerated so Nix store paths (sftp-server, etc.) stay valid.
+    cat > "$HOME/.ssh/sshd_config" << 'SSHD_EOF'
 Port 8022
 ListenAddress 0.0.0.0
-PidFile $HOME/.ssh/sshd.pid
-HostKey $HOME/.ssh/ssh_host_ed25519_key
+PidFile PLACEHOLDER_HOME/.ssh/sshd.pid
+HostKey PLACEHOLDER_HOME/.ssh/ssh_host_ed25519_key
+AuthorizedKeysFile PLACEHOLDER_HOME/.ssh/authorized_keys
+
+# Security
+PermitRootLogin no
+PubkeyAuthentication yes
+PasswordAuthentication no
+ChallengeResponseAuthentication no
+UsePAM no
+UseDNS no
+GSSAPIAuthentication no
+X11Forwarding no
+PrintMotd no
+
+# Performance
+Compression no
+TCPKeepAlive yes
+
+# Forwarding
+AllowTcpForwarding yes
+
+# Ciphers (modern, fast)
 Ciphers chacha20-poly1305@openssh.com,aes128-gcm@openssh.com,aes128-ctr
 MACs hmac-sha2-256-etm@openssh.com,hmac-sha2-256
 KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group14-sha256
-Compression no
-UseDNS no
-GSSAPIAuthentication no
-PermitRootLogin no
-PubkeyAuthentication yes
-AuthorizedKeysFile $HOME/.ssh/authorized_keys
-PasswordAuthentication no
-ChallengeResponseAuthentication no
-AllowTcpForwarding yes
-X11Forwarding no
-PrintMotd no
+
 AcceptEnv LANG LC_*
-Subsystem sftp ${pkgs.openssh}/libexec/sftp-server
-EOF
+SSHD_EOF
+
+    # Substitute $HOME (heredoc cannot expand vars inside single-quoted EOF)
+    ${pkgs.gnused}/bin/sed -i \
+      "s|PLACEHOLDER_HOME|$HOME|g" \
+      "$HOME/.ssh/sshd_config"
+
+    # Append sftp subsystem with current Nix store path
+    echo "Subsystem sftp ${pkgs.openssh}/libexec/sftp-server" \
+      >> "$HOME/.ssh/sshd_config"
 
     chmod 600 "$HOME/.ssh/sshd_config"
 
-    # Generate start script with current package paths
-    cat > "$HOME/.ssh/start-sshd.sh" <<EOF
+    # ── start-sshd.sh ────────────────────────────────────────────────────
+    cat > "$HOME/.ssh/start-sshd.sh" << 'START_EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Stop any existing sshd process
-pkill -f "sshd -f \$HOME/.ssh/sshd_config" 2>/dev/null || true
-sleep 0.5
+PIDFILE="$HOME/.ssh/sshd.pid"
+LOGFILE="$HOME/.ssh/sshd.log"
+SSHD_BIN="PLACEHOLDER_SSHD"
+CONFIG="$HOME/.ssh/sshd_config"
 
-LOGFILE="\$HOME/.ssh/sshd.log"
-rm -f "\$LOGFILE"
+# Kill any existing instance
+if [ -f "$PIDFILE" ]; then
+  OLD_PID=$(cat "$PIDFILE" 2>/dev/null || echo "")
+  if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+    kill "$OLD_PID"
+    sleep 0.3
+  fi
+  rm -f "$PIDFILE"
+fi
 
-${pkgs.openssh}/bin/sshd -f "\$HOME/.ssh/sshd_config" -E "\$LOGFILE" || {
-  echo "sshd failed to launch." >&2
-  cat "\$LOGFILE" >&2
-  exit 1
-}
+rm -f "$LOGFILE"
+"$SSHD_BIN" -f "$CONFIG" -E "$LOGFILE"
 
-sleep 0.3
-if pgrep -f "sshd -f \$HOME/.ssh/sshd_config" >/dev/null 2>&1; then
-  echo "✓ SSH server started on port 8022"
-  echo "  To connect: ssh -p 8022 nix-on-droid@<device-ip>"
-  echo "  To stop: ~/.ssh/stop-sshd.sh"
+# Wait up to 2 seconds for PID file
+for i in $(seq 1 20); do
+  if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+    break
+  fi
+  sleep 0.1
+done
+
+if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+  DEVICE_IP=$(ip route get 1 2>/dev/null | awk '/src/{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}' || echo "<device-ip>")
+  echo "✓ SSH server started (PID $(cat "$PIDFILE"))"
+  echo ""
+  echo "── Connection Methods ────────────────────────────────────────────"
+  echo "  Wi-Fi:    ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@''${DEVICE_IP}"
+  echo "  USB:      adb forward tcp:8022 tcp:8022"
+  echo "            ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@localhost"
+  echo "  Tailscale: ssh -p 8022 -i ~/.ssh/android_client_key nix-on-droid@<tailscale-ip>"
+  echo "─────────────────────────────────────────────────────────────────"
+  echo ""
+  echo "  Client private key to copy to Mac:"
+  echo "    $HOME/.ssh/android_client_key"
+  echo "  (scp it or cat it and paste into ~/.ssh/android_client_key on Mac)"
 else
-  echo "Failed to start SSH server!" >&2
-  cat "\$LOGFILE" >&2
+  echo "✗ SSH server failed to start" >&2
+  cat "$LOGFILE" >&2
   exit 1
 fi
-EOF
+START_EOF
+
+    # Substitute sshd binary path (cannot interpolate Nix vars inside heredoc)
+    ${pkgs.gnused}/bin/sed -i \
+      "s|PLACEHOLDER_SSHD|${pkgs.openssh}/bin/sshd|g" \
+      "$HOME/.ssh/start-sshd.sh"
     chmod +x "$HOME/.ssh/start-sshd.sh"
 
-    # Generate stop script
-    cat > "$HOME/.ssh/stop-sshd.sh" <<'EOF'
+    # ── stop-sshd.sh ─────────────────────────────────────────────────────
+    cat > "$HOME/.ssh/stop-sshd.sh" << 'STOP_EOF'
 #!/usr/bin/env bash
-if pkill -f "sshd -f $HOME/.ssh/sshd_config"; then
-  echo "✓ SSH server stopped"
+PIDFILE="$HOME/.ssh/sshd.pid"
+if [ -f "$PIDFILE" ]; then
+  PID=$(cat "$PIDFILE" 2>/dev/null || echo "")
+  if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
+    kill "$PID"
+    rm -f "$PIDFILE"
+    echo "✓ SSH server stopped"
+  else
+    rm -f "$PIDFILE"
+    echo "SSH server was not running (stale PID file removed)"
+  fi
 else
-  echo "No SSH server running"
+  echo "SSH server is not running"
 fi
-EOF
+STOP_EOF
     chmod +x "$HOME/.ssh/stop-sshd.sh"
 
-    # Auto-start SSH server
-    echo "Starting SSH server..."
-    "$HOME/.ssh/start-sshd.sh" || echo "⚠️  SSH server failed to auto-start. Run ~/.ssh/start-sshd.sh manually"
+    # ── status-sshd.sh ───────────────────────────────────────────────────
+    cat > "$HOME/.ssh/status-sshd.sh" << 'STATUS_EOF'
+#!/usr/bin/env bash
+PIDFILE="$HOME/.ssh/sshd.pid"
+if [ -f "$PIDFILE" ]; then
+  PID=$(cat "$PIDFILE" 2>/dev/null || echo "")
+  if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
+    echo "✓ SSH server running (PID $PID, port 8022)"
+  else
+    echo "✗ SSH server not running (stale PID file)"
+  fi
+else
+  echo "✗ SSH server not running"
+fi
+STATUS_EOF
+    chmod +x "$HOME/.ssh/status-sshd.sh"
+
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  SSH server configured. Auto-starts on shell open."
+    echo "  Manual control:"
+    echo "    ~/.ssh/start-sshd.sh   — start"
+    echo "    ~/.ssh/stop-sshd.sh    — stop"
+    echo "    ~/.ssh/status-sshd.sh  — status"
+    echo ""
+    echo "  Client key for Mac: $HOME/.ssh/android_client_key"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   '';
 }
