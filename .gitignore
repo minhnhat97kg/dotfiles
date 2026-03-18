@@ -1,0 +1,73 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Nix
+result
+result-*
+*.qcow2
+
+# Backup files
+*.backup
+*.old
+modules.old/
+
+# Editor directories
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code
+.claude/settings.local.json
+
+# Secrets - commit only encrypted .sops.yaml files and README
+secrets/*
+!secrets/README.md
+!secrets/config.yaml
+!secrets/encrypted/
+*.tmp
+
+# Age encryption keys - NEVER COMMIT
+.config/sops/
+**/sops/age/keys.txt
+
+# Personal aliases (customize per machine)
+shell/aliases.yaml
+
+# Work git configs (contain personal work email/info — stored as encrypted secrets)
+git/work.gitconfig
+git/buuuk.gitconfig
+
+# Generated files
+scripts/whichkey_bindings.txt
+
+
+# Config-specific ignores
+fish/fish_variables
+fish/fishd.*
+karabiner/automatic_backups/
+htop/htoprc.bak
+btop/btop.log
+lazygit/state.yml

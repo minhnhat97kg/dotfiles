@@ -1,0 +1,18 @@
+{
+  "title": "Home Row Modifiers",
+  "rules": [
+    {
+      "description": "Home row letters act as modifiers when held (A=Ctrl, S=Option, D=Command, F=Shift, J=Shift, K=Command, L=Option, ;=Control)",
+      "manipulators": [
+        {"type": "basic", "from": {"key_code": "a", "modifiers": {"optional": ["any"]}}, "parameters": {"basic.from_key_repeat": false}, "to_if_alone": [{"key_code": "a"}], "to": [{"key_code": "left_control"}]},
+        {"type": "basic", "from": {"key_code": "s", "modifiers": {"optional": ["any"]}}, "parameters": {"basic.from_key_repeat": false}, "to_if_alone": [{"key_code": "s"}], "to": [{"key_code": "left_option"}]},
+        {"type": "basic", "from": {"key_code": "d", "modifiers": {"optional": ["any"]}}, "parameters": {"basic.from_key_repeat": false}, "to_if_alone": [{"key_code": "d"}], "to": [{"key_code": "left_command"}]},
+        {"type": "basic", "from": {"key_code": "f", "modifiers": {"optional": ["any"]}}, "parameters": {"basic.from_key_repeat": false}, "to_if_alone": [{"key_code": "f"}], "to": [{"key_code": "left_shift"}]},
+        {"type": "basic", "from": {"key_code": "j", "modifiers": {"optional": ["any"]}}, "parameters": {"basic.from_key_repeat": false}, "to_if_alone": [{"key_code": "j"}], "to": [{"key_code": "right_shift"}]},
+        {"type": "basic", "from": {"key_code": "k", "modifiers": {"optional": ["any"]}}, "parameters": {"basic.from_key_repeat": false}, "to_if_alone": [{"key_code": "k"}], "to": [{"key_code": "right_command"}]},
+        {"type": "basic", "from": {"key_code": "l", "modifiers": {"optional": ["any"]}}, "parameters": {"basic.from_key_repeat": false}, "to_if_alone": [{"key_code": "l"}], "to": [{"key_code": "right_option"}]},
+        {"type": "basic", "from": {"key_code": "semicolon", "modifiers": {"optional": ["any"]}}, "parameters": {"basic.from_key_repeat": false}, "to_if_alone": [{"key_code": "semicolon"}], "to": [{"key_code": "right_control"}]}
+      ]
+    }
+  ]
+}
