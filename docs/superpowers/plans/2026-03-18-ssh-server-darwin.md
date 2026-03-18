@@ -29,7 +29,7 @@
 
 File: `modules/platforms/darwin.nix`
 
-The block will be inserted after the `launchd.user.agents.clipse` block (line 55) and before `system.primaryUser = username;` (line 57).
+Look for the `launchd.user.agents.clipse` block. It ends with closing braces and a semicolon (`};` on line 55). The SSH config block will be inserted right after this block and before the `system.primaryUser = username;` line (line 57).
 
 - [ ] **Step 2: Add services.openssh block**
 
@@ -150,11 +150,19 @@ Expected: PASS — no evaluation errors.
 
 Run: `darwin-rebuild dry-activate --flake . 2>&1 | head -50`
 
-Expected: Generates `/etc/ssh/sshd_config.d/100-nix-darwin.conf` with the SSH directives; no errors about missing keys or invalid syntax.
+Expected: Output shows the system configuration was evaluated successfully; no errors about missing keys or invalid syntax.
+
+If successful, the `/etc/ssh/sshd_config.d/100-nix-darwin.conf` file is generated in the Nix store. You won't see its exact path in the dry-activate output, but you can verify it was created by checking the system build:
+
+```bash
+darwin-rebuild dry-activate --flake . 2>&1 | grep -i "sshd_config"
+```
+
+Expected: Some reference to the sshd config generation (or no output if grep finds nothing — the absence of errors is what matters).
 
 - [ ] **Step 3: Verify sshd_config syntax that will be generated**
 
-If dry-activate succeeded, the config was evaluated correctly. The actual sshd_config will be generated at rebuild time. No need to test further until rebuilding.
+If dry-activate succeeded with no errors, the config syntax is correct. The actual file will be activated in Task 4.
 
 ---
 
