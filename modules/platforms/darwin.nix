@@ -54,6 +54,24 @@
     };
   };
 
+  # SSH Server — speed-optimized for LAN and Tailscale
+  services.openssh = {
+    enable = true;
+    extraConfig = ''
+      Port 22
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PermitRootLogin no
+      UseDNS no
+      Compression no
+      ClientAliveInterval 60
+      ClientAliveCountMax 3
+      MaxSessions 10
+      Ciphers aes256-gcm@openssh.com,chacha20-poly1305@openssh.com
+      MACs hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com
+    '';
+  };
+
   system.primaryUser = username;
 
   users.users."${username}" = {
