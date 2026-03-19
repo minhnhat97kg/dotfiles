@@ -22,6 +22,11 @@
       # opencode (optional — only if installed)
       [ -d "$HOME/.opencode/bin" ] && export PATH="$HOME/.opencode/bin:$PATH"
       alias claude-api="CLAUDE_CONFIG_DIR=~/.claude-api claude"
+
+      # Auto-attach tmux on SSH login — reuses existing session
+      if [ -n "$SSH_CONNECTION" ] && [ -z "$TMUX" ]; then
+        tmux attach-session -t ssh 2>/dev/null || tmux new-session -s ssh
+      fi
     '';
     shellAliases = {
       ll = "ls -l";
