@@ -1,0 +1,50 @@
+# swaylock config — appearance for the niri lock screen.
+# Palette matches the onedark/niri theme (blue accent on a dark base).
+# Vanilla swaylock (Ubuntu build) — no clock/blur/effects flags. Docs: man 5 swaylock
+
+# Behaviour
+daemonize
+ignore-empty-password
+show-failed-attempts
+indicator-caps-lock
+indicator-idle-visible
+
+# Background: solid deep-slate fill (no image)
+color=1a1d23
+scaling=fill
+
+# Indicator geometry + text
+indicator-radius=120
+indicator-thickness=10
+font=sans-serif
+font-size=26
+
+# Idle / at-rest ring
+inside-color=1a1d23dd
+ring-color=3b4048
+line-color=00000000
+separator-color=00000000
+text-color=abb2bf
+
+# Typing
+inside-ver-color=282c34dd
+ring-ver-color=7fc8ff
+text-ver-color=7fc8ff
+key-hl-color=98c379
+bs-hl-color=e06c75
+caps-lock-key-hl-color=e5c07b
+
+# Cleared
+inside-clear-color=282c34dd
+ring-clear-color=e5c07b
+text-clear-color=e5c07b
+
+# Caps Lock
+inside-caps-lock-color=282c34dd
+ring-caps-lock-color=e5c07b
+caps-lock-text-color=e5c07b
+
+# Correct password
+inside-wrong-color=3b1f22dd
+ring-wrong-color=e06c75
+text-wrong-color=e06c75

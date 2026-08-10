@@ -1,0 +1,28 @@
+# warpd — keyboard-driven mouse pointer.
+# On Wayland (niri) global hotkeys can't be bound by warpd itself, so the modes
+# are launched from niri binds instead: warpd --hint / --grid / --normal
+# (see niri/config.kdl). warpd injects input via the kernel uinput device,
+# which is why it works on niri even though niri lacks wlr-virtual-pointer.
+#
+# Full option list: warpd --list-options
+# Palette matches the onedark/niri theme (blue accent on a dark base).
+
+# --- Hint mode (label the screen, type a hint to jump there) ---
+hint_chars: asdfghjkl;
+hint_bgcolor: #1a1d23
+hint_fgcolor: #7fc8ff
+hint_font: sans-serif
+hint_size: 20
+hint_border_radius: 4
+
+# --- Normal mode pointer (h/j/k/l to nudge, m/space/enter to click) ---
+cursor_color: #e06c75
+cursor_size: 8
+
+# --- Grid mode ---
+grid_color: #3b4048
+grid_border_color: #7fc8ff
+grid_size: 4
+
+# Green flash where a click lands.
+indicator_color: #98c379

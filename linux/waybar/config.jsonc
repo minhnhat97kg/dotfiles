@@ -1,0 +1,124 @@
+[
+    {
+        "output": "eDP-1",
+        "layer": "top",
+        "position": "left",
+        "width": 52,
+        "margin": "0",
+        "spacing": 0,
+        "modules-left": [
+            "custom/launcher",
+            "custom/menu",
+            "custom/niri-workspaces"
+        ],
+        "modules-right": [
+            "group/tray-group",
+            "custom/power-draw",
+            "group/control",
+            "clock",
+            "custom/power"
+        ],
+        "custom/power-draw": {
+            "exec": "~/.config/waybar/scripts/power-draw.sh",
+            "return-type": "json"
+        },
+        "custom/launcher": {
+            "format": "",
+            "tooltip-format": "Launch app",
+            "on-click": "fuzzel"
+        },
+        "custom/menu": {
+            "format": "",
+            "tooltip-format": "Menu",
+            "on-click": "~/.config/waybar/scripts/quickmenu.sh"
+        },
+        "custom/niri-workspaces": {
+            "exec": "~/.config/waybar/scripts/workspaces.sh eDP-1",
+            "return-type": "json",
+            "interval": 2,
+            "on-scroll-up": "niri msg action focus-workspace-up",
+            "on-scroll-down": "niri msg action focus-workspace-down"
+        },
+        "group/tray-group": {
+            "orientation": "vertical",
+            "modules": [
+                "tray"
+            ]
+        },
+        "tray": {
+            "icon-size": 18,
+            "spacing": 8
+        },
+        "group/control": {
+            "orientation": "vertical",
+            "modules": [
+                "battery",
+                "network",
+                "bluetooth",
+                "custom/brightness",
+                "custom/volume"
+            ]
+        },
+        "battery": {
+            "states": {
+                "warning": 30,
+                "critical": 15
+            },
+            "format": "{icon}",
+            "format-charging": "",
+            "format-icons": [
+                "",
+                "",
+                "",
+                "",
+                ""
+            ],
+            "tooltip-format": "Battery: {capacity}% ({timeTo})"
+        },
+        "network": {
+            "format-wifi": "",
+            "format-ethernet": "",
+            "format-disconnected": "",
+            "tooltip-format-wifi": "{essid} ({signalStrength}%)",
+            "tooltip-format-ethernet": "{ipaddr}",
+            "tooltip-format-disconnected": "Disconnected",
+            "on-click": "kitty -e nmtui"
+        },
+        "bluetooth": {
+            "format": "",
+            "format-disabled": "",
+            "format-connected": "",
+            "tooltip-format": "{controller_alias}\t{controller_address}",
+            "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{device_enumerate}",
+            "on-click": "bluetoothctl power on"
+        },
+        "clock": {
+            "format": "{:%H%n%M}",
+            "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
+        },
+        "custom/power": {
+            "format": "",
+            "tooltip-format": "Power menu",
+            "on-click": "~/.config/waybar/scripts/powermenu.sh"
+        },
+        "custom/brightness": {
+            "exec": "~/.config/waybar/scripts/brightness.sh",
+            "return-type": "json",
+            "interval": 2,
+            "on-scroll-up": "brightnessctl -d intel_backlight set 5%+",
+            "on-scroll-down": "brightnessctl -d intel_backlight set 5%-",
+            "signal": 8,
+            "on-click": "~/.config/waybar/scripts/toggle-expand.sh brightness"
+        },
+        "custom/volume": {
+            "exec": "~/.config/waybar/scripts/volume.sh",
+            "return-type": "json",
+            "interval": 1,
+            "on-click": "~/.config/waybar/scripts/toggle-expand.sh volume",
+            "on-scroll-up": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+",
+            "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
+            "signal": 9,
+            "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+        }
+    }
+]

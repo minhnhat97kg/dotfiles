@@ -1,0 +1,6 @@
+[user]
+  email = your-work-email@example.com
+  name = Your Work Name
+
+[core]
+  sshCommand = "ssh -i ~/.ssh/id_work"

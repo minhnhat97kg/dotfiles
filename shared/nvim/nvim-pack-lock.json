@@ -1,0 +1,48 @@
+{
+  "plugins": {
+    "blink.cmp": {
+      "rev": "679a2ffad4bae720bb12e6bcdf57b0dd8b8a80f8",
+      "src": "https://github.com/saghen/blink.cmp"
+    },
+    "gitsigns.nvim": {
+      "rev": "e1b90b60fb7aa9c0ada8e983b460764b35a05e2e",
+      "src": "https://github.com/lewis6991/gitsigns.nvim"
+    },
+    "mason-tool-installer.nvim": {
+      "rev": "443f1ef8b5e6bf47045cb2217b6f748a223cf7dc",
+      "src": "https://github.com/WhoIsSethDaniel/mason-tool-installer.nvim"
+    },
+    "mason.nvim": {
+      "rev": "44d1e90e1f66e077268191e3ee9d2ac97cc18e65",
+      "src": "https://github.com/williamboman/mason.nvim"
+    },
+    "mini.nvim": {
+      "rev": "3923662bf3d6ca49a9503f8d7196ea0450983e6a",
+      "src": "https://github.com/echasnovski/mini.nvim"
+    },
+    "nvim-treesitter": {
+      "rev": "6878ae017d691a0df1c49d8a091c88a33e4c2d50",
+      "src": "https://github.com/nvim-treesitter/nvim-treesitter"
+    },
+    "onedark.nvim": {
+      "rev": "df4792accde9db0043121f32628bcf8e645d9aea",
+      "src": "https://github.com/navarasu/onedark.nvim"
+    },
+    "plenary.nvim": {
+      "rev": "b9fd5226c2f76c951fc8ed5923d85e4de065e509",
+      "src": "https://github.com/nvim-lua/plenary.nvim"
+    },
+    "rustaceanvim": {
+      "rev": "4db27c89017ee0b53d2ec3dbaa4948efe7bd2bdf",
+      "src": "https://github.com/mrcjkb/rustaceanvim"
+    },
+    "telescope-fzf-native.nvim": {
+      "rev": "6fea601bd2b694c6f2ae08a6c6fab14930c60e2c",
+      "src": "https://github.com/nvim-telescope/telescope-fzf-native.nvim"
+    },
+    "telescope.nvim": {
+      "rev": "cfb85dcf7f822b79224e9e6aef9e8c794211b20b",
+      "src": "https://github.com/nvim-telescope/telescope.nvim"
+    }
+  }
+}
