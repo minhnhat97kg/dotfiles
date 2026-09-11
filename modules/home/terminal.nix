@@ -18,7 +18,6 @@
       window = {
         option_as_alt = "Both";
         padding = { x = 12; y = 12; };
-        decorations = "buttonless";
         opacity = 1.0;
       };
       scrolling.history = 10000;

@@ -17,10 +17,10 @@ in
         italic_font auto
         bold_italic_font auto
       '' else ''
-        font_family      UbuntuMono Nerd Font Mono
-        bold_font        UbuntuMono Nerd Font Mono Bold
-        italic_font      UbuntuMono Nerd Font Mono Italic
-        bold_italic_font UbuntuMono Nerd Font Mono Bold Italic
+        font_family      JetBrainsMono Nerd Font
+        bold_font        auto
+        italic_font      auto
+        bold_italic_font auto
       ''}
       font_size 12
 
@@ -34,7 +34,7 @@ in
       ${if isDarwin then "macos_titlebar_color background" else "shell /usr/bin/zsh"}
 
       window_padding_width 1
-      hide_window_decorations yes
+      hide_window_decorations no
       cursor_shape beam
       cursor_blink_interval 0
       tab_bar_edge top

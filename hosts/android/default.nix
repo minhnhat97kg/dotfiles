@@ -45,7 +45,7 @@
       '';
 
       # Manual tmux config since programs.tmux is disabled on Android
-      home.file.".config/tmux/tmux.conf".source = ../../tmux/tmux.conf;
+      home.file.".config/tmux/tmux.conf".source = ../../shared/tmux/tmux.conf;
     };
   };
 }

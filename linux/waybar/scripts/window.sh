@@ -15,9 +15,11 @@ jq -c -n --arg output "$output" --argjson ws "$ws_json" --argjson wins "$win_jso
     { text: "", tooltip: "" }
   else
     ($win.title // $win.app_id // "") as $t |
+    # @html escapes & < > — waybar renders labels as Pango markup, so an
+    # unescaped ampersand in a window title breaks the module outright.
     {
-      text: (if ($t | length) > 60 then ($t[0:60] + "…") else $t end),
-      tooltip: $t,
+      text: (if ($t | length) > 60 then ($t[0:60] + "…") else $t end | @html),
+      tooltip: ($t | @html),
       class: (if $win.is_focused then "niri-window focused" else "niri-window" end)
     }
   end

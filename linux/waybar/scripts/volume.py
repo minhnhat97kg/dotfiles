@@ -4,28 +4,21 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from barutil import render_bar
-
-ICON_MUTED = chr(0xF026)
-ICON_LOW = chr(0xF027)
-ICON_HIGH = chr(0xF028)
+from barutil import SYM_VOLUME, fmt, readout
 
 percent = int(sys.argv[1])
 muted = sys.argv[2] == "true"
-expanded = os.path.exists(os.path.expanduser("~/.cache/waybar/volume_expanded"))
 
-if muted:
-    icon = ICON_MUTED
-elif percent < 50:
-    icon = ICON_LOW
-else:
-    icon = ICON_HIGH
+# "--" rather than the level: while muted the number is not actionable, and the
+# dashes read as "off" without needing a colour to say it.
+value = "--" if muted else fmt(percent)
 
-if expanded:
-    rows = render_bar(percent)
-    text = icon + "\n" + "\n".join(rows)
-else:
-    text = icon
-
-klass = "muted" if muted else ""
-print(json.dumps({"text": text, "tooltip": f"Volume: {percent}%", "class": klass}))
+print(
+    json.dumps(
+        {
+            "text": readout(SYM_VOLUME, value),
+            "tooltip": f"Volume: {percent}%" + (" (muted)" if muted else ""),
+            "class": "muted" if muted else "",
+        }
+    )
+)

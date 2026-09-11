@@ -3,7 +3,14 @@
 
 environment {
     GTK_IM_MODULE "fcitx"
-    QT_IM_MODULE "fcitx"
+    // Qt 6.7+ uses QT_IM_MODULES (plural) to pick an input-context backend by
+    // priority. On this Wayland session we want Qt's native text-input-v3 path
+    // (which QtWebEngine/qutebrowser fully supports), falling back to the fcitx
+    // plugin. The old singular QT_IM_MODULE=fcitx forced the plugin — which the
+    // pip-venv's bundled Qt 6.11 doesn't ship — so it's unset here.
+    // See https://fcitx-im.org/wiki/Using_Fcitx_5_on_Wayland
+    QT_IM_MODULE null
+    QT_IM_MODULES "wayland;fcitx"
     XMODIFIERS "@im=fcitx"
     SDL_IM_MODULE "fcitx"
     GLFW_IM_MODULE "ibus"
@@ -25,27 +32,27 @@ input {
     }
 }
 
-output "HDMI-A-1" {
-    mode "1920x1080@60.000"
-    scale 1
-    position x=0 y=0
-}
-
-output "DP-1" {
-    mode "1920x1080@60.000"
-    scale 1
-    position x=1920 y=0
-}
-
-output "eDP-1" {
-    mode "1920x1080@60.002"
-    scale 1
-    position x=960 y=1080
+// Output positioning is owned by kanshi (see kanshi/config), NOT by static
+// `output {}` blocks here. niri has no native monitor "profiles"; kanshi watches
+// for monitor connect/disconnect and applies the layout matching the connected
+// set via the wlr-output-management protocol (niri implements it since v0.1.8).
+// kanshi runs as a systemd user unit (kanshi.service in modules/home/niri.nix).
+// Add/adjust profiles in kanshi/config.
+//
+// Lid handling: disable the built-in BOE panel when the lid closes and re-enable
+// it when it opens, then relocate waybar onto whatever output is now active (the
+// lid script restarts waybar.service; its launcher re-picks the target). The
+// script addresses monitors by name (make/model/serial), not connector.
+// NOTE: switch-events only accepts the `spawn` action (not `spawn-sh`), and
+// `spawn` does not go through a shell, so wrap in `sh -c` for ~ expansion.
+switch-events {
+    lid-close { spawn "sh" "-c" "~/.config/niri/scripts/lid.sh close"; }
+    lid-open  { spawn "sh" "-c" "~/.config/niri/scripts/lid.sh open"; }
 }
 
 layout {
-    gaps 16
-    center-focused-column "never"
+    gaps 5
+    center-focused-column "on-overflow"
 
     preset-column-widths {
         proportion 0.33333
@@ -73,8 +80,6 @@ layout {
     }
 }
 
-spawn-at-startup "mako"
-
 hotkey-overlay {
 }
 
@@ -93,10 +98,24 @@ window-rule {
     open-floating true
 }
 
+// Scratch terminal (Mod+Return): a kitty window floating in the middle of the
+// screen for quick one-off commands -- `ask`, df, docker ps -- without
+// disturbing the tiling layout.
 window-rule {
-    match app-id=r#"^kitty$"#
+    match app-id=r#"^quickterm$"#
+    open-floating true
+    default-column-width { proportion 0.6; }
+    default-window-height { proportion 0.6; }
+}
+
+window-rule {
     geometry-corner-radius 10
     clip-to-geometry true
+}
+
+window-rule {
+    match is-focused=false
+    opacity 0.7
 }
 
 binds {
@@ -105,6 +124,7 @@ binds {
     Mod+T hotkey-overlay-title="Open a Terminal: kitty" { spawn "kitty"; }
     Mod+D hotkey-overlay-title="Run an Application: fuzzel" { spawn "fuzzel"; }
     Mod+Shift+D hotkey-overlay-title="Web Search / Calculator: fuzzel" { spawn-sh "~/.config/fuzzel/scripts/smart-launcher.sh"; }
+    Mod+Return hotkey-overlay-title="Toggle Floating Scratch Terminal" { spawn-sh "~/.config/niri/scripts/scratch-term.sh"; }
     Mod+Shift+S hotkey-overlay-title="Open Settings" { spawn-sh "XDG_CURRENT_DESKTOP=GNOME gnome-control-center"; }
     Mod+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock"; }
 
@@ -127,8 +147,15 @@ binds {
     Mod+O repeat=false { toggle-overview; }
     Mod+Q repeat=false { close-window; }
 
-    Mod+N repeat=false hotkey-overlay-title="Restore Last Notification" { spawn "makoctl" "restore"; }
-    Mod+Shift+N repeat=false hotkey-overlay-title="Dismiss All Notifications" { spawn "makoctl" "dismiss" "--all"; }
+    Mod+Shift+M repeat=false hotkey-overlay-title="Show Monitor Names & Positions" { spawn-sh "~/.config/niri/scripts/show-monitors.sh"; }
+
+    // Notifications: swaync. -sw ("skip wait") returns immediately instead of
+    // waiting on the daemon, so the keypress never blocks the compositor.
+    Mod+N repeat=false hotkey-overlay-title="Toggle Notification Center" { spawn "swaync-client" "-t" "-sw"; }
+    Mod+Shift+N repeat=false hotkey-overlay-title="Clear All Notifications" { spawn "swaync-client" "-C" "-sw"; }
+    // Routed through toggle.sh, not `swaync-client -d`, so the panel's
+    // "[x] Do Not Disturb" label is redrawn to match.
+    Mod+Ctrl+N repeat=false hotkey-overlay-title="Toggle Do Not Disturb" { spawn-sh "~/.config/swaync/scripts/toggle.sh dnd toggle"; }
 
     Mod+Left  { focus-column-left; }
     Mod+Down  { focus-window-down; }
@@ -213,7 +240,7 @@ binds {
 
     Mod+F { maximize-column; }
     Mod+Shift+F { fullscreen-window; }
-    Mod+M { maximize-window-to-edges; }
+    Mod+M { toggle-windowed-fullscreen; }
     Mod+Ctrl+F { expand-column-to-available-width; }
     Mod+C { center-column; }
 
@@ -226,9 +253,9 @@ binds {
     Mod+Shift+V { switch-focus-between-floating-and-tiling; }
     Mod+W { toggle-column-tabbed-display; }
 
-    Print { screenshot; }
-    Ctrl+Print { screenshot-screen; }
-    Alt+Print { screenshot-window; }
+    Mod+S      { screenshot; }
+    Mod+Ctrl+S { screenshot-screen; }
+    Mod+Alt+S  { screenshot-window; }
 
     Mod+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
 

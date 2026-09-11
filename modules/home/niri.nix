@@ -1,6 +1,6 @@
 # modules/home/niri.nix
 # Wayland desktop stack: niri (compositor) + waybar (bar) + fuzzel (launcher)
-# + mako (notifications) + kanata (keyboard remapper).
+# + swaync (notifications) + kanata (keyboard remapper).
 # Packages come from linuxDesktopPackages (see flake.nix) — imported by hosts
 # that run this desktop (currently just hosts/linux/ubuntu.nix).
 { ... }:
@@ -11,7 +11,7 @@
 
   # systemd --user's own default PATH doesn't include the Nix profile — only
   # login shells get that via /etc/zshrc. Without this, niri.service (and
-  # anything it spawns: mako, waybar via waybar-watch, fuzzel, kitty) can't
+  # anything it spawns: waybar, fuzzel, kitty) can't
   # find their binaries now that the apt/manual duplicates are gone.
   #
   # This must NOT go through `systemd.user.sessionVariables` (home-manager
@@ -43,13 +43,24 @@
     recursive = true;
   };
 
-  home.file.".config/mako/config".source = ../../linux/mako/config;
+  # swaync: notification daemon + control center, replacing mako. Linked as a
+  # directory because it is two files that must stay in step — config.json
+  # (behaviour) and style.css (appearance, GTK4 dialect; see the note at the
+  # top of that file for why it differs from waybar's GTK3 stylesheet).
+  home.file.".config/swaync" = {
+    source = ../../linux/swaync;
+    recursive = true;
+  };
 
   home.file.".config/swaylock/config".source = ../../linux/swaylock/config;
 
   home.file.".config/warpd/config".source = ../../linux/warpd/config;
 
   home.file.".config/kanata/kanata.kbd".source = ../../linux/kanata/kanata.kbd;
+
+  # kanshi: dynamic output profiles by connected-monitor set. See linux/kanshi/config
+  # for the profiles and kanshi.service below for how it is run.
+  home.file.".config/kanshi/config".source = ../../linux/kanshi/config;
 
   # kanata needs read/write on /dev/uinput — add the user to the "input"
   # group and set up the matching udev rule outside of home-manager (requires
@@ -61,6 +72,26 @@
     };
     Service = {
       ExecStart = "%h/.nix-profile/bin/kanata --cfg %h/.config/kanata/kanata.kbd";
+      Restart = "on-failure";
+      RestartSec = 2;
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  # kanshi: applies the output layout matching the connected-monitor set (see
+  # linux/kanshi/config). It talks to niri over the wlr-output-management protocol via
+  # the Wayland socket, so — like waybar/swayidle — it just needs WAYLAND_DISPLAY
+  # from graphical-session.target, not niri's IPC socket. Restarts on failure and
+  # re-applies whenever outputs change on their own.
+  systemd.user.services.kanshi = {
+    Unit = {
+      Description = "kanshi — dynamic output profiles";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+      Requisite = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart = "%h/.nix-profile/bin/kanshi";
       Restart = "on-failure";
       RestartSec = 2;
     };
@@ -82,7 +113,10 @@
       Requisite = [ "graphical-session.target" ];
     };
     Service = {
-      ExecStart = "%h/.nix-profile/bin/waybar";
+      # launch.sh picks the active output (built-in when the lid is open,
+      # external when closed), bakes it into a runtime config, then `exec`s
+      # waybar — so waybar stays the unit's main process and Restart works.
+      ExecStart = "%h/.config/waybar/scripts/launch.sh";
       Restart = "always";
       RestartSec = 1;
     };
@@ -102,6 +136,37 @@
     Service = {
       ExecStart = "%h/.config/waybar/scripts/watch-reload.sh";
       Restart = "on-failure";
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  # swaync — notification daemon + control center. A supervised unit, unlike the
+  # `spawn-at-startup "mako"` it replaces: that made the daemon an orphan
+  # reparented to systemd --user, so if it died notifications stopped silently
+  # for the rest of the session, and restarting niri spawned a second copy that
+  # could not claim the org.freedesktop.Notifications bus name. Restart=always
+  # fixes both.
+  #
+  # X-Config-Path is not read by systemd (it ignores X- keys) — it exists so the
+  # unit's text changes whenever linux/swaync/ changes, which is what makes
+  # sd-switch restart the daemon on `home-manager switch`. Without it a config
+  # edit would sit in the store unread until the next login, since swaync only
+  # reads config.json at startup.
+  systemd.user.services.swaync = {
+    Unit = {
+      Description = "swaync — notification daemon and control center";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+      Requisite = [ "graphical-session.target" ];
+      X-Config-Path = "${../../linux/swaync}";
+    };
+    Service = {
+      # launch.sh copies config.json into $XDG_RUNTIME_DIR and draws the toggle
+      # labels from live state, then execs swaync -c against that copy — so swaync
+      # stays the unit's main process and Restart works. Same shape as waybar.
+      ExecStart = "%h/.config/swaync/scripts/launch.sh";
+      Restart = "always";
+      RestartSec = 1;
     };
     Install.WantedBy = [ "graphical-session.target" ];
   };

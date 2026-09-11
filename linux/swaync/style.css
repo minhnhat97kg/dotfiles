@@ -1,0 +1,384 @@
+/* swaync theme — the waybar text-mode theme, carried into the panel.
+ *
+ * Same rules as linux/waybar/style.css, not just the same colours:
+ *   - High-contrast monochrome. White is the DEFAULT, grey is for secondary and
+ *     genuinely-inactive things. Colour NEVER carries state.
+ *   - TEXT ONLY. No app icons, no notification images, no album art; see the
+ *     "no icons" block for what that does and does not reach.
+ *   - Every framing element is drawn with CHARACTERS, not CSS. Nothing here draws
+ *     a border or a corner radius; the brackets around "[ Clear All ]", "[Lock]",
+ *     "[+]" and "-- no notifications --" come from config.json label strings.
+ *   - One inversion only. On the bar that is #battery.critical; here it is a
+ *     critical notification. A second inverting element and the whole surface
+ *     reads as though everything is on fire.
+ *
+ * HOW THIS FILE WORKS — read before adding a rule.
+ *
+ * A user style.css is loaded *in addition to* swaync's shipped stylesheet (both
+ * at the same provider priority, ours second), and upstream's sheet is compiled
+ * from nested SCSS, so its selectors are long chains like
+ *
+ *   .notification-row .notification-background .notification .notification-action > button
+ *
+ * A short rule of ours LOSES to those on specificity. The first draft of this
+ * file learned that the hard way: `.notification-action { color: … }` never
+ * applied, and on the inverted critical card upstream's white button text landed
+ * on our white background — invisible, verified by sampling the pixels.
+ *
+ * So this file is driven by VARIABLES, not selectors. Upstream declares its own
+ * palette as custom properties on :root (--text-color, --noti-bg, --cc-bg …) and
+ * every one of its nested rules reads them through var(). Redefining those on
+ * :root therefore reaches all of them at once, with no specificity fight. And
+ * because custom properties inherit, scoping them onto .critical / .low restyles
+ * an entire card — which is exactly how the inversion below is done. Upstream
+ * leaves its own `.critical {}` block empty for this purpose.
+ *
+ * Only spacing needs real selectors, because upstream's padding comes from a
+ * SCSS `$margin: 8px` that is compiled away and cannot be reached by a variable.
+ * Those rules below deliberately MATCH upstream's chain length rather than
+ * exceed it — equal specificity plus loading second is enough to win.
+ *
+ * GTK4, NOT GTK3. swaync 0.12.6 links gtk4 4.22 + libadwaita, where GTK has
+ * deprecated @define-color in favour of standard custom properties (supported
+ * since 4.16) — upstream's own sheet uses them too. Deliberately unlike waybar's
+ * style.css, which is GTK3 and uses @define-color/@name. Same palette, different
+ * dialect. Note Ubuntu's system GTK is 4.14 and rejects both `:root` and `var()`;
+ * only the Nix GTK 4.22 that swaync actually links supports them.
+ */
+
+:root {
+  /* ---- waybar palette ---- */
+  --cc-bg:               #000000;   /* bar bg: solid black, flush to the edge */
+  --noti-bg:             13, 13, 13;  /* raw triple: used as rgba(var(--noti-bg), …) */
+  --noti-bg-alpha:       1;         /* opaque. At 0.8 a white page behind the rail
+                                       bled through and washed the whole thing to grey */
+  --noti-bg-darker:      #000000;
+  --noti-bg-hover:       #1a1a1a;
+  --noti-bg-focus:       #1a1a1a;
+  --noti-close-bg:       transparent;
+  --noti-close-bg-hover: #1a1a1a;
+
+  --text-color:          #ffffff;   /* waybar @fg */
+  --text-color-disabled: #5a5a5a;   /* waybar @faint */
+  --bg-selected:         #2a2a2a;   /* upstream default is blue — hue is not allowed here */
+
+  /* ---- framing: none. characters do it. ---- */
+  --noti-border-color:   transparent;
+  --border:              none;
+  --border-radius:       0;
+  --notification-shadow: none;
+
+  /* ---- metrics ---- */
+  /* 1px, not 0: this surface is text only, but GTK asserts `size > 0` when it
+     looks up an icon paintable, so a 0 here spams
+     "gtk_icon_theme_lookup_by_gicon: assertion 'size > 0' failed" on every
+     notification that carries an icon — and left the control center refusing
+     to open at all. 1px plus opacity 0 is invisible and legal. */
+  --notification-icon-size:       1px;   /* upstream 64px */
+  --notification-group-icon-size: 1px;   /* upstream 32px */
+  --font-size-summary:            14px;  /* upstream 16px; matches waybar's 14px */
+  --font-size-body:               13px;  /* upstream 15px */
+
+  /* ---- widget extras (from widgets/*.scss) ---- */
+  --mpris-album-art-overlay:     rgba(0, 0, 0, 0.65);
+  --mpris-button-hover:          #1a1a1a;
+  --mpris-album-art-icon-size:   1px;    /* upstream 96px; art is off entirely.
+                                            1px not 0 — see the note above. */
+  --mpris-album-art-shadow:      none;
+
+  /* ---- bars (progress hints + mpris seek) ---- */
+  /* Ours, not upstream's: upstream leaves `progressbar {}` empty, so an
+     unstyled bar falls through to Adwaita and paints its accent BLUE. Seen in
+     a screenshot before this existed — the one hue on the whole surface. */
+  --bar-track: #333333;
+  --bar-fill:  var(--text-color);
+}
+
+/* ---- the one inversion ---- */
+/* Scoped variables, so every nested upstream rule inside the card flips with it:
+   summary, body, timestamp, action buttons, hover states. Doing this with our own
+   selectors is what failed before. */
+.notification-row .notification-background .notification.critical {
+  --noti-bg:             255, 255, 255;
+  --noti-bg-alpha:       1;
+  --noti-bg-hover:       #e6e6e6;
+  --noti-bg-focus:       #e6e6e6;
+  --noti-close-bg:       transparent;
+  --noti-close-bg-hover: #d6d6d6;
+  --text-color:          #000000;
+  --text-color-disabled: #5a5a5a;
+  --bar-track:           #cccccc;
+}
+
+/* Low urgency steps DOWN the grey ramp rather than changing hue. */
+.notification-row .notification-background .notification.low {
+  --text-color: #8a8a8a;
+}
+
+/* ---- no icons ---- */
+/* Text only. A notification's icon is the one thing on this surface that an
+ * OUTSIDE app chooses, so it is also the one thing that can break the palette:
+ * fwupd sends a green circle, Firefox its full-colour logo, and those landed on
+ * a black monochrome rail looking like stickers. Verified by screenshot before
+ * turning them off, not assumed.
+ *
+ * config.json does the real work ("image-visibility": "never", and mpris
+ * "show-album-art": "never"), and measurement showed that is enough on its own
+ * — text starts flush at the card padding, with no leftover gutter. The rules
+ * below are only a backstop for an icon that slips through a code path
+ * image-visibility does not gate. They collapse it with opacity and zero
+ * min-size; deliberately NOT with -gtk-icon-size, which may not be 0.
+ *
+ * NOT hidden, deliberately: the notification close button and mpris's
+ * transport buttons. Both are SYMBOLIC glyphs that upstream recolours with
+ * `color: var(--text-color)`, so they already draw as white line art on black
+ * (and black on the inverted critical card) — and hiding them would leave an
+ * empty clickable square with no way to spell the action instead. swaync 0.12.6
+ * has no text mode for either; a label cannot be injected from CSS. To get to
+ * zero glyphs, drop "mpris" from `widgets` in config.json — media control then
+ * has no home, since the bar has no mpris module. */
+
+.notification-row .notification-background .notification .notification-default-action .notification-content .image,
+.notification-row .notification-background .notification .notification-default-action .notification-content .app-icon,
+.notification-row .notification-background .notification .notification-default-action .notification-content .body-image {
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+}
+
+.notification-group .notification-group-headers .notification-group-icon {
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+}
+
+.widget-mpris .widget-mpris-player .mpris-overlay .widget-mpris-album-art {
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+}
+
+/* Upstream blurs the album art as the player's backdrop. With no art there is
+ * nothing to blur, but the blur filter still costs a pass — and if a player
+ * ever supplies art it would tint the card. Flat black instead. */
+.widget-mpris .widget-mpris-player .mpris-background {
+  filter: none;
+  background: transparent;
+}
+
+/* ---- spacing ---- */
+/* Chains match upstream's length on purpose — see the header. */
+
+/* THE NOTIFICATION LIST CARRIES NO PADDING AND NO MARGIN. Cards run flush —
+ * edge to edge across the panel, stacked with no gap — so the list reads as one
+ * continuous column of text rather than a set of floating tiles. Several
+ * separate insets had to go to get there, which is why they are all named here
+ * even where the value is just 0:
+ *
+ *   - upstream's `.notification-background { padding: 6px 12px }`, the widest;
+ *   - the 3px inter-card margin this file used to add;
+ *   - `.control-center`'s own padding, which inset the whole column;
+ *   - the group wrapper's padding, which applies once grouping is on.
+ *
+ * The only inset left is INSIDE a card (.notification-default-action): at 0 the
+ * summary text touches the card edge. The title row and the button grid are
+ * given the same horizontal value so every column of text on this surface
+ * starts on one vertical line. Measured, not eyeballed — a scanline across the
+ * panel should show the card background running from the panel's left edge to
+ * its right edge with nothing between. */
+
+/* The last inset, and the one that is easy to miss: upstream sets
+ * `.widget { margin: 8px; padding: 8px }` on EVERY widget — the title, the
+ * button grid, and the notification LIST alike — so 16px per side was being
+ * added outside anything with "notification" in its name. Zeroed here; the
+ * title row and the button grid re-add their own horizontal padding below, so
+ * their text still lines up with a card's. */
+.widget {
+  margin: 0;
+  padding: 0;
+}
+
+.control-center {
+  background: var(--cc-bg);
+  color: var(--text-color);
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.control-center-list {
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}
+
+.control-center-list-placeholder {
+  color: var(--text-color-disabled);
+  padding: 20px 0;
+}
+
+.notification-row {
+  padding: 0;
+  margin: 0;
+}
+
+.notification-row .notification-background {
+  padding: 0;
+  margin: 0;
+}
+
+.notification-row .notification-background .notification {
+  padding: 0;
+  margin: 0;
+}
+
+.notification-row .notification-background .notification .notification-default-action {
+  padding: 5px 7px;
+}
+
+.notification-row .notification-background .notification .notification-action > button {
+  padding: 2px 7px;
+}
+
+.close-button {
+  margin: 2px;
+  padding: 0 5px;
+}
+
+.notification-group-headers {
+  padding: 1px 4px;
+}
+
+/* The full-screen layer behind the rail — transparent or it paints a sheet over
+   the whole output. */
+.blank-window {
+  background: transparent;
+}
+
+/* A popup has no rail behind it, so black-on-whatever is its own hard edge. */
+.floating-notifications .notification {
+  margin: 4px;
+}
+
+/* ---- widgets ---- */
+/* These selectors have little upstream competition (widgets/*.scss nests only one
+   or two levels), so single-class rules hold. */
+
+.widget-title {
+  color: var(--text-color);
+  font-weight: bold;
+  padding: 4px 7px 6px 7px;   /* 7px = the card's inner inset, so "Notifications"
+                                 and a notification summary share a left edge */
+}
+
+/* "[ Clear All ]" is bracketed in config.json, so this only colours it — same
+   treatment as #custom-menu on the bar: mute at rest, white on hover. */
+.widget-title > button {
+  background: transparent;
+  color: #8a8a8a;
+  border: none;
+  padding: 1px 4px;
+  font-weight: normal;
+}
+
+.widget-title > button:hover {
+  color: var(--text-color);
+}
+
+/* NOTE: there are no :checked / .active rules on this surface. The toggles spell
+   their state with characters ("[x] Wifi" vs "[ ] Wifi", redrawn by
+   scripts/toggle.sh), so CSS never carries it — same rule as the bar, where the
+   glyph says what is happening and colour only steps up and down the grey ramp. */
+
+.widget-mpris {
+  color: var(--text-color);
+  padding: 4px 0 0 0;
+}
+
+.widget-mpris-player {
+  background: #0d0d0d;
+  padding: 6px 8px;
+  margin: 0 0 3px 0;
+}
+
+.widget-mpris-title {
+  color: var(--text-color);
+  font-weight: bold;
+}
+
+.widget-mpris-subtitle {
+  color: #8a8a8a;
+  font-size: 12px;
+}
+
+/* No volume/backlight SLIDER-WIDGET rules: those widgets are deliberately not in
+   `widgets` (config.json). The ASCII toggle labels are redrawn by rewriting the
+   config and calling `swaync-client -R`, and swaync 0.12.6's reload leaves a
+   slider widget showing a stale value until the panel is closed and reopened, so
+   a slider here would read wrong after every toggle click. Volume and brightness
+   live on the bar instead (group/volume, group/brightness), where they are
+   event-driven and correct.
+
+   The bare trough/highlight/slider element rules below DO stay: mpris draws a
+   progress bar, and a notification can carry one via `-h int:value:N`. */
+
+trough {
+  background: var(--bar-track);
+  border: none;
+  min-height: 5px;
+}
+
+/* `highlight` is the GtkScale fill; a GtkProgressBar uses a DIFFERENT node
+ * name — progressbar > trough > progress — which is why styling `highlight`
+ * alone left `notify-send -h int:value:60` rendering a blue bar. Both named
+ * here. Bare selectors are enough: user CSS outranks the theme provider that
+ * supplies the accent colour. */
+highlight,
+progressbar > trough > progress {
+  background: var(--bar-fill);
+  border: none;
+  min-height: 5px;
+}
+
+/* Kept for any GtkScale upstream draws (mpris seek). The margin here used to be
+ * -4px, which made GTK log "GtkGizmo (slider) reported min width -3, but sizes
+ * must be >= 0" — 5px wide minus 8px of negative margin. Zero instead. */
+slider {
+  background: var(--bar-fill);
+  border: none;
+  min-height: 11px;
+  min-width: 5px;
+  margin: 0;
+}
+
+/* Labels are bracketed in config.json ("[Lock]"), so these rules only colour
+   them. Hover and active both invert, matching #custom-power:hover on the bar. */
+/* Do Not Disturb lives in THIS grid, alongside Lock / Suspend / Wifi /
+ * Bluetooth, rather than in a strip of its own above the list — one row of
+ * toggles, one row of actions. It is a `normal` button like the rest, so
+ * scripts/toggle.sh redraws "[ ]" / "[x]" into its label the same way. That
+ * also retired the .dnd grid this file used to style separately. */
+.widget-buttons-grid.actions {
+  background: transparent;
+  padding: 4px 5px 2px 5px;
+}
+
+.widget-buttons-grid.actions > flowbox > flowboxchild > button {
+  background: transparent;
+  color: #8a8a8a;
+  border: none;
+  margin: 1px;
+  padding: 4px 2px;
+}
+
+.widget-buttons-grid.actions > flowbox > flowboxchild > button:hover {
+  color: var(--text-color);
+  background: #1a1a1a;
+}
+

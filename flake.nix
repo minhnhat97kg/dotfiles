@@ -53,6 +53,7 @@
         git gh fzf ripgrep fd jq jless coreutils
         delta diff-so-fancy
         fx
+        ddgr
       ];
 
       # Minimal dev packages matching nvim language support:
@@ -71,6 +72,24 @@
 
         # Lua
         lua-language-server stylua
+
+        # Python — uv owns interpreters and per-project venvs (`uv python
+        # install 3.13`, `uv sync`), so no python3 interpreter is pinned here;
+        # uv downloads its own python-build-standalone builds. Nix only
+        # provides the tools that must exist outside any venv: the type
+        # checker and the linter/formatter (see nvim's lsp/basedpyright.lua
+        # and lsp/ruff.lua).
+        uv basedpyright ruff
+
+        # Java / JVM (mem-system: Spring Boot, Maven, Java 21)
+        # jdt-language-server ships a `jdtls` wrapper on PATH; nvim's lsp/jdtls.lua
+        # invokes it directly (it resolves the JDK from PATH — jdk21 above).
+        jdk21 maven jdt-language-server lombok
+
+        # DB clients used by vim-dadbod (psql speaks postgres; add mysql/mariadb
+        # client here if a project needs it)
+        postgresql
+        glow
       ];
 
       # Shared packages — combined alias for backwards compat (macOS + Android use this)
@@ -87,10 +106,13 @@
       # `make qutebrowser-venv`) — only their configs are Nix-managed
       # (modules/home/kitty.nix, modules/home/qutebrowser.nix).
       linuxDesktopPackages = pkgs: with pkgs; [
-        niri waybar fuzzel mako kanata
+        niri waybar fuzzel kanata
+        swaynotificationcenter   # notification daemon + control center (see linux/swaync/)
         btop superfile
         brightnessctl
+        grim   # screenshots (wlroots-compatible; niri supports the export-dmabuf protocol)
         swayidle
+        kanshi   # dynamic output profiles by connected-monitor set (see linux/kanshi/config)
 
         # Mouseless helpers:
         #   warpd   — keyboard-driven mouse pointer (hint/grid/normal modes).
@@ -140,49 +162,13 @@
           rust = pkgs.mkShell { buildInputs = with pkgs; [ rustc cargo clippy rustfmt rust-analyzer ]; };
           react = pkgs.mkShell { buildInputs = with pkgs; [ nodejs typescript typescript-language-server ]; };
           lua = pkgs.mkShell { buildInputs = with pkgs; [ lua-language-server stylua ]; };
+          python = pkgs.mkShell { buildInputs = with pkgs; [ uv basedpyright ruff ]; };
         });
 
       # ============================================================================
       # macOS Configurations (nix-darwin)
       # To add a new Mac: copy this stanza, update hostname + host file path
       # ============================================================================
-      darwinConfigurations."Nathan-Macbook-2" = nix-darwin.lib.darwinSystem {
-        system = "aarch64-darwin";
-        specialArgs = inputs // { inherit username useremail darwinPackages sharedPackages neovim-src; };
-        modules = [
-          ./modules/platforms/darwin.nix
-          ./hosts/darwin/example-macbook.nix
-          home-manager.darwinModules.home-manager
-          {
-            home-manager = {
-              useGlobalPkgs = true;
-              useUserPackages = true;
-              verbose = true;
-              extraSpecialArgs = inputs // { inherit username darwinPackages sharedPackages neovim-src; };
-            };
-          }
-        ];
-      };
-
-      darwinConfigurations."Nathan-Macbook-3" = nix-darwin.lib.darwinSystem {
-        system = "aarch64-darwin";
-        specialArgs = inputs // { inherit username useremail darwinPackages sharedPackages neovim-src; };
-        modules = [
-          ./modules/platforms/darwin.nix
-          ./hosts/darwin/nathan-macbook-3.nix
-          home-manager.darwinModules.home-manager
-          {
-            home-manager = {
-              useGlobalPkgs = true;
-              useUserPackages = true;
-              verbose = true;
-              backupFileExtension = "backup";
-              extraSpecialArgs = inputs // { inherit username darwinPackages sharedPackages neovim-src; };
-            };
-          }
-        ];
-      };
-
       darwinConfigurations."Nathan-Macbook-4" = nix-darwin.lib.darwinSystem {
         system = "aarch64-darwin";
         specialArgs = inputs // { inherit username useremail darwinPackages sharedPackages neovim-src; };

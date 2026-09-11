@@ -1,0 +1,92 @@
+# kanshi — dynamic output profiles keyed on the connected-monitor set.
+#
+# niri has no native "profiles"; its FAQ recommends kanshi for changing the
+# output layout depending on which monitors are plugged in. kanshi watches for
+# monitor connect/disconnect and, when the connected set exactly matches a
+# profile's `output` lines, applies that profile via the wlr-output-management
+# protocol (niri has implemented it since v0.1.8).
+#
+# This is the SINGLE SOURCE OF TRUTH for output positioning — the static
+# `output {}` blocks were removed from niri/config.kdl. Keep any positions here
+# in sync with niri/scripts/lid.sh (DOCK_HOME_*/DOCK_LID_*).
+#
+# SCOPE NOTE: kanshi reacts to physical connect/disconnect only. Closing the lid
+# does NOT disconnect the built-in panel (niri just powers it off), so kanshi
+# does not fire on lid events — that stays with switch-events -> lid.sh. kanshi
+# owns docked-vs-undocked; lid.sh owns lid-open-vs-closed within a docked set.
+#
+# Output identifiers are either a connector name ("HDMI-A-1") or a
+# "Make Model Serial" description, exactly as niri prints them in `niri msg
+# outputs`. The two Dells are the same make/model; the top-left one has no
+# distinct serial, so it is matched by connector (HDMI-A-1) while the top-right
+# one is matched by its description — mirroring the old config.kdl arrangement.
+#
+# Verify/adjust after a `home-manager switch`:
+#   niri msg outputs          # exact names, modes, and refresh rates
+#   kanshi                    # run in a terminal to see which profile matched
+# If a `mode` line fails to apply (rate mismatch), drop the `@<rate>Hz` and let
+# the output use its preferred mode.
+
+# Refresh rates below are the exact values niri prints in `niri msg outputs`
+# (60.002 for the BOE panel, 154.998 for the RTK's high-rate mode). kanshi needs
+# the real rate — a rounded "155" would not match and the mode would be skipped.
+
+# Full dock: both Dells on the top row, RTK dock centered underneath them,
+# built-in to the right of the RTK dock (row 2 = RTK + built-in, non-overlapping).
+profile docked {
+    output "HDMI-A-1"                           mode 1920x1080@60Hz      scale 1   position 0,0
+    output "Dell Inc. DELL P2425H BM2XY74"      mode 1920x1080@60Hz      scale 1   position 1920,0
+    output "DO NOT USE - RTK 0x2775 0x20230923" mode 2560x1600@154.998Hz scale 1.2 position 854,1080
+    output "BOE 0x0AFC Unknown"                 mode 1920x1080@60.002Hz  scale 1   position 2987,1080
+    # Re-target the single-output waybar onto whatever this profile makes active.
+    exec systemctl --user restart waybar.service
+}
+
+# Partial dock: one Dell (the serial'd DP-1) + RTK dock + built-in. Dell on the
+# top row, RTK and built-in on the bottom row (Dell centered over the pair).
+profile dock-one-dell {
+    output "Dell Inc. DELL P2425H BM2XY74"      mode 1920x1080@60Hz      scale 1   position 1066,0
+    output "DO NOT USE - RTK 0x2775 0x20230923" mode 2560x1600@154.998Hz scale 1.2 position 0,1080
+    output "BOE 0x0AFC Unknown"                 mode 1920x1080@60.002Hz  scale 1   position 2133,1080
+    exec systemctl --user restart waybar.service
+}
+
+# Built-in + RTK only (no Dells). RTK on the LEFT and the main output (origin
+# at 0,0 so new windows/workspaces land there), built-in to its right.
+# RTK logical width = 2560 / 1.2 = 2133, so the built-in starts at x=2133.
+# Built-in is left unscaled (scale 1).
+profile dock-rtk-only {
+    output "DO NOT USE - RTK 0x2775 0x20230923" mode 2560x1600@154.998Hz scale 1.2 position 0,0
+    output "BOE 0x0AFC Unknown"                 mode 1920x1080@60.002Hz  scale 1   position 2133,0
+    exec systemctl --user restart waybar.service
+}
+
+# Built-in + a single external HDMI monitor (no dock, no Dells) — e.g. a plain
+# monitor/TV plugged in directly. HDMI on the LEFT (origin at 0,0 so new
+# windows/workspaces land there), built-in to its right. Both left unscaled
+# (scale 1) — without this profile, this exact 2-output combo matched none of
+# the profiles above, so kanshi never fired and niri fell back to its own
+# auto-computed scale for the built-in panel (1.25, noticeably too big).
+profile builtin-plus-hdmi {
+    output "HDMI-A-1"           mode 1920x1080@60Hz     scale 1 position 0,0
+    output "BOE 0x0AFC Unknown" mode 1920x1080@60.002Hz scale 1 position 1920,0
+    exec systemctl --user restart waybar.service
+}
+
+# Built-in only (no dock, no external monitors). Unscaled (scale 1), matching
+# every other profile's treatment of this panel — without this profile, kanshi
+# never fires for this single-output case and niri falls back to its own
+# auto-computed scale (1.25, noticeably too big).
+profile laptop-only {
+    output "BOE 0x0AFC Unknown" mode 1920x1080@60.002Hz scale 1 position 0,0
+    exec systemctl --user restart waybar.service
+}
+
+# --- Additional profiles: uncomment and adjust as your setups grow. ---
+# kanshi matches a profile only when the connected set is EXACTLY its outputs.
+#
+# profile dock-no-dells {
+#     output "BOE 0x0AFC Unknown"                 mode 1920x1080@60Hz scale 1   position 960,1080
+#     output "DO NOT USE - RTK 0x2775 0x20230923" mode 2560x1600@155Hz scale 1.2 position -1173,1080
+#     exec systemctl --user restart waybar.service
+# }

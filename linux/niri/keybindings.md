@@ -6,8 +6,10 @@
 | Key | Action |
 |---|---|
 | `Mod+Shift+/` | Show hotkey overlay |
-| `Mod+T` | Open terminal (alacritty) |
+| `Mod+T` | Open terminal (kitty) |
+| `Mod+Return` | Toggle floating scratch terminal (kitty, 60%×60%, centered) — press again to hide it, session kept |
 | `Mod+D` | App launcher (fuzzel) |
+| `Mod+Shift+D` | Web search / calculator (fuzzel) |
 | `Mod+Shift+S` | Open Settings (gnome-control-center) |
 | `Mod+Alt+L` | Lock the screen (swaylock) |
 | `Mod+Tab` | Fuzzy window switcher (fuzzel) |
@@ -36,8 +38,9 @@ Inside warpd normal mode: `x` = hint, `g` = grid, arrows via `h/j/k/l`, `esc` to
 |---|---|
 | `Mod+O` | Toggle overview |
 | `Mod+Q` | Close window |
-| `Mod+N` | Restore last notification (makoctl restore) |
-| `Mod+Shift+N` | Dismiss all notifications |
+| `Mod+N` | Toggle notification center (swaync) |
+| `Mod+Shift+N` | Clear all notifications |
+| `Mod+Ctrl+N` | Toggle do-not-disturb |
 
 ## Focus (column/window) — arrows or H/J/K/L
 | Key | Action |
@@ -126,9 +129,9 @@ Inside warpd normal mode: `x` = hint, `g` = grid, arrows via `h/j/k/l`, `esc` to
 ## Screenshots
 | Key | Action |
 |---|---|
-| `Print` | Screenshot (interactive) |
-| `Ctrl+Print` | Screenshot full screen |
-| `Alt+Print` | Screenshot window |
+| `Mod+S` | Screenshot (interactive) |
+| `Mod+Ctrl+S` | Screenshot full screen |
+| `Mod+Alt+S` | Screenshot window |
 
 ## Session
 | Key | Action |
@@ -142,6 +145,5 @@ Inside warpd normal mode: `x` = hint, `g` = grid, arrows via `h/j/k/l`, `esc` to
 | Key | Tap | Hold |
 |---|---|---|
 | `CapsLock` | Escape | Control |
-| `a` `s` `d` `f` | letter | Super / Alt / Ctrl / Shift |
-| `j` `k` `l` `;` | letter | Shift / Ctrl / Alt / Super |
 | `Space` | Space | Nav layer: `h/j/k/l`→arrows, `u/i/o/p`→Home/End/PgUp/PgDn |
+| `j`+`k` (chord) | Escape | — |

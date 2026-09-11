@@ -9,7 +9,13 @@ return {
     "typescript.tsx",
   },
   root_markers = { "tsconfig.json", "jsconfig.json", "package.json", ".git" },
-  init_options = { hostInfo = "neovim" },
+  init_options = {
+    hostInfo = "neovim",
+    -- Cap the tsserver heap (MB) so it can't grow unbounded on large projects.
+    maxTsServerMemory = 2048,
+    -- Skip Automatic Type Acquisition, which downloads and holds @types in memory.
+    disableAutomaticTypingAcquisition = true,
+  },
   handlers = {
     ["_typescript.rename"] = function(_, result, ctx)
       local client = assert(vim.lsp.get_client_by_id(ctx.client_id))

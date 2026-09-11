@@ -9,6 +9,19 @@ config.load_autoconfig()
 # force it on regardless of patch version since we're on 6.11.1.
 c.qt.workarounds.disable_hangouts_extension = True
 
+# Some sites gate on the UA string and reject QtWebEngine's own (which already
+# says "Chrome" but not a version they recognize) — report as a normal current
+# Chrome/Linux build instead.
+c.content.headers.user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+
+# ── Keybindings ───────────────────────────────────────────────────────────────
+# Default binds bare 'd' to tab-close, which is a one-key-fumble away from
+# losing a tab. Require the vim-style double-tap 'dd' instead; a lone 'd' now
+# just waits for a second key (config.unbind so 'd' isn't left dangling on
+# tab-close underneath the chain).
+config.unbind("d")
+config.bind("dd", "tab-close")
+
 # ── Tokyo Night palette ───────────────────────────────────────────────────────
 bg        = "#1a1b26"
 bg_dark   = "#16161e"
@@ -35,9 +48,11 @@ c.fonts.tabs.selected = "9pt sans-serif"
 c.fonts.tabs.unselected = "9pt sans-serif"
 c.tabs.favicons.scale = 0.8
 
-# Statusbar: keep it thin too
-c.fonts.statusbar = "9pt monospace"
-c.statusbar.padding = {"top": 1, "bottom": 1, "left": 5, "right": 5}
+# Statusbar: only show it when it's actually saying something (command mode,
+# insert mode, messages, download progress) instead of sitting there always.
+c.fonts.statusbar = "10pt monospace"
+c.statusbar.padding = {"top": 4, "bottom": 4, "left": 8, "right": 8}
+c.statusbar.show = "in-mode"
 
 # OS-level window title (used by taskbar/alt-tab, not drawn on screen here)
 c.window.title_format = "{perc}{current_title}"

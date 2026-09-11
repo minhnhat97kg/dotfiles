@@ -1,9 +1,14 @@
+// Horizontal top bar, text-mode theme.
+//
+// Each readout leads with a CP437 symbol whose shape is distinct from its
+// neighbours', so the bar stays readable peripherally. Width is plentiful here
+// (unlike the previous 52px vertical layout), so values are spelled out rather
+// than compressed to two glyphs. Colour never carries state — see style.css.
 [
     {
-        "output": "eDP-1",
+        "output": "__set-by-launch.sh__",
         "layer": "top",
-        "position": "left",
-        "width": 52,
+        "position": "top",
         "margin": "0",
         "spacing": 0,
         "modules-left": [
@@ -11,114 +16,208 @@
             "custom/menu",
             "custom/niri-workspaces"
         ],
+        "modules-center": [
+            "custom/window"
+        ],
         "modules-right": [
-            "group/tray-group",
+            "tray",
+            "custom/net",
+            "bluetooth",
+            "group/brightness",
+            "group/volume",
             "custom/power-draw",
-            "group/control",
+            "battery",
+            "custom/notification",
             "clock",
             "custom/power"
         ],
-        "custom/power-draw": {
-            "exec": "~/.config/waybar/scripts/power-draw.sh",
-            "return-type": "json"
-        },
         "custom/launcher": {
-            "format": "",
+            "format": "[*]",
             "tooltip-format": "Launch app",
             "on-click": "fuzzel"
         },
         "custom/menu": {
-            "format": "",
+            "format": "[≡]",
             "tooltip-format": "Menu",
             "on-click": "~/.config/waybar/scripts/quickmenu.sh"
         },
         "custom/niri-workspaces": {
-            "exec": "~/.config/waybar/scripts/workspaces.sh eDP-1",
+            "exec": "~/.config/waybar/scripts/workspaces.sh",
             "return-type": "json",
             "interval": 2,
             "on-scroll-up": "niri msg action focus-workspace-up",
             "on-scroll-down": "niri msg action focus-workspace-down"
         },
-        "group/tray-group": {
-            "orientation": "vertical",
-            "modules": [
-                "tray"
-            ]
+        "custom/window": {
+            "exec": "~/.config/waybar/scripts/window.sh",
+            "return-type": "json",
+            "interval": 1
         },
+        // Tray apps ship full-colour icons, and three of them (OPSWATClient,
+        // teams-for-linux, NJBar) supply raw pixmaps that GTK cannot recolour.
+        // The "icons" map overrides whatever the app provides, so every item is
+        // forced to an Adwaita *-symbolic glyph — those are single-path SVGs
+        // that GTK tints from the widget's CSS colour (see #tray in style.css).
+        // Keys are the item's DBus Id:
+        //   busctl --user call org.kde.StatusNotifierWatcher /StatusNotifierWatcher \
+        //     org.freedesktop.DBus.Properties Get ss \
+        //     org.kde.StatusNotifierWatcher RegisteredStatusNotifierItems
+        // then read the Id property of each returned service/path.
         "tray": {
-            "icon-size": 18,
-            "spacing": 8
+            "icon-size": 15,
+            "spacing": 8,
+            "icons": {
+                "Fcitx": "input-keyboard-symbolic",
+                "OPSWATClient": "security-high-symbolic",
+                "remmina-icon": "preferences-desktop-remote-desktop-symbolic",
+                "nm-applet": "network-wireless-signal-good-symbolic",
+                "livepatch": "software-update-available-symbolic",
+                "software-update-available": "software-update-available-symbolic",
+                "teams-for-linux_status_icon_1": "system-users-symbolic",
+                "NJBar": "application-x-executable-symbolic"
+            }
         },
-        "group/control": {
-            "orientation": "vertical",
-            "modules": [
-                "battery",
-                "network",
-                "bluetooth",
-                "custom/brightness",
-                "custom/volume"
-            ]
-        },
-        "battery": {
-            "states": {
-                "warning": 30,
-                "critical": 15
-            },
-            "format": "{icon}",
-            "format-charging": "",
-            "format-icons": [
-                "",
-                "",
-                "",
-                "",
-                ""
-            ],
-            "tooltip-format": "Battery: {capacity}% ({timeTo})"
-        },
-        "network": {
-            "format-wifi": "",
-            "format-ethernet": "",
-            "format-disconnected": "",
-            "tooltip-format-wifi": "{essid} ({signalStrength}%)",
-            "tooltip-format-ethernet": "{ipaddr}",
-            "tooltip-format-disconnected": "Disconnected",
+        // One module, not the two "network" ones this replaces. Waybar's network
+        // module reports per-interface link state but has no notion of which
+        // interface holds the DEFAULT ROUTE, so with cable and wifi both up the
+        // bar painted two equally-bright readouts and could not say which was
+        // actually live — the whole question on a dual-homed machine.
+        //
+        //   ● carrying traffic    ○ link up, standing by
+        //
+        // scripts/network.sh resolves the live link from the lowest-metric
+        // default route among en*/wl* ONLY. Restricting it to those physical
+        // prefixes is what keeps openvpnclient0 and the virbr* bridges out of
+        // the answer: they carry default/blanket routes too and waybar reported
+        // them as a wired link, which is the bug the old two-module split was
+        // working around. This fixes it at the source instead.
+        "custom/net": {
+            "exec": "~/.config/waybar/scripts/network.sh",
+            "return-type": "json",
+            "interval": 3,
+            "signal": 10,
             "on-click": "kitty -e nmtui"
         },
         "bluetooth": {
-            "format": "",
-            "format-disabled": "",
-            "format-connected": "",
+            "format": "♦··",
+            "format-disabled": "♦--",
+            "format-connected": "♦{device_alias}",
+            "max-length": 18,
             "tooltip-format": "{controller_alias}\t{controller_address}",
             "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{device_enumerate}",
             "on-click": "bluetoothctl power on"
         },
-        "clock": {
-            "format": "{:%H%n%M}",
-            "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
-        },
-        "custom/power": {
-            "format": "",
-            "tooltip-format": "Power menu",
-            "on-click": "~/.config/waybar/scripts/powermenu.sh"
+        // Brightness and volume are group drawers: the readout is the group
+        // leader and is always visible; [-] and [+] slide out on hover. The
+        // leader must come FIRST in "modules" — waybar never hides it — which
+        // is why the buttons sit to the right of the value rather than either
+        // side of it.
+        //
+        // Every adjustment pokes waybar's real-time signal so the readout
+        // updates immediately instead of waiting out the poll interval:
+        // RTMIN+8 refreshes brightness, RTMIN+9 volume.
+        "group/brightness": {
+            "orientation": "horizontal",
+            "drawer": {
+                "transition-duration": 250,
+                "children-class": "ctl-btn"
+            },
+            "modules": [
+                "custom/brightness",
+                "custom/bright-down",
+                "custom/bright-up"
+            ]
         },
         "custom/brightness": {
             "exec": "~/.config/waybar/scripts/brightness.sh",
             "return-type": "json",
             "interval": 2,
-            "on-scroll-up": "brightnessctl -d intel_backlight set 5%+",
-            "on-scroll-down": "brightnessctl -d intel_backlight set 5%-",
             "signal": 8,
-            "on-click": "~/.config/waybar/scripts/toggle-expand.sh brightness"
+            "on-scroll-up": "brightnessctl -d intel_backlight set 5%+ && pkill -RTMIN+8 waybar",
+            "on-scroll-down": "brightnessctl -d intel_backlight set 5%- && pkill -RTMIN+8 waybar"
+        },
+        "custom/bright-down": {
+            "format": "[-]",
+            "tooltip": false,
+            "on-click": "brightnessctl -d intel_backlight set 5%- && pkill -RTMIN+8 waybar"
+        },
+        "custom/bright-up": {
+            "format": "[+]",
+            "tooltip": false,
+            "on-click": "brightnessctl -d intel_backlight set 5%+ && pkill -RTMIN+8 waybar"
+        },
+        "group/volume": {
+            "orientation": "horizontal",
+            "drawer": {
+                "transition-duration": 250,
+                "children-class": "ctl-btn"
+            },
+            "modules": [
+                "custom/volume",
+                "custom/vol-down",
+                "custom/vol-up"
+            ]
         },
         "custom/volume": {
             "exec": "~/.config/waybar/scripts/volume.sh",
             "return-type": "json",
             "interval": 1,
-            "on-click": "~/.config/waybar/scripts/toggle-expand.sh volume",
-            "on-scroll-up": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+",
-            "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
             "signal": 9,
-            "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+            "on-scroll-up": "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+ && pkill -RTMIN+9 waybar",
+            "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && pkill -RTMIN+9 waybar",
+            "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && pkill -RTMIN+9 waybar"
+        },
+        "custom/vol-down": {
+            "format": "[-]",
+            "tooltip": false,
+            "on-click": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && pkill -RTMIN+9 waybar"
+        },
+        "custom/vol-up": {
+            "format": "[+]",
+            "tooltip": false,
+            "on-click": "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+ && pkill -RTMIN+9 waybar"
+        },
+        "custom/power-draw": {
+            "exec": "~/.config/waybar/scripts/power-draw.sh",
+            "return-type": "json"
+        },
+        // {capacity:02} keeps 0-99 at two glyphs; 100 widens to three on its own.
+        "battery": {
+            "states": {
+                "warning": 30,
+                "critical": 15
+            },
+            "format": "{icon}{capacity:02}",
+            "format-icons": ["▁", "▃", "▅", "▆", "█"],
+            "format-charging": "↑{capacity:02}",
+            "format-plugged": "≡{capacity:02}",
+            "tooltip-format": "Battery: {capacity}% ({timeTo})"
+        },
+        // Push-driven, not polled: swaync-client -swb emits a line whenever the
+        // count, dnd state or panel visibility changes, so there is deliberately
+        // no "interval" here. scripts/notifications.sh reframes swaync's bare
+        // count into the bar's bracket convention — see the header there.
+        //
+        // "escape" is off because the script emits no markup; leaving it on would
+        // be harmless but the tooltip contains newlines we want kept literal.
+        "custom/notification": {
+            "exec": "~/.config/waybar/scripts/notifications.sh",
+            "return-type": "json",
+            "escape": false,
+            "on-click": "swaync-client -t -sw",
+            "on-click-right": "swaync-client -d -sw",
+            "on-click-middle": "swaync-client -C -sw"
+        },
+        // Bracketed rather than CSS-bordered: all framing on this bar is drawn
+        // with characters, matching [*] / [≡] / [X].
+        "clock": {
+            "format": "[{:%H:%M}]",
+            "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
+        },
+        "custom/power": {
+            "format": "[X]",
+            "tooltip-format": "Power menu",
+            "on-click": "~/.config/waybar/scripts/powermenu.sh"
         }
     }
 ]

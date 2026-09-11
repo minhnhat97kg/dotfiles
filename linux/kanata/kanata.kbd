@@ -1,24 +1,33 @@
-;; Home-row mods + a space-hold navigation layer, plus the original
-;; Caps = tap:Escape / hold:Control.
-;;
-;; Home-row mods (based on kanata's cfg_samples/home-row-mod-advanced.kbd):
-;;   hold a/s/d/f = Super/Alt/Ctrl/Shift   (left hand)
-;;   hold j/k/l/; = Shift/Ctrl/Alt/Super   (right hand)
-;; Anti-misfire: when a mod key resolves as a tap, mods are briefly disabled
-;; (the `nomods` layer) so fast rolls type letters instead of firing modifiers;
-;; an idle fake-key flips back to `base`. `tap-hold-release-keys` with the
-;; same-hand key list also makes same-hand rolls tap early.
-;;
-;; Nav layer: hold Space to turn h/j/k/l into arrows and u/i/o/p into
-;; Home/End/PgUp/PgDn. A tap of Space is still Space.
+;; Caps = tap:Escape / hold:Control, plus a space-hold navigation layer.
 
 (defcfg
   process-unmapped-keys yes
+  ;; Required by defchordsv2 (the J+K -> Esc combo). Lets a tap-hold key and a
+  ;; chord be evaluated concurrently instead of the tap-hold swallowing the chord.
+  concurrent-tap-hold yes
+  ;; Allow-list: kanata only remaps the built-in laptop keyboard. Everything
+  ;; else on /dev/input is ignored, which is deliberate:
+  ;;
+  ;;   - Bluetooth keyboards (the Corne, and any other BT board) are left alone.
+  ;;     The Corne carries its own home row mods and remapping in firmware, so
+  ;;     kanata processing it too would double-remap and fight the firmware
+  ;;     layer. Excluding BT as a class means a newly paired keyboard can't
+  ;;     silently pick up these mappings either.
+  ;;   - The fcitx5/Lotus virtual keyboard must not be grabbed: the synthetic
+  ;;     backspaces/characters Lotus emits to compose Vietnamese would loop back
+  ;;     through kanata's tap-hold engine, adding latency and mangling input.
+  ;;
+  ;; Names must match exactly (no partial matches or regex); they come from
+  ;; kanata's "registering /dev/input/eventX: ..." startup lines.
+  linux-dev-names-include (
+    "AT Translated Set 2 keyboard"
+  )
 )
 
 (defsrc
   caps
-  a s d f  h j k l ;
+  a s d f
+  h j k l ;
   u i o p
   spc
 )
@@ -26,62 +35,43 @@
 (defvar
   tap-time 200
   hold-time 150
-
-  left-hand-keys (
-    q w e r t
-    a s d f g
-    z x c v b
-  )
-  right-hand-keys (
-    y u i o p
-    h j k l ;
-    n m , . /
-  )
-)
-
-(deffakekeys
-  to-base (layer-switch base)
+  ;; Thumb key (Space) mirrors a thumb-hold-tap: tapping-term 180,
+  ;; tap-preferred flavor (implemented in kanata with plain `tap-hold`, which only
+  ;; holds on timeout and never on an interrupting keypress -> no dropped spaces).
+  thumb-time 180
 )
 
 (defalias
   caps (tap-hold-release $tap-time $hold-time esc lctl)
 
-  ;; Disable mods while typing fast, then return to base once idle.
-  tap (multi
-    (layer-switch nomods)
-    (on-idle-fakekey to-base tap 20)
-  )
-
-  a (tap-hold-release-keys $tap-time $hold-time (multi a @tap) lmet $left-hand-keys)
-  s (tap-hold-release-keys $tap-time $hold-time (multi s @tap) lalt $left-hand-keys)
-  d (tap-hold-release-keys $tap-time $hold-time (multi d @tap) lctl $left-hand-keys)
-  f (tap-hold-release-keys $tap-time $hold-time (multi f @tap) lsft $left-hand-keys)
-  j (tap-hold-release-keys $tap-time $hold-time (multi j @tap) rsft $right-hand-keys)
-  k (tap-hold-release-keys $tap-time $hold-time (multi k @tap) rctl $right-hand-keys)
-  l (tap-hold-release-keys $tap-time $hold-time (multi l @tap) ralt $right-hand-keys)
-  ; (tap-hold-release-keys $tap-time $hold-time (multi ; @tap) rmet $right-hand-keys)
-
   ;; Space: tap = Space, hold = navigation layer.
-  spc (tap-hold-release $tap-time $hold-time spc (layer-while-held nav))
+  ;; Uses plain `tap-hold` (not `-release`): the nav layer only engages after a
+  ;; full 180ms hold and is NOT triggered early by an interrupting keypress, so a
+  ;; quick space in the middle of typing always emits a space.
+  spc (tap-hold $thumb-time $thumb-time spc (layer-while-held nav))
 )
 
 (deflayer base
   @caps
-  @a @s @d @f  h @j @k @l @;
-  u i o p
-  @spc
-)
-
-(deflayer nomods
-  @caps
-  a s d f  h j k l ;
+  a s d f
+  h j k l ;
   u i o p
   @spc
 )
 
 (deflayer nav
   @caps
-  _ _ _ _  left down up right _
+  _ _ _ _
+  left down up right _
   home end pgup pgdn
   spc
+)
+
+;; Home-row combo: press J + K together (within 150ms) -> Escape, mirroring the
+;; repo's `combo_esc` (key-positions 19 20, timeout-ms 150). `first-release` frees
+;; the chord as soon as either key lifts; the empty layer list keeps it active
+;; everywhere. Rolling J->K normally still types "jk" as long as they overlap for
+;; less than the 150ms window.
+(defchordsv2
+  (j k) esc 150 first-release ()
 )

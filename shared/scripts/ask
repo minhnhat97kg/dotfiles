@@ -1,0 +1,220 @@
+#!/usr/bin/env zsh
+# Ask a local Ollama model for a shell command / explanation, optionally piping
+# in stdin as extra context, e.g.: ls -la | ask "summarize this list"
+#
+# Env:
+#   ASK_MODEL     ollama model tag     (default gemma4:e2b)
+#   ASK_THINK     0/false/no/off turns off the model's thinking pass (default on)
+#   ASK_SEARCH    0 never searches, 1 always searches (default: model decides)
+#   ASK_SEARCH_N  how many search results to feed the model (default 5)
+#
+# Flags: -s force a web search, -S never search.
+
+model=${ASK_MODEL:-gemma4:e2b}
+today=$(date +%F)
+
+think=true
+case ${ASK_THINK:-1} in
+  0|false|no|off|FALSE|NO|OFF) think=false ;;
+esac
+
+case ${ASK_SEARCH:-auto} in
+  0|false|no|off|FALSE|NO|OFF) search_mode=never ;;
+  1|true|yes|on|TRUE|YES|ON)   search_mode=always ;;
+  *)                           search_mode=auto ;;
+esac
+n_results=${ASK_SEARCH_N:-5}
+
+while [[ $1 == -? || $1 == -- ]]; do
+  case $1 in
+    -s) search_mode=always; shift ;;
+    -S) search_mode=never;  shift ;;
+    --) shift; break ;;
+    *)  print -u2 "ask: unknown option $1"; exit 2 ;;
+  esac
+done
+
+input=""
+if [ ! -t 0 ]; then
+  input=$(cat)
+fi
+
+question="$*"
+if [ -z "$question" ] && [ -z "$input" ]; then
+  print -u2 "usage: ask [-s|-S] <question>   |   <command> | ask <question>"
+  exit 2
+fi
+
+# Router pass: a tiny non-streaming call with a JSON schema, deciding whether
+# this question needs the web at all. Only the query it returns leaves the
+# machine -- piped stdin never does.
+search_block=""
+if [[ $search_mode != never ]] && (( $+commands[ddgr] )) && [ -n "$question" ]; then
+  query=""
+  if [[ $search_mode == always ]]; then
+    query=$question
+  else
+    router_schema='{"type":"object",
+      "properties":{"need_search":{"type":"boolean"},"query":{"type":"string"}},
+      "required":["need_search","query"]}'
+    router_sys="Today is $today. Decide if answering needs a web search. Set need_search=true ONLY for things beyond stable general knowledge: current events, recent releases, versions, prices, news, or facts after your training. Set need_search=false for general programming, shell commands, and definitions. If true, put the best search query in \"query\", else \"\"."
+    router_payload=$(jq -n \
+      --arg model "$model" \
+      --arg prompt "$question" \
+      --arg system "$router_sys" \
+      --argjson format "$router_schema" \
+      '{model: $model, prompt: $prompt, system: $system, stream: false,
+        think: false, format: $format,
+        options: {num_predict: 120, temperature: 0}}')
+
+    router_out=$(curl -s --max-time 60 http://localhost:11434/api/generate \
+                      -H "Content-Type: application/json" \
+                      -d "$router_payload" 2>/dev/null \
+                 | jq -r '.response // empty' \
+                 | jq -r 'select(.need_search == true) | .query' 2>/dev/null)
+    query=$router_out
+  fi
+
+  if [ -n "$query" ]; then
+    [ -t 1 ] && printf '\033[2m⌕ searching: %s\033[0m' "$query"
+    results=$(timeout 12 ddgr --json -n "$n_results" -- "$query" 2>/dev/null)
+    [ -t 1 ] && printf '\r\033[J'
+
+    if [ -n "$results" ]; then
+      search_block=$(print -r -- "$results" | jq -r --arg d "$today" '
+        select(type == "array" and length > 0)
+        | "Web search results (" + $d + "):\n"
+          + ([to_entries[] | "[\(.key+1)] \(.value.title)\n    \(.value.url)\n    \(.value.abstract)"]
+             | join("\n"))' 2>/dev/null)
+    fi
+    [ -z "$search_block" ] && print -u2 "ask: search found nothing, answering from local knowledge"
+  fi
+fi
+
+full_prompt="$question"
+if [ -n "$search_block" ]; then
+  full_prompt+=$'\n\n'"$search_block"
+fi
+if [ -n "$input" ]; then
+  full_prompt+=$'\n\n'"Input Data:"$'\n'"$input"
+fi
+
+# System prompt: describe the machine so the model suggests commands that
+# actually run here. ASK_CONTEXT=0 drops it; ASK_SYSTEM appends to it.
+sysprompt=""
+if [ "${ASK_CONTEXT:-1}" != "0" ]; then
+  os=$(. /etc/os-release 2>/dev/null && print -r -- "$PRETTY_NAME")
+  : ${os:=$(uname -s)}
+
+  pkgs=()
+  for p in nix apt dnf pacman zypper apk brew; do
+    (( $+commands[$p] )) && pkgs+=("$p")
+  done
+
+  git_line=""
+  if branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); then
+    dirty=$(git status --porcelain 2>/dev/null | wc -l)
+    if (( dirty > 0 )); then
+      git_line="Git: branch $branch, $dirty files modified"
+    else
+      git_line="Git: branch $branch, clean"
+    fi
+  fi
+
+  sysprompt="You are a shell assistant on this machine. Prefer commands that work here."$'\n'
+  sysprompt+="Today is $today."$'\n'
+  sysprompt+="OS: $os   Kernel: $(uname -r) $(uname -m)"$'\n'
+  sysprompt+="Host: ${HOST:-$(hostname)}   Shell: ${SHELL:t}"$'\n'
+  (( $#pkgs )) && sysprompt+="Package managers available: ${(j:, :)pkgs}"$'\n'
+  sysprompt+="Current directory: $PWD"$'\n'
+  [ -n "$git_line" ] && sysprompt+="$git_line"$'\n'
+  sysprompt+="Be concise; prefer a command over prose when a command answers it."
+fi
+if [ -n "$search_block" ]; then
+  sysprompt="${sysprompt:+$sysprompt$'\n'}Web search results are included in the prompt. Base your answer on them and cite the URL you relied on."
+fi
+[ -n "$ASK_SYSTEM" ] && sysprompt="${sysprompt:+$sysprompt$'\n'}$ASK_SYSTEM"
+
+payload=$(jq -n \
+  --arg model "$model" \
+  --arg prompt "$full_prompt" \
+  --arg system "$sysprompt" \
+  --argjson think "$think" \
+  '{model: $model, prompt: $prompt, stream: true, think: $think,
+    options: {num_predict: 4096}}
+   + (if $system != "" then {system: $system} else {} end)')
+
+tmpfile=$(mktemp)
+altscreen=0
+cleanup() {
+  (( altscreen )) && printf '\033[0m\033[?1049l'
+  rm -f "$tmpfile" "$tmpfile.err"
+}
+on_interrupt() {
+  # Leave the alt screen but keep whatever streamed in so far -- an interrupt
+  # usually means the partial answer was already enough.
+  if (( altscreen )); then
+    printf '\033[0m\033[?1049l'; altscreen=0
+    local partial
+    partial=$(jq -j '.response // empty' "$tmpfile" 2>/dev/null)
+    [ -n "$partial" ] && print -r -- "$partial"
+  fi
+  exit 130
+}
+trap cleanup EXIT
+trap on_interrupt INT TERM
+
+# Live pass: one long-lived jq for the whole stream, not one per token. Thinking
+# chunks are dimmed; the first answer chunk resets the dim and breaks the line.
+display='
+foreach inputs as $l ([false, false, ""];
+    ($l.thinking // "") as $t
+  | ($l.response // "") as $r
+  | if   $r != "" then [true, .[1], (if .[0] then "" elif .[1] then "\u001b[22m\n\n" else "" end) + $r]
+    elif $t != "" then [.[0], true, "\u001b[2m" + $t]
+    else [.[0], .[1], ""] end;
+  .[2])
+'
+
+if [ -t 1 ]; then
+  # Stream on the alternate screen so the raw text can be discarded wholesale
+  # afterwards -- glow then renders the answer on the normal screen no matter
+  # how far the stream scrolled.
+  printf '\033[?1049h\033[H'; altscreen=1
+  curl -sNS http://localhost:11434/api/generate \
+       -H "Content-Type: application/json" \
+       -d "$payload" 2>"$tmpfile.err" \
+    | tee "$tmpfile" \
+    | jq -jn --unbuffered "$display"
+  rc=${pipestatus[1]}
+  printf '\033[0m\033[?1049l'; altscreen=0
+else
+  curl -sS http://localhost:11434/api/generate \
+       -H "Content-Type: application/json" \
+       -d "$payload" > "$tmpfile" 2>"$tmpfile.err"
+  rc=$?
+fi
+
+if [ "$rc" -ne 0 ]; then
+  print -u2 "ask: request failed (curl exit $rc): $(cat "$tmpfile.err" 2>/dev/null)"
+  exit "$rc"
+fi
+
+err=$(jq -r -s 'map(.error // empty) | first // empty' "$tmpfile" 2>/dev/null)
+if [ -n "$err" ]; then
+  print -u2 "ask: ollama error: $err"
+  exit 1
+fi
+
+answer=$(jq -j '.response // empty' "$tmpfile")
+
+if [ -z "$answer" ]; then
+  print -u2 "ask: empty response from $model (thinking may have used the whole num_predict budget; try ASK_THINK=0)"
+  exit 1
+fi
+
+if [ -t 1 ]; then
+  printf '%s\n' "$answer" | glow -w "$(tput cols)" -
+else
+  printf '%s\n' "$answer" | glow -w "${COLUMNS:-80}" -
+fi

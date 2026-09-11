@@ -10,6 +10,7 @@
       export NPM_CONFIG_PREFIX="$HOME/.npm-global"
       export PATH="$HOME/.npm-global/bin:$PATH"
       export PATH="$HOME/.local/bin:$PATH"
+      export PATH="$HOME/.cargo/bin:$PATH"
       export BUN_INSTALL="$HOME/.bun"
       export PATH="$BUN_INSTALL/bin:$PATH"
       ALIASES_SCRIPT="$HOME/.config/dotfiles/scripts/load-aliases.sh"
@@ -24,7 +25,9 @@
       # opencode (optional — only if installed)
       [ -d "$HOME/.opencode/bin" ] && export PATH="$HOME/.opencode/bin:$PATH"
       alias claude-api="CLAUDE_CONFIG_DIR=~/.claude-api claude"
+
     '';
+
     shellAliases = {
       ll = "ls -l";
       e = "nvim";
