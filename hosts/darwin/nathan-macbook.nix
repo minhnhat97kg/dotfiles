@@ -1,10 +1,10 @@
-# Host-specific configuration for Nathan-Macbook-4
+# Host-specific configuration for nathan-macbook
 # Receives: username, sharedPackages, darwinPackages via extraSpecialArgs
 { pkgs, lib, username, sharedPackages, darwinPackages, ... }:
 {
   # Host identity
-  networking.hostName = "Nathan-Macbook-4";
-  networking.computerName = "Nathan-Macbook-4";
+  networking.hostName = "nathan-macbook";
+  networking.computerName = "nathan-macbook";
 
   # yabai — bsp tiling window manager. Basic tiling/focus/resize works out of
   # the box; the scripting addition (better space handling, some window rules)

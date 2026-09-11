@@ -169,12 +169,12 @@
       # macOS Configurations (nix-darwin)
       # To add a new Mac: copy this stanza, update hostname + host file path
       # ============================================================================
-      darwinConfigurations."Nathan-Macbook-4" = nix-darwin.lib.darwinSystem {
+      darwinConfigurations."nathan-macbook" = nix-darwin.lib.darwinSystem {
         system = "aarch64-darwin";
         specialArgs = inputs // { inherit username useremail darwinPackages sharedPackages neovim-src; };
         modules = [
           ./modules/platforms/darwin.nix
-          ./hosts/darwin/nathan-macbook-4.nix
+          ./hosts/darwin/nathan-macbook.nix
           home-manager.darwinModules.home-manager
           {
             home-manager = {

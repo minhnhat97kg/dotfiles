@@ -290,7 +290,7 @@ directly. Tiling window management:
 - `darwinPackages` in `flake.nix` adds `clipboard-jh`, `clipse`, and the
   JetBrains Mono Nerd Font on top of `sharedPackages`.
 
-To add a second Mac: copy the `darwinConfigurations."Nathan-Macbook-4"` stanza
+To add a second Mac: copy the `darwinConfigurations."nathan-macbook"` stanza
 in `flake.nix`, point it at a new `hosts/darwin/<hostname>.nix`.
 
 ### WSL — `hosts/linux/wsl.nix`
