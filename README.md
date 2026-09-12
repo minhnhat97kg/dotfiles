@@ -52,12 +52,6 @@ dotfiles/
 
 ### macOS
 
-Tiling window management via **yabai** + **skhd** (nix-darwin's `services.yabai`
-/ `services.skhd`, config in `hosts/darwin/example-macbook.nix`). Basic
-tiling/focus/resize works immediately; the scripting addition (for full
-space-switching behavior) needs SIP partially disabled — a manual step, see
-the comment above `services.yabai` in that file.
-
 ```bash
 sh <(curl -L https://nixos.org/nix/install)
 git clone <repo> ~/projects/dotfiles
@@ -270,18 +264,7 @@ per-host file in `hosts/<platform>/`.
 ### macOS — `hosts/darwin/example-macbook.nix`
 nix-darwin, not home-manager standalone — `flake.nix`'s
 `darwinConfigurations` wires `home-manager.darwinModules.home-manager` in
-directly. Tiling window management:
-- **yabai** (`services.yabai`) — bsp layout, 8px gaps/padding, `Finder` and
-  `System Settings` excluded from tiling. Basic tiling/focus/resize/rules work
-  immediately with no extra setup.
-- **skhd** (`services.skhd`) — keybindings for focus/swap/resize (`alt+hjkl`,
-  `shift+alt+hjkl`, `ctrl+alt+hjkl`), float/fullscreen toggle, and switching
-  windows/spaces 1–4.
-- The scripting addition (finer space-switching behavior) needs System
-  Integrity Protection partially disabled — a manual, security-relevant step
-  this repo deliberately does not automate. See the comment above
-  `services.yabai` in `example-macbook.nix` for the exact `csrutil`/
-  `yabai --install-sa` steps.
+directly.
 - kitty config comes from the shared `modules/home/kitty.nix` (imported by
   the host file), with macOS-specific options (`macos_option_as_alt`,
   titlebar color, JetBrainsMono Nerd Font) selected via its `isDarwin` branch.

@@ -59,7 +59,7 @@
       # Minimal dev packages matching nvim language support:
       # Go, Rust, React/JS/TS, Lua + build tools for native plugins/treesitter.
       devPackages = pkgs: with pkgs; [
-        gnumake gcc
+        gnumake gcc tree-sitter
 
         # Go
         go gopls delve gofumpt goimports-reviser

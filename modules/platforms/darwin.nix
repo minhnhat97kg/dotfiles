@@ -34,13 +34,6 @@
   # macOS-specific settings
   programs.zsh.enable = true;
 
-  # Mission Control prerequisites for yabai on macOS 26 (Tahoe) — see
-  # https://github.com/asmvik/yabai/wiki#installation-requirements
-  system.defaults.spaces.spans-displays = false; # each display keeps its own Spaces
-  system.defaults.dock.mru-spaces = false; # keep space order stable for alt-1..4 shortcuts
-  system.defaults.WindowManager.StandardHideDesktopIcons = false; # "Show Items On Desktop" — multi-display focus reliability
-  system.defaults.WindowManager.EnableStandardClickToShowDesktop = false; # "Click wallpaper to reveal Desktop" -> Only in Stage Manager
-
   homebrew = {
     enable = true;
     brews = [ ];

@@ -22,7 +22,7 @@ in
         italic_font      auto
         bold_italic_font auto
       ''}
-      font_size 12
+      font_size ${if isDarwin then "14" else "12"}
 
       map ctrl+shift+equal    change_font_size all +0.5
       map ctrl+shift+plus     change_font_size all +0.5

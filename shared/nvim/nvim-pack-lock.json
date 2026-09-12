@@ -24,10 +24,6 @@
       "rev": "eb60cc7b94c46005237fd34170d76f3a089a90aa",
       "src": "https://github.com/lewis6991/gitsigns.nvim"
     },
-    "jb.nvim": {
-      "rev": "ad55d976d44c498ae8dfb0dfec5712516a9cadf9",
-      "src": "https://github.com/nickkadutskyi/jb.nvim"
-    },
     "kulala.nvim": {
       "rev": "41060832946ac3ea3ed83f39404682dbeed830b3",
       "src": "https://github.com/mistweaverco/kulala.nvim"
