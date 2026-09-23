@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
+# Author: nathan.huynh
 # bootstrap.sh — installs Nix and clones the dotfiles repo on a fresh machine.
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/<github-user>/dotfiles/main/bootstrap.sh | bash
 #   OR: clone repo first, then: ./bootstrap.sh
 #
 # What this does:
-#   1. Detects the OS (macOS, WSL, Termux, Android, Linux)
+#   1. Detects the OS (macOS, Termux, Android, Linux)
 #   2. Installs Nix (Determinate Systems installer), if not already present
 #   3. Clones the dotfiles repo
 #
@@ -37,8 +38,6 @@ detect_platform() {
     echo "android"
   elif [ -d /data/data/com.termux ] || [ -n "${TERMUX_VERSION:-}" ]; then
     echo "termux"
-  elif grep -qi microsoft /proc/version 2>/dev/null; then
-    echo "wsl"
   else
     echo "linux"
   fi

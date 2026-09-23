@@ -1,7 +1,7 @@
 # Cross-Platform Dotfiles
 
 Nix configuration for **macOS** (nix-darwin), **Linux** (standalone home-manager —
-Ubuntu, WSL), **Termux**, and **Android** (nix-on-droid). One flake, one set of
+Ubuntu), **Termux**, and **Android** (nix-on-droid). One flake, one set of
 package lists, per-host overrides for anything machine-specific.
 
 ## Structure
@@ -30,7 +30,7 @@ dotfiles/
 │
 ├── hosts/
 │   ├── darwin/                 # One file per Mac (example-macbook.nix is the template)
-│   ├── linux/{ubuntu,wsl,termux}.nix
+│   ├── linux/{ubuntu,termux}.nix
 │   ├── linux/ubuntu-apt-deps.sh         # apt packages Nix can't provide on Ubuntu
 │   ├── linux/ubuntu-qutebrowser-venv.sh # qutebrowser via pip venv (Nix build crashes)
 │   └── android/default.nix
@@ -74,14 +74,14 @@ make apt-deps           # kitty + fcitx5 — see "Things that stay apt-installed
 make install            # applies the flake
 ```
 
-### WSL / Termux
+### Termux
 
 ```bash
 git clone <repo> ~/dotfiles
 cd ~/dotfiles
 ./bootstrap.sh
 exec $SHELL -l
-make install             # picks wsl or termux automatically
+make install             # picks termux automatically
 ```
 
 ### Android (nix-on-droid)
@@ -100,7 +100,6 @@ make help              # list all commands (platform auto-detected)
 make install           # apply configuration for the detected platform
 make darwin            # macOS only
 make linux             # Ubuntu only
-make wsl               # WSL only
 make termux            # Termux only
 make android           # Android (nix-on-droid) only
 make apt-deps           # Ubuntu only: apt-install kitty + fcitx5 (see below)
@@ -270,18 +269,13 @@ directly.
   titlebar color, JetBrainsMono Nerd Font) selected via its `isDarwin` branch.
 - qutebrowser is the plain Nix package here (no EGL/GPU issue on macOS, unlike
   Ubuntu — see the qutebrowser component above).
-- `darwinPackages` in `flake.nix` adds `clipboard-jh`, `clipse`, and the
-  JetBrains Mono Nerd Font on top of `sharedPackages`.
+- `darwinPackages` in `flake.nix` adds `clipboard-jh`, `clipse`, `mosh`, and
+  the JetBrains Mono Nerd Font on top of `sharedPackages`. Mosh uses the same
+  SSH configuration, keys, and SSH certificates as `ssh`; its session traffic
+  additionally needs UDP ports 60000–61000 reachable on the remote host.
 
 To add a second Mac: copy the `darwinConfigurations."nathan-macbook"` stanza
 in `flake.nix`, point it at a new `hosts/darwin/<hostname>.nix`.
-
-### WSL — `hosts/linux/wsl.nix`
-Standalone home-manager (`modules/platforms/linux.nix` + this host file, no
-darwin/nix-on-droid glue). Adds `wslu` and sets `$BROWSER=wslview` so links
-open in the Windows default browser. Also patches `$DISPLAY` for GUI/X11 apps
-when it isn't already set by WSLg, by reading the nameserver out of
-`/etc/resolv.conf` (the classic WSL1/older-WSL2 X-server trick).
 
 ### Termux — `hosts/linux/termux.nix`
 Standalone home-manager targeting `aarch64-linux`, home directory

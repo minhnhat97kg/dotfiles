@@ -26,6 +26,17 @@
       [ -d "$HOME/.opencode/bin" ] && export PATH="$HOME/.opencode/bin:$PATH"
       alias claude-api="CLAUDE_CONFIG_DIR=~/.claude-api claude"
 
+      # Ollama server tuning (macOS: also set for GUI via launchd — see modules/platforms/darwin.nix)
+      # q8_0 KV cache + flash attention keep 32k context from swapping on 16GB machines;
+      # a single loaded model / single parallel slot avoids loading ornith + coder at once.
+      # keep_alive is short so the model unloads when idle and stops pinning ~6GB of RAM
+      # (resident weights force other apps into swap, which is the real battery cost).
+      export OLLAMA_FLASH_ATTENTION=1
+      export OLLAMA_KV_CACHE_TYPE=q8_0
+      export OLLAMA_MAX_LOADED_MODELS=1
+      export OLLAMA_NUM_PARALLEL=1
+      export OLLAMA_KEEP_ALIVE=5m
+
     '';
 
     shellAliases = {

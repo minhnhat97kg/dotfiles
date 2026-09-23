@@ -1,6 +1,6 @@
 # modules/home/kitty.nix
 # Single source of truth for kitty config across all hosts (Linux + macOS).
-# Platform differences (font, macos_* options, shell path, Catppuccin theme
+# Platform differences (font, macos_* options, shell path, Kanagawa theme
 # include) are conditioned on pkgs.stdenv.hostPlatform.isDarwin below.
 { pkgs, lib, ... }:
 let
@@ -12,12 +12,12 @@ in
       ${if isDarwin then ''
         macos_option_as_alt yes
 
-        font_family JetBrainsMono Nerd Font
+        font_family JetBrainsMono NFM
         bold_font auto
         italic_font auto
         bold_italic_font auto
       '' else ''
-        font_family      JetBrainsMono Nerd Font
+        font_family      JetBrainsMono NFM
         bold_font        auto
         italic_font      auto
         bold_italic_font auto
@@ -42,7 +42,7 @@ in
       tab_powerline_style slanted
 
       # BEGIN_KITTY_THEME
-      # Catppuccin-Mocha
+      # Kanagawa-Wave
       include current-theme.conf
       # END_KITTY_THEME
     '';

@@ -9,6 +9,10 @@ vim.pack.add({
   U.gh("christoomey/vim-tmux-navigator"),
   { src = U.gh("nvzone/volt"), name = "volt" },
   { src = U.gh("nvzone/menu"), name = "menu" },
+  { src = U.gh("nickjvandyke/opencode.nvim"), version = vim.version.range("*") },
+  U.gh("pablopunk/pi.nvim"),
+  U.gh("nvim-lua/plenary.nvim"),
+  { src = U.gh("olimorris/codecompanion.nvim"), version = vim.version.range("^19.0.0") },
 })
 
 require("config.options")
@@ -31,3 +35,6 @@ require("plugins.conform")
 require("plugins.rest")
 require("plugins.db")
 require("plugins.whichkey")
+require("plugins.opencode")
+require("plugins.pi")
+require("plugins.codecompanion")

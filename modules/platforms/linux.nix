@@ -1,6 +1,6 @@
 # modules/platforms/linux.nix
 # Shared home-manager configuration for all Linux platforms
-# (Ubuntu bare-metal, WSL, Termux via Nix standalone home-manager)
+# (Ubuntu bare-metal, Termux via Nix standalone home-manager)
 { pkgs, lib, ... }:
 {
   imports = [ ../home/default.nix ];

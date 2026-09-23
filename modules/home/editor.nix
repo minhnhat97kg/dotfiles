@@ -10,7 +10,11 @@
     withRuby = false;
     package = pkgs.neovim-unwrapped.overrideAttrs (_: {
       src = neovim-src;
-      version = "0.12.0";
+      version = "0.12.5";
+      # The functional test suite is flaky/unavailable in the Nix sandbox for
+      # a source version that differs from nixpkgs' own pin.
+      doCheck = false;
+      doInstallCheck = false;
     });
   };
 }

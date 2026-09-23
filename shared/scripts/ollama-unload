@@ -1,0 +1,28 @@
+#!/usr/bin/env zsh
+# Unload every memory-resident Ollama model.
+#
+# On a 16GB machine a loaded 9B model pins ~6GB of RAM. Left resident while you
+# are not coding, it pushes everything else into swap — and swap churn is the
+# real battery cost once generation has stopped. Run this before unplugging the
+# charger, closing the lid, or when switching to battery.
+set -u
+
+if ! ps_out=$(ollama ps 2>/dev/null); then
+  print -u2 "ollama-unload: ollama server not reachable"
+  exit 1
+fi
+
+models=(${(f)"$(print -r -- "$ps_out" | awk 'NR>1 && NF {print $1}')"})
+
+if (( ${#models} == 0 )); then
+  print "ollama-unload: no models loaded"
+  exit 0
+fi
+
+for m in $models; do
+  if ollama stop "$m" >/dev/null 2>&1; then
+    print "ollama-unload: unloaded $m"
+  else
+    print -u2 "ollama-unload: failed to unload $m"
+  fi
+done

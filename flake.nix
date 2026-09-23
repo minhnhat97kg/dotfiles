@@ -1,11 +1,11 @@
 {
-  description = "Cross-platform Nix configuration (macOS, Linux, WSL, Termux, Android)";
+  description = "Cross-platform Nix configuration (macOS, Linux, Termux, Android)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     neovim-src = {
-      url = "github:neovim/neovim/v0.12.0";
+      url = "github:neovim/neovim/v0.12.5";
       flake = false;
     };
 
@@ -145,7 +145,10 @@
       darwinPackages = pkgs: with pkgs; [
         clipboard-jh
         clipse
+        mosh          # authenticates through the existing SSH configuration/certificates
         nerd-fonts.jetbrains-mono
+        azure-cli
+        btop
       ];
 
       # Shared home-manager configuration (modules/home/default.nix)
@@ -218,7 +221,6 @@
       # ============================================================================
       homeConfigurations = {
         "ubuntu"  = mkLinuxHome { hostname = "ubuntu"; };
-        "wsl"     = mkLinuxHome { hostname = "wsl"; };
         "termux"  = mkLinuxHome { hostname = "termux"; system = "aarch64-linux"; };
       };
     };

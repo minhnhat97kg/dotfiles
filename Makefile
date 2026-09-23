@@ -1,8 +1,7 @@
-.PHONY: help install build update format check clean darwin android linux wsl termux apt-deps qutebrowser-venv
+.PHONY: help install build update format check clean darwin android linux termux apt-deps qutebrowser-venv
 
-# Detect platform: macos, wsl, termux, android, ubuntu
+# Detect platform: macos, termux, android, ubuntu
 _UNAME := $(shell uname -s)
-_IS_WSL := $(shell grep -qi microsoft /proc/version 2>/dev/null && echo yes || echo no)
 _IS_TERMUX := $(shell [ -d /data/data/com.termux ] || [ -n "$$TERMUX_VERSION" ] && echo yes || echo no)
 _IS_DROID := $(shell command -v nix-on-droid > /dev/null 2>&1 && echo yes || echo no)
 
@@ -10,8 +9,6 @@ ifeq ($(_UNAME),Darwin)
   PLATFORM := macos
 else ifeq ($(_IS_DROID),yes)
   PLATFORM := android
-else ifeq ($(_IS_WSL),yes)
-  PLATFORM := wsl
 else ifeq ($(_IS_TERMUX),yes)
   PLATFORM := termux
 else
@@ -46,9 +43,6 @@ apt-deps: ## Install apt packages the ubuntu host needs but Nix can't provide (k
 
 qutebrowser-venv: ## Install qutebrowser into a pip venv (Nix build crashes on EGL init)
 	./hosts/linux/ubuntu-qutebrowser-venv.sh
-
-wsl: ## Install on WSL
-	nix run 'github:nix-community/home-manager' -- switch --flake .#wsl
 
 termux: ## Install on Termux (aarch64)
 	nix run 'github:nix-community/home-manager' -- switch --flake .#termux

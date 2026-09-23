@@ -59,6 +59,29 @@
     };
   };
 
+  # Ollama server tuning for GUI-launched instances (Ollama.app inherits the
+  # launchd user environment, not the shell's). Mirrors the exports in
+  # modules/home/shell.nix so a server started either way gets the same config.
+  # Restart Ollama (quit + reopen the app) after this takes effect.
+  launchd.user.agents.ollama-env = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/sh"
+        "-c"
+        ''
+          /bin/launchctl setenv OLLAMA_FLASH_ATTENTION 1
+          /bin/launchctl setenv OLLAMA_KV_CACHE_TYPE q8_0
+          /bin/launchctl setenv OLLAMA_MAX_LOADED_MODELS 1
+          /bin/launchctl setenv OLLAMA_NUM_PARALLEL 1
+          /bin/launchctl setenv OLLAMA_KEEP_ALIVE 5m
+        ''
+      ];
+      RunAtLoad = true;
+      StandardOutPath = "/tmp/ollama-env.out.log";
+      StandardErrorPath = "/tmp/ollama-env.err.log";
+    };
+  };
+
   # SSH Server — speed-optimized for LAN and Tailscale
   # Port 22: macOS built-in Remote Login — password auth allowed (default)
   # Port 2222: custom sshd instance — key-only auth (no passwords)
