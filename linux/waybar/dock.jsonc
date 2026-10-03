@@ -1,0 +1,112 @@
+// Floating macOS-style dock: a second waybar instance (waybar-dock.service),
+// launched by the same scripts/launch.sh as the menu bar (see config.jsonc for
+// the shared output-selection logic) but with this config/dock.css pair.
+//
+// "name": "dock" is what makes this instance's layer-shell namespace "dock"
+// instead of "waybar" (waybar uses the "name" config key verbatim as the
+// namespace, no "waybar-" prefix — confirmed with `niri msg -j layers`, do
+// not assume otherwise). Without it, this and the menu bar would share a
+// namespace and any layer-rule (e.g. the blur rule in linux/niri/config.kdl)
+// aimed at one would hit both.
+//
+// NO "mode": "dock". That waybar mode forces the layer-shell surface onto
+// niri's Bottom z-order layer regardless of the "layer" key below — confirmed
+// with `niri msg -j layers` (it reported "dock  Bottom" with mode: "dock"
+// set, vs. "dock  Top" without it) — and Bottom sits BELOW normal windows in
+// wlr-layer-shell, so any maximized/tall window covered the dock almost
+// entirely. Plain "layer": "top" is what actually keeps it above windows.
+//
+// WHY THE DOCK HAS A FIXED LENGTH (a "margin", not a narrower geometry): waybar
+// always paints window#waybar edge-to-edge across its position axis — there is
+// no "shrink-to-content" option — so an earlier attempt at painting glass
+// directly on window#waybar produced a faint full-length band down the edge
+// of the screen instead of a centered pill. The obvious-looking fix, make
+// window#waybar transparent and put the glass on an inner box (e.g.
+// .modules-center) instead, is a dead end: niri's background-effect has no
+// alpha-threshold/ignore-alpha key (`niri validate` rejects both), so blur
+// applies to the WHOLE layer-surface rectangle regardless of what's painted
+// inside it — that would blur a full-width band AND still show a pill inside
+// it, which is worse. So instead the surface itself is shortened with top/bottom
+// margins below, sized to fit Launchpad + a handful of running windows on this
+// 1080px-tall output. Trade-off accepted: wlr/taskbar's length is LIVE (it grows
+// with every open window), so this margin is a static guess, not computed — open
+// enough windows at once and the taskbar will clip. If that starts happening
+// in practice, shrink the top/bottom margins here; do not revert to the
+// transparent full-length + inner-box approach ruled out above.
+//
+// Honest cost of the static length: this is tuned to HUG the icons rather than
+// to leave room for growth — at 220px it fits Launchpad plus about three
+// running windows, and beyond that wlr/taskbar starts clipping. That is the
+// deliberate choice: an earlier, longer value left a tall half-empty glass
+// slab below the icons, which read as a stray background panel rather than a
+// dock. If clipping becomes the bigger annoyance, grow it by reducing the
+// top/bottom margins here — and expect the empty-desktop look to suffer again.
+//
+// Contents: Launchpad (grid glyph -> fuzzel), then wlr/taskbar for whatever is
+// actually running. No tray here — the menu bar already has one (see
+// config.jsonc), and macOS's own split is status icons on the menu bar, apps
+// on the dock.
+//
+// PINNED APPS WERE TRIED AND REMOVED — DO NOT RE-ADD THEM WITHOUT SOLVING THIS
+// FIRST: an earlier revision added custom/pin-* glyph buttons (Firefox, kitty,
+// Files) alongside wlr/taskbar so the dock would show apps even when they
+// weren't running. That broke in a way neither a style review nor a config
+// read caught — it only showed up on a real screenshot: waybar has no way to
+// associate a pinned launcher button with that same app's live toplevel, so a
+// pinned app that was ALSO running rendered TWICE — once as a flat glyph, once
+// again as wlr/taskbar's real icon. Firefox pinned + Firefox running showed as
+// two separate icons in the dock, not one icon with a running indicator like
+// real macOS. Seven slots were really five things. On top of the duplication,
+// the pinned glyphs (Pango text) and the taskbar's real app icons (looked up
+// from the toplevel's app-id via the desktop-file/icon-theme machinery) never
+// looked visually uniform anyway. Re-adding pins needs an actual answer to the
+// duplication problem first (e.g. suppressing a pin whenever wlr/taskbar
+// already shows that app-id), not just re-adding the custom/ modules.
+[
+    {
+        "name": "dock",
+        "output": "__set-by-launch.sh__",
+        "layer": "top",
+        // Left edge, like macOS with the Dock moved to the left. waybar lays
+        // a left/right-positioned bar out VERTICALLY on its own — no
+        // "orientation" key needed — so modules-center centers down the
+        // column rather than across a row.
+        "position": "left",
+        // No exclusive zone. A layer-shell surface reserves space by default,
+        // and the dock sitting on the left edge was reserving its own width
+        // across the WHOLE left side — which inset the menu bar's surface, so
+        // waybar's background started 64px in instead of at x=0. Measured, not
+        // guessed: sampling the bar's pixels showed it darkening the wallpaper
+        // only from x=64 rightwards. With this off the dock overlaps windows
+        // instead of displacing them, which is fine because it is on the Top
+        // layer and draws above them anyway.
+        "exclusive": false,
+        // "top right bottom left". Top/bottom are what makes the surface
+        // dock-sized instead of full-height on this 1080px-tall output; the
+        // left value floats it clear of the screen edge. Tuned by screenshot,
+        // not computed. See the length comment above.
+        "margin": "430 0 430 8",
+        // No "width": let the icons size the bar's thickness, same reasoning
+        // as the menu bar's comment on why THAT height is set explicitly —
+        // here there is nothing but icon-sized modules.
+        "spacing": 14,
+        "modules-center": [
+            "custom/launchpad",
+            "wlr/taskbar"
+        ],
+        "custom/launchpad": {
+            "format": "▦",
+            "tooltip-format": "Launchpad",
+            "on-click": "fuzzel"
+        },
+        // Running apps. niri advertises wlr-foreign-toplevel-management, which
+        // this module reads over (confirmed: `niri msg -j version` responds,
+        // and this module populates live below — no compositor-side gap).
+        "wlr/taskbar": {
+            "icon-size": 28,
+            "spacing": 10,
+            "tooltip-format": "{title}",
+            "on-click": "activate"
+        }
+    }
+]

@@ -1,0 +1,142 @@
+{ pkgs, lib, username, useremail, ... }:
+{
+  system.stateVersion = 5;
+  nixpkgs.config.allowUnfree = true;
+  nixpkgs.hostPlatform = "aarch64-darwin";
+
+  # Manage the Nix daemon + /etc/nix/nix.conf through nix-darwin. This assumes
+  # Nix was installed with the OFFICIAL installer — bootstrap.sh uses it on
+  # macOS for exactly this reason. If you switch a Mac to Determinate Nix,
+  # set `nix.enable = false`: Determinate manages its own daemon, and the two
+  # fight over /etc/nix and the launchd daemon.
+  nix = {
+    enable = true;
+    package = pkgs.nix;
+    gc = {
+      automatic = true;
+      options = "--delete-older-than 7d";
+    };
+    settings = {
+      experimental-features = [ "nix-command" "flakes" ];
+      substituters = [
+        "https://cache.nixos.org"
+        "https://mirror.sjtu.edu.cn/nix-channels/store"
+        "https://nix-community.cachix.org"
+      ];
+      trusted-public-keys = [
+        "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+        "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      ];
+      trusted-users = [ username ];
+    };
+  };
+
+  # macOS-specific settings
+  programs.zsh.enable = true;
+
+  networking.applicationFirewall = {
+    enable = true;
+    enableStealthMode = true;
+  };
+
+  # Homebrew — nix-homebrew owns the installation (version + prefix), while the
+  # nix-darwin `homebrew.*` options below declare packages/casks. On first
+  # activation nix-homebrew installs Homebrew under /opt/homebrew; afterwards
+  # it keeps brew itself pinned to the version in flake.lock. Taps are left
+  # mutable, so `brew tap` / `brew install` work imperatively as usual.
+  nix-homebrew = {
+    enable = true;
+    user = username;
+    # Adopt an existing hand-installed Homebrew instead of failing on it.
+    autoMigrate = true;
+  };
+
+  homebrew = {
+    enable = true;
+
+    brews = [ ];
+    casks = [ "kitty" "alacritty" ];
+
+    onActivation = {
+      autoUpdate = true;   # `brew update` before every activation
+      upgrade = true;      # upgrade outdated formulae/casks
+      # "none" = never remove packages you installed by hand. Use "zap" only if
+      # you go fully declarative and want everything undeclared deleted.
+      cleanup = "none";
+    };
+  };
+
+  environment.systemPackages = with pkgs; [
+    nixfmt
+    jq
+  ];
+
+  # Ollama server tuning for GUI-launched instances (Ollama.app inherits the
+  # launchd user environment, not the shell's). Mirrors the exports in
+  # modules/home/shell.nix so a server started either way gets the same config.
+  # Restart Ollama (quit + reopen the app) after this takes effect.
+  launchd.user.agents.ollama-env = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/bin/sh"
+        "-c"
+        ''
+          /bin/launchctl setenv OLLAMA_FLASH_ATTENTION 1
+          /bin/launchctl setenv OLLAMA_KV_CACHE_TYPE q8_0
+          /bin/launchctl setenv OLLAMA_MAX_LOADED_MODELS 1
+          /bin/launchctl setenv OLLAMA_NUM_PARALLEL 1
+          /bin/launchctl setenv OLLAMA_KEEP_ALIVE 5m
+        ''
+      ];
+      RunAtLoad = true;
+      StandardOutPath = "/tmp/ollama-env.out.log";
+      StandardErrorPath = "/tmp/ollama-env.err.log";
+    };
+  };
+
+  # SSH Server — speed-optimized for LAN and Tailscale
+  # Port 22: macOS built-in Remote Login — password auth allowed (default)
+  # Port 2222: custom sshd instance — key-only auth (no passwords)
+  #   ET: et -p 2222 <username>@<host>
+  #   ET needs port 2022 (default) open for its own connection
+  # Shared sshd config (applies to both ports)
+  services.openssh = {
+    enable = true;
+    extraConfig = ''
+      PermitRootLogin no
+      UseDNS no
+      Compression no
+      ClientAliveInterval 60
+      ClientAliveCountMax 3
+      MaxSessions 10
+      Ciphers aes256-gcm@openssh.com,chacha20-poly1305@openssh.com
+      MACs hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com
+    '';
+  };
+
+  # Custom sshd on port 2222 — key-only auth, no passwords
+  launchd.daemons.sshd-custom = {
+    serviceConfig = {
+      Label = "org.nixos.sshd-custom";
+      ProgramArguments = [
+        "/usr/sbin/sshd"
+        "-D"
+        "-f" "/etc/ssh/sshd_config"
+        "-o" "Port=2222"
+        "-o" "PasswordAuthentication=no"
+        "-o" "KbdInteractiveAuthentication=no"
+      ];
+      KeepAlive = true;
+      RunAtLoad = true;
+      StandardErrorPath = "/var/log/sshd-custom.log";
+    };
+  };
+
+  system.primaryUser = username;
+
+  users.users."${username}" = {
+    home = "/Users/${username}";
+    description = username;
+    shell = pkgs.zsh;
+  };
+}

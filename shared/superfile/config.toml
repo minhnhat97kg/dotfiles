@@ -1,0 +1,83 @@
+# superfile config — https://superfile.dev/configure/superfile-config/
+
+###############################################################################
+#                                   Defaults                                  #
+###############################################################################
+
+# Default: $EDITOR
+editor = ""
+dir_editor = ""
+auto_check_update = true
+cd_on_quit = false
+default_open_file_preview = true
+show_image_preview = true
+show_panel_footer_info = true
+default_directory = "."
+
+# false: IEC binary units of 1024 (KiB, MiB, GiB).
+file_size_use_si = false
+
+# (0: Name, 1: Size, 2: Date Modified, 3: Type, 4: Natural).
+default_sort_type = 0
+sort_order_reversed = false
+case_sensitive_sort = false
+shell_close_on_success = false
+
+# 0: full page.
+page_scroll_size = 0
+debug = false
+ignore_missing_fields = false
+
+# 0 disables extra columns.
+file_panel_extra_columns = 0
+file_panel_name_percent = 50
+
+
+###############################################################################
+#                                   Styling                                   #
+###############################################################################
+
+theme = "catppuccin-mocha"
+
+# "" for builtin chroma, "bat" for bat
+code_previewer = ""
+nerdfont = true
+
+# Requires: nerdfont = true
+show_select_icons = true
+transparent_background = false
+
+# Width is 1/n of the total; 0 = same width as the file picker panel.
+file_preview_width = 0
+enable_file_preview_border = false
+sidebar_width = 20
+sidebar_sections = ["home", "pinned", "disks"]
+
+# Each must be exactly one character wide; ' ' for borderless.
+border_top = '─'
+border_bottom = '─'
+border_left = '│'
+border_right = '│'
+border_top_left = '╭'
+border_top_right = '╮'
+border_bottom_left = '╰'
+border_bottom_right = '╯'
+border_middle_left = '├'
+border_middle_right = '┤'
+
+###############################################################################
+#                                   Plugins                                   #
+###############################################################################
+
+# Requires: exiftool
+metadata = false
+
+# Requires: md5sum
+enable_md5_checksum = false
+
+# Requires: zoxide
+zoxide_support = false
+
+# Extension -> command; the file path is appended as the last argument.
+# MUST BE IN THE VERY END OF THE FILE BECAUSE TOML CANNOT CLOSE TABLES
+[open_with]

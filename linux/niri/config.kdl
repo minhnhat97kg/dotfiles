@@ -1,0 +1,297 @@
+// niri config — based on the upstream default, with a few local tweaks.
+// Docs: https://niri-wm.github.io/niri/Configuration:-Introduction
+
+environment {
+    GTK_IM_MODULE "fcitx"
+    // Qt 6.7+ uses QT_IM_MODULES (plural) to pick an input-context backend by
+    // priority. On this Wayland session we want Qt's native text-input-v3 path
+    // (which QtWebEngine/qutebrowser fully supports), falling back to the fcitx
+    // plugin. The old singular QT_IM_MODULE=fcitx forced the plugin — which the
+    // pip-venv's bundled Qt 6.11 doesn't ship — so it's unset here.
+    // See https://fcitx-im.org/wiki/Using_Fcitx_5_on_Wayland
+    QT_IM_MODULE null
+    QT_IM_MODULES "wayland;fcitx"
+    XMODIFIERS "@im=fcitx"
+    SDL_IM_MODULE "fcitx"
+    GLFW_IM_MODULE "ibus"
+}
+
+input {
+    keyboard {
+        xkb {
+            // Uses org.freedesktop.locale1 / localectl settings by default.
+        }
+        numlock
+    }
+
+    touchpad {
+        tap
+        natural-scroll
+    }
+
+    mouse {
+    }
+}
+
+// Output positioning is owned by kanshi (see kanshi/config), NOT by static
+// `output {}` blocks here. kanshi runs as a systemd user unit (kanshi.service in
+// modules/home/niri.nix).
+//
+// Lid handling: disable the built-in BOE panel when the lid closes and re-enable
+// it when it opens. The script addresses monitors by name (make/model/serial),
+// not connector.
+// NOTE: switch-events only accepts the `spawn` action (not `spawn-sh`), and
+// `spawn` does not go through a shell, so wrap in `sh -c` for ~ expansion.
+switch-events {
+    lid-close { spawn "sh" "-c" "~/.config/niri/scripts/lid.sh close"; }
+    lid-open  { spawn "sh" "-c" "~/.config/niri/scripts/lid.sh open"; }
+}
+
+layout {
+    gaps 10
+    center-focused-column "on-overflow"
+
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+    }
+
+    default-column-width { proportion 0.5; }
+
+    focus-ring {
+        width 4
+        active-color "#0A84FF"
+        inactive-color "#505050"
+    }
+
+    border {
+        off
+        width 4
+        active-color "#ffc87f"
+        inactive-color "#505050"
+        urgent-color "#9b0000"
+    }
+}
+
+hotkey-overlay {
+}
+
+// Backdrop blur, which is what makes a translucent surface read as glass rather
+// than as a flat tinted panel. Since niri 26.04. NOTE: there is no `radius`
+// key — passes/offset/noise/saturation only.
+blur {
+    passes 2
+    offset 3.0
+    noise 0.03
+}
+
+// Caelestia's backdrop layer (a blurred copy of the wallpaper) sits inside
+// niri's overview backdrop instead of above it.
+layer-rule {
+    match namespace="^quickshell:Backdrop$"
+    place-within-backdrop true
+}
+
+screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
+
+animations {
+}
+
+window-rule {
+    match app-id=r#"^org\.wezfurlong\.wezterm$"#
+    default-column-width {}
+}
+
+window-rule {
+    match app-id=r#"firefox$"# title="^Picture-in-Picture$"
+    open-floating true
+}
+
+// Scratch terminal (Mod+Return): a kitty window floating in the middle of the
+// screen for quick one-off commands -- `ask`, df, docker ps -- without
+// disturbing the tiling layout.
+window-rule {
+    match app-id=r#"^quickterm$"#
+    open-floating true
+    default-column-width { proportion 0.6; }
+    default-window-height { proportion 0.6; }
+}
+
+// kitty (and the quickterm scratch kitty) is glass: background_opacity in
+// kitty.nix makes it translucent, this blurs what shows through.
+window-rule {
+    match app-id="^kitty$"
+    match app-id="^quickterm$"
+    // Otherwise niri fills the focus ring colour behind the whole window and
+    // it shows through the translucency as a solid blue background.
+    draw-border-with-background false
+    background-effect {
+        blur true
+        xray false
+    }
+}
+
+window-rule {
+    geometry-corner-radius 20
+    clip-to-geometry true
+    shadow {
+        on
+        softness 30
+        spread 5
+        offset x=0 y=6
+        color "#00000066"
+    }
+}
+
+binds {
+    Mod+Shift+Slash { show-hotkey-overlay; }
+
+    Mod+T hotkey-overlay-title="Open a Terminal: kitty" { spawn "kitty"; }
+    // Caelestia shell, over IPC (`caelestia-shell ipc show` lists every target).
+    // The launcher also does calculator, web search, etc. via its `>` prefix.
+    Mod+D hotkey-overlay-title="Launcher" { spawn "caelestia-shell" "ipc" "call" "drawers" "toggle" "launcher"; }
+    Mod+Shift+D hotkey-overlay-title="Dashboard" { spawn "caelestia-shell" "ipc" "call" "drawers" "toggle" "dashboard"; }
+    Ctrl+Alt+Delete hotkey-overlay-title="Session Menu" { spawn "caelestia-shell" "ipc" "call" "drawers" "toggle" "session"; }
+    Mod+Alt+C hotkey-overlay-title="Control Center" { spawn "caelestia-shell" "ipc" "call" "controlCenter" "open"; }
+    Mod+Shift+X hotkey-overlay-title="OCR Region" { spawn "caelestia-shell" "ipc" "call" "picker" "regionOcr"; }
+    Mod+Shift+A hotkey-overlay-title="Google Lens Region" { spawn "caelestia-shell" "ipc" "call" "picker" "regionSearch"; }
+    Mod+Return hotkey-overlay-title="Toggle Floating Scratch Terminal" { spawn-sh "~/.config/niri/scripts/scratch-term.sh"; }
+    Mod+Shift+S hotkey-overlay-title="Open Settings" { spawn-sh "XDG_CURRENT_DESKTOP=GNOME gnome-control-center"; }
+    Mod+Alt+L hotkey-overlay-title="Lock the Screen" { spawn "caelestia-shell" "ipc" "call" "lock" "lock"; }
+
+    Mod+Tab repeat=false hotkey-overlay-title="Window Overview" { toggle-overview; }
+    Mod+Shift+C hotkey-overlay-title="Clipboard History" { spawn "caelestia-shell" "ipc" "call" "clipboard" "toggle"; }
+
+    // Keyboard-driven mouse pointer (warpd). Hint: label the screen, type a
+    // hint, then h/j/k/l to nudge and m / space / enter to click. Grid: bisect.
+    Mod+Semicolon hotkey-overlay-title="Mouse: warpd hint mode" { spawn "warpd" "--hint"; }
+    Mod+Apostrophe hotkey-overlay-title="Mouse: warpd grid mode" { spawn "warpd" "--grid"; }
+
+    XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.1+ -l 1.0"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.1-"; }
+    XF86AudioMute        allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }
+    XF86AudioMicMute     allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
+
+    XF86MonBrightnessUp   allow-when-locked=true { spawn-sh "brightnessctl set 5%+"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn-sh "brightnessctl set 5%-"; }
+
+    Mod+O repeat=false { toggle-overview; }
+    Mod+Q repeat=false { close-window; }
+
+    Mod+Shift+M repeat=false hotkey-overlay-title="Show Monitor Names & Positions" { spawn-sh "~/.config/niri/scripts/show-monitors.sh"; }
+
+    Mod+N repeat=false hotkey-overlay-title="Quick Toggles & Notifications" { spawn "caelestia-shell" "ipc" "call" "quicktoggles" "toggle"; }
+    Mod+Shift+N repeat=false hotkey-overlay-title="Clear All Notifications" { spawn "caelestia-shell" "ipc" "call" "notifs" "clear"; }
+    Mod+Ctrl+N repeat=false hotkey-overlay-title="Toggle Do Not Disturb" { spawn "caelestia-shell" "ipc" "call" "notifs" "toggleDnd"; }
+
+    Mod+Left  { focus-column-left; }
+    Mod+Down  { focus-window-down; }
+    Mod+Up    { focus-window-up; }
+    Mod+Right { focus-column-right; }
+    Mod+H     { focus-column-left; }
+    Mod+J     { focus-window-down; }
+    Mod+K     { focus-window-up; }
+    Mod+L     { focus-column-right; }
+
+    Mod+Ctrl+Left  { move-column-left; }
+    Mod+Ctrl+Down  { move-window-down; }
+    Mod+Ctrl+Up    { move-window-up; }
+    Mod+Ctrl+Right { move-column-right; }
+    Mod+Ctrl+H     { move-column-left; }
+    Mod+Ctrl+J     { move-window-down; }
+    Mod+Ctrl+K     { move-window-up; }
+    Mod+Ctrl+L     { move-column-right; }
+
+    Mod+Shift+Left  { focus-monitor-left; }
+    Mod+Shift+Down  { focus-monitor-down; }
+    Mod+Shift+Up    { focus-monitor-up; }
+    Mod+Shift+Right { focus-monitor-right; }
+    Mod+Shift+H     { focus-monitor-left; }
+    Mod+Shift+J     { focus-monitor-down; }
+    Mod+Shift+K     { focus-monitor-up; }
+    Mod+Shift+L     { focus-monitor-right; }
+
+    Mod+Ctrl+Shift+Left  { move-column-to-monitor-left; }
+    Mod+Ctrl+Shift+Down  { move-column-to-monitor-down; }
+    Mod+Ctrl+Shift+Up    { move-column-to-monitor-up; }
+    Mod+Ctrl+Shift+Right { move-column-to-monitor-right; }
+    Mod+Ctrl+Shift+H     { move-column-to-monitor-left; }
+    Mod+Ctrl+Shift+J     { move-column-to-monitor-down; }
+    Mod+Ctrl+Shift+K     { move-column-to-monitor-up; }
+    Mod+Ctrl+Shift+L     { move-column-to-monitor-right; }
+
+    Mod+Home { focus-column-first; }
+    Mod+End  { focus-column-last; }
+    Mod+Ctrl+Home { move-column-to-first; }
+    Mod+Ctrl+End  { move-column-to-last; }
+
+    Mod+Page_Down      { focus-workspace-down; }
+    Mod+Page_Up        { focus-workspace-up; }
+    Mod+U              { focus-workspace-down; }
+    Mod+I              { focus-workspace-up; }
+    Mod+Ctrl+Page_Down { move-column-to-workspace-down; }
+    Mod+Ctrl+Page_Up   { move-column-to-workspace-up; }
+    Mod+Ctrl+U         { move-column-to-workspace-down; }
+    Mod+Ctrl+I         { move-column-to-workspace-up; }
+
+    Mod+WheelScrollDown      cooldown-ms=150 { focus-workspace-down; }
+    Mod+WheelScrollUp        cooldown-ms=150 { focus-workspace-up; }
+    Mod+Ctrl+WheelScrollDown cooldown-ms=150 { move-column-to-workspace-down; }
+    Mod+Ctrl+WheelScrollUp   cooldown-ms=150 { move-column-to-workspace-up; }
+
+    Mod+WheelScrollRight      { focus-column-right; }
+    Mod+WheelScrollLeft       { focus-column-left; }
+    Mod+Ctrl+WheelScrollRight { move-column-right; }
+    Mod+Ctrl+WheelScrollLeft  { move-column-left; }
+
+    Mod+1 { focus-workspace 1; }
+    Mod+2 { focus-workspace 2; }
+    Mod+3 { focus-workspace 3; }
+    Mod+4 { focus-workspace 4; }
+    Mod+5 { focus-workspace 5; }
+    Mod+Ctrl+1 { move-column-to-workspace 1; }
+    Mod+Ctrl+2 { move-column-to-workspace 2; }
+    Mod+Ctrl+3 { move-column-to-workspace 3; }
+    Mod+Ctrl+4 { move-column-to-workspace 4; }
+    Mod+Ctrl+5 { move-column-to-workspace 5; }
+
+    Mod+BracketLeft  { consume-or-expel-window-left; }
+    Mod+BracketRight { consume-or-expel-window-right; }
+    Mod+Comma  { consume-window-into-column; }
+    Mod+Period { expel-window-from-column; }
+
+    Mod+R { switch-preset-column-width; }
+    Mod+Shift+R { switch-preset-column-width-back; }
+    Mod+Ctrl+Shift+R { switch-preset-window-height; }
+    Mod+Ctrl+R { reset-window-height; }
+
+    Mod+F { maximize-column; }
+    Mod+Shift+F { fullscreen-window; }
+    Mod+M { toggle-windowed-fullscreen; }
+    Mod+Ctrl+F { expand-column-to-available-width; }
+    Mod+C { center-column; }
+
+    Mod+Minus { set-column-width "-10%"; }
+    Mod+Equal { set-column-width "+10%"; }
+    Mod+Shift+Minus { set-window-height "-10%"; }
+    Mod+Shift+Equal { set-window-height "+10%"; }
+
+    Mod+V       { toggle-window-floating; }
+    Mod+Shift+V { switch-focus-between-floating-and-tiling; }
+    Mod+W { toggle-column-tabbed-display; }
+
+    Mod+S      { screenshot; }
+    Mod+Ctrl+S { screenshot-screen; }
+    Mod+Alt+S  { screenshot-window; }
+
+    Mod+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
+
+    Mod+Shift+E { quit; }
+    Mod+Shift+P { power-off-monitors; }
+}
+
+// Focus ring/border colours follow the Caelestia palette (written by the
+// caelestia-theme-sync service, modules/home/niri.nix); the layout colours
+// above are the fallback until it exists. Must stay after `layout`.
+include optional=true "~/.local/state/caelestia/niri-colors.kdl"

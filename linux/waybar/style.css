@@ -1,0 +1,237 @@
+* {
+    /* SF Pro Text carries the UI text (installed via Nix, see niri.nix); the
+       Nerd Font is kept in the chain only as a glyph fallback for the CP437
+       and icon characters the module formats still use. */
+    font-family: "SF Pro Text", "JetBrainsMono Nerd Font", "JetBrainsMono NF", sans-serif;
+    font-size: 13px;
+    min-height: 0;
+    /* Kept from when the bar was fully transparent. The translucent background
+       below does most of the work now, but the shadow still earns its place
+       over a bright wallpaper showing through. */
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+/* macOS dark-mode label ramp (primary / secondary / tertiary), same ramp used
+   for hover fills and the one accent/critical colour. */
+@define-color bg       rgba(0, 0, 0, 0.35);        /* the bar's own translucent fill */
+@define-color elevated rgba(255, 255, 255, 0.18);  /* hover fill, a lift off the bar */
+@define-color fg       #f5f5f7;
+@define-color mute     #98989d;  /* secondary: window title, power draw, chrome */
+@define-color faint    #636366;  /* inactive: bluetooth off, muted, wifi down */
+@define-color accent   #0a84ff;  /* macOS system blue, dark mode */
+
+/* A translucent dark strip, at the user's request.
+ *
+ * NOTE THIS IS A DEPARTURE FROM TAHOE, and a deliberate one. macOS 26's menu
+ * bar draws no background at all by default — fully transparent, no separator,
+ * no blur — and a translucent dark strip was the single biggest "generic
+ * Linux" tell in the first styling pass here. macOS does offer this look as an
+ * opt-in ("Show menu bar background"), so it is not unheard of, just not the
+ * default. Set this back to `transparent` to restore the stock Tahoe look.
+ *
+ * Still no separator line: a hairline under the bar is its own, separate tell
+ * and was not asked for.
+ *
+ * Still no blur either, deliberately — waybar is absent from the blur
+ * layer-rule in linux/niri/config.kdl. Unlike the dock, the bar fills its whole
+ * layer surface, so blurring it would NOT produce the squared-corner artifact
+ * documented there; it is simply a further step away from Tahoe than the fill
+ * alone. Add "^waybar$" to that rule if a frosted bar is wanted. */
+window#waybar {
+    background: @bg;
+    color: @fg;
+}
+
+/* Structure comes from spacing alone now — no hairline under the bar; see the
+   note above. Modules themselves are unframed until hovered, when they take a
+   rounded fill; an earlier revision framed every module permanently and
+   turned into nested-rectangle soup. */
+
+/* ---- left: launcher / menu / workspaces ---- */
+#custom-launcher,
+#custom-menu {
+    color: @mute;
+    padding: 0 8px;
+    border-radius: 8px;
+}
+
+#custom-launcher { margin-left: 6px; }
+
+#custom-launcher:hover,
+#custom-menu:hover {
+    background-color: @elevated;
+    color: @fg;
+}
+
+/* Workspace colours come from Pango spans in scripts/workspaces.sh (the focused
+   index gets an accent-blue pill there), so none is set here — CSS loses to
+   inline markup. */
+#custom-niri-workspaces {
+    padding: 0 10px;
+}
+
+/* ---- left: active app name ---- */
+/* macOS has no window-title module; it shows the focused app's name, bold,
+   right where that app's own menus would start. Sits right after the
+   Apple-logo launcher, before the ⌘ quick-menu and the workspaces. */
+#custom-window {
+    color: @fg;
+    font-weight: bold;
+    padding: 0 8px;
+}
+
+/* ---- right: tray + readouts ---- */
+/* Every tray item is remapped to an Adwaita *-symbolic icon in config.jsonc.
+   Symbolic icons are tinted from this colour, which is what makes the tray
+   monochrome — GTK3 CSS has no filter/grayscale, so recolouring the app's own
+   full-colour icon is not possible; substituting a tintable one is. */
+#tray {
+    color: @mute;
+    padding: 0 10px;
+}
+
+#tray > .passive {
+    color: @faint;
+}
+
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+}
+
+/* Active/standby colours come from Pango spans in scripts/network.sh — one
+   module has to paint two segments differently, and CSS loses to inline markup.
+   The rule below is the fallback for anything the script leaves unspanned. */
+#custom-net,
+#bluetooth,
+#custom-brightness,
+#custom-volume,
+#battery {
+    color: @fg;
+    padding: 0 9px;
+    border-radius: 8px;
+}
+
+#custom-net:hover,
+#bluetooth:hover,
+#custom-brightness:hover,
+#custom-volume:hover,
+#battery:hover {
+    background-color: @elevated;
+}
+
+/* ---- brightness / volume drawer buttons ---- */
+/* Revealed on hover by group/brightness and group/volume. Dimmer than the
+   readout they belong to, so the value still reads as the primary thing when
+   the drawer is open. */
+#custom-bright-down,
+#custom-bright-up,
+#custom-vol-down,
+#custom-vol-up {
+    color: @faint;
+    padding: 0 3px;
+}
+
+#custom-bright-down:hover,
+#custom-bright-up:hover,
+#custom-vol-down:hover,
+#custom-vol-up:hover {
+    color: @fg;
+}
+
+/* The readout keeps its right padding for the closed state; while the drawer is
+   open the buttons supply their own, so tighten it up to keep them adjacent. */
+#custom-brightness,
+#custom-volume {
+    padding-right: 4px;
+}
+
+/* Secondary information: present, never competing with the readouts. */
+#custom-power-draw {
+    color: @mute;
+    font-size: 12px;
+    padding: 0 9px;
+}
+
+/* Inactive states step down the ramp rather than changing hue. */
+#custom-net.offline,
+#bluetooth.disabled,
+#bluetooth.off,
+#custom-volume.muted {
+    color: @faint;
+}
+
+/* The single filled state in the theme. Keep it to this one — the moment a
+   second module fills, the bar reads as though everything is on fire. Red is
+   macOS's system red rather than the old white inversion, which read as an
+   alert but not as a *battery* alert. */
+#battery.critical {
+    background-color: #ff453a;
+    color: #ffffff;
+}
+
+#battery.warning {
+    color: @fg;
+}
+
+/* ---- notifications ---- */
+/* Monochrome like the rest of the bar: the GLYPH carries the state ([·] idle,
+   [3] waiting, [-] muted) and colour only steps up and down the grey ramp.
+   Class names come from swaync's -swb feed verbatim — "none"/"notification"
+   plus dnd-/inhibited- prefixes, and an extra "cc-open" while the panel is up. */
+#custom-notification {
+    color: @mute;
+    padding: 0 8px;
+    border-radius: 8px;
+}
+
+/* Something is waiting: step up to full white. */
+#custom-notification.notification,
+#custom-notification.inhibited-notification {
+    color: @fg;
+}
+
+/* Muted, so step down the ramp instead of changing hue — same treatment as
+   bluetooth.disabled and custom-volume.muted. */
+#custom-notification.dnd-none,
+#custom-notification.dnd-notification,
+#custom-notification.dnd-inhibited-none,
+#custom-notification.dnd-inhibited-notification {
+    color: @faint;
+}
+
+/* While the panel is open the indicator is the thing you are looking at, so it
+   takes the same fill a hovered module would. */
+#custom-notification.cc-open {
+    background-color: @elevated;
+    color: @fg;
+}
+
+#custom-notification:hover {
+    background-color: @elevated;
+    color: @fg;
+}
+
+/* ---- clock: the anchor ---- */
+#clock {
+    color: @fg;
+    font-weight: 500;
+    padding: 0 8px;
+    border-radius: 8px;
+}
+
+#clock:hover {
+    background-color: @elevated;
+}
+
+/* ---- power ---- */
+#custom-power {
+    color: @mute;
+    padding: 0 10px;
+    margin-right: 6px;
+    border-radius: 8px;
+}
+
+#custom-power:hover {
+    background-color: #ff453a;
+    color: #ffffff;
+}

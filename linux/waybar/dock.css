@@ -1,0 +1,57 @@
+/* The dock's glass, distinct from the menu bar's plain transparency (see
+ * style.css's header for why the bar itself has none). It sits on the
+ * compositor's own backdrop blur — this instance's layer-shell namespace,
+ * "dock", is in the blurred layer-rule in linux/niri/config.kdl.
+ *
+ * DARK GLASS, ON PURPOSE, AND A DEPARTURE FROM TAHOE. Real Liquid Glass
+ * lightens rather than darkens: the researched value here was a 12% white
+ * fill, and that is what macOS 26 actually does. The user asked for a dark
+ * theme instead, so the fill is inverted to black. Keep the border light —
+ * the bright hairline rim is what still reads as "glass" rather than as a
+ * flat dark panel, and dropping it is what makes dark surfaces look like a
+ * generic Linux bar. If anyone is chasing macOS fidelity again, this fill is
+ * the first value to put back.
+ */
+window#waybar {
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 22px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+* {
+    font-family: "SF Pro Text", "JetBrainsMono Nerd Font", "JetBrainsMono NF", sans-serif;
+    font-size: 13px;
+    min-height: 0;
+}
+
+/* Launchpad: a text-glyph button. Pinned-app glyph buttons used to sit here
+   too; removed — see the "PINNED APPS WERE TRIED AND REMOVED" comment in
+   dock.jsonc for why (duplicated running apps, not just a style mismatch).
+   font-size bumped up from the base 13px so the Nerd Font glyph reads at
+   roughly the same visual weight as the taskbar's 28px icons. */
+#custom-launchpad {
+    color: #f5f5f7;
+    font-size: 18px;
+    padding: 6px 14px;
+    border-radius: 16px;
+}
+
+#custom-launchpad:hover {
+    background-color: rgba(255, 255, 255, 0.18);
+}
+
+/* wlr/taskbar: one #taskbar box holding a .item button per running window.
+   No tray here any more — see dock.jsonc for why. */
+#taskbar {
+    padding: 0 4px;
+}
+
+#taskbar item {
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+#taskbar item.active {
+    background-color: rgba(255, 255, 255, 0.18);
+}

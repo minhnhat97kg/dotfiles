@@ -1,0 +1,17 @@
+#!/usr/bin/env zsh
+# Phone as a desktop: scrcpy virtual display with apps in resizable windows.
+#
+# One UI doesn't apply desktop mode to scrcpy's virtual display, so apps open
+# fullscreen. Once scrcpy prints the new display's id (it changes every run),
+# switch that display to freeform (windowing mode 5).
+# 200dpi = UI a bit larger than the laptop's ~157ppi panel.
+set -u
+
+scrcpy --new-display=1920x1080/200 --no-vd-destroy-content --no-audio \
+  --keyboard=uhid --display-ime-policy=local -S -w "$@" 2>&1 |
+  while IFS= read -r line; do
+    print -r -- "$line"
+    if [[ $line =~ 'New display: .*\(id=([0-9]+)\)' ]]; then
+      adb shell cmd window set-display-windowing-mode -d $match[1] 5
+    fi
+  done
